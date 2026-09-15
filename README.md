@@ -77,3 +77,5 @@ uv export --project agent --frozen --no-dev --no-emit-project --output-file tool
 项目从 [MaaPracticeBoilerplate](https://github.com/MaaXYZ/MaaPracticeBoilerplate) 初始化，参考 [M9A](https://github.com/MAA1999/M9A) 的发布及包检查方式；界面使用 [MFAAvalonia](https://github.com/MaaXYZ/MFAAvalonia)。框架入门见[官方文档](https://maafw.com/docs/1.1-QuickStarted)。
 
 项目代码采用 [MIT](LICENSE)。第三方组件及游戏素材归各自权利人所有，见 [第三方说明](THIRD_PARTY_NOTICES.md)。
+
+常见问题及首次发布的本机 Agent 初始化验证限制见 [FAQ](docs/zh_cn/develop/faq.md)。

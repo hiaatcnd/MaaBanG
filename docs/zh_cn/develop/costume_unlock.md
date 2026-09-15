@@ -48,14 +48,14 @@ uv run --project agent python tools/run_costume_task.py 60 --inspect-only --adb 
 指定范围时，在命令末尾添加 `--band Roselia`（该乐队五人）或 `--member "市谷有咲"`（仅此成员），两者不能同时使用。不传则为全部成员。乐队支持显示名称或内部标识（如 `poppin_party`、`roselia`），成员使用列表里的姓名，`CHU2` 也可用于选择 `CHU²`。
 此入口直接调用相同的任务代码，不依赖 Agent 进程通信。
 
-UI 与 Python Agent 必须使用兼容的 MaaFramework 协议。当前开发环境统一为 **5.12.2**（Python 依赖及 maa-tools 均已锁定），Maa Support 的 LoadedVer 也应为 5.12.2。此前 UI 5.12.2 与 Python 5.13.0 混用会报 `Protocol version mismatch`（协议 7 / 8）；遇到此错误先核对两侧版本。独立测试进程曾出现的 ZeroMQ 初始化错误与此不同，不能据此判定 VS Code 中的 Agent 也无法连接。
+UI 与 Python Agent 必须使用兼容的 MaaFramework 协议。当前开发环境统一为 **5.12.2**（Python 依赖及 maa-tools 均已锁定），Maa Support 的 LoadedVer 也应为 5.12.2。此前 UI 5.12.2 与 Python 5.13.0 混用会报 `Protocol version mismatch`（协议 7 / 8）；遇到此错误先核对两侧版本。本机独立包的 ZeroMQ 初始化错误及 Windows CI 验证结果见 [FAQ](faq.md)。
 
 ## 开发验证状态
 
 2026-09-16，MuMu 中国服实机验证：
 
 - 输入 x=1、仅检查：8 队 40 人全部遍历成功，按需领取已完成的服装收集奖励，无额外服装解锁。
-- 经用户授权实际解锁里美一件默认服装，评级进度 65 → 66；裁缝套装 2967 → 2767，金币 3571864 → 3561864。
+- 经用户授权实际解锁一件默认服装，确认进度增加 1，消耗 200 裁缝套装和 10000 金币。
 - 补齐“解锁完毕 → 不变更”的处理。早期单件实机测试返回评级复核过增量；当前连续解锁实现改为按成功弹窗累计，不再逐件返回评级。
 - 开发用双分类统计曾实机验证：57 件服装 + 9 件发型/饰品 = 66，与评级进度一致。该统计方法仅保留作开发校验，正式任务的快速模式不会调用。
 - 快速模式实机验证通过：羽泽鸫的收集任务全部完成，直接返回角色列表，没有进入服装列表统计。

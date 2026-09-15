@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import sys
 import subprocess
+import hashlib
 
 package = Path(sys.argv[1]).resolve()
 os.chdir(package)
@@ -12,6 +13,10 @@ interface = json.loads(Path("interface.json").read_text(encoding="utf-8"))
 assert interface["agent"]["child_exec"] == "./python/python.exe"
 assert Path("MFAAvalonia.exe").is_file()
 assert Path("resource/model/ocr/rec.onnx").is_file()
+for library in ("MaaFramework.dll", "MaaAgentClient.dll", "MaaAgentServer.dll"):
+    native = package / "runtimes/win-x64/native" / library
+    python_native = package / "python/Lib/site-packages/maa/bin" / library
+    assert hashlib.sha256(native.read_bytes()).digest() == hashlib.sha256(python_native.read_bytes()).digest(), library
 from maa.library import Library
 from maa.resource import Resource
 from maa.toolkit import Toolkit

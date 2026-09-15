@@ -55,10 +55,12 @@ def build(version):
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, package)
     shutil.copytree(ROOT / "docs", package / "docs")
-    subprocess.run([str(package / "python/python.exe"), str(ROOT / "tools/package_smoke.py"), str(package)], check=True)
+    subprocess.run([str(package / "python/python.exe"), str(ROOT / "tools/package_smoke.py"), str(package)], check=True, timeout=90)
     # Smoke logs are build diagnostics, not user configuration.
     if (package / "debug").exists():
         shutil.rmtree(package / "debug")
+    for bytecode in package.rglob("__pycache__"):
+        shutil.rmtree(bytecode)
     output = ROOT / "dist"
     output.mkdir(exist_ok=True)
     archive = Path(shutil.make_archive(str(output / package.name), "zip", package.parent, package.name))
