@@ -5,10 +5,10 @@ import unicodedata
 
 def parse_target(value):
     if isinstance(value, bool) or not re.fullmatch(r"[0-9]+", str(value)):
-        raise ValueError("目标数量 x 必须为非负整数")
+        raise ValueError("目标数量必须为非负整数")
     value = int(value)
     if not 0 <= value <= 999:
-        raise ValueError("目标数量 x 必须在 0–999 之间")
+        raise ValueError("目标数量必须在 0–999 之间")
     return value
 
 

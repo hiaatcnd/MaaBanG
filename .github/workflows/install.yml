@@ -23,7 +23,7 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.1.0-ci' }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.1.1-ci' }
           python tools/install.py $version
       - uses: actions/upload-artifact@v4
         with:
@@ -51,3 +51,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: gh release create "$RELEASE_TAG" dist/* --verify-tag --title "MaaBanG $RELEASE_TAG" --notes-file docs/release-notes.md
+

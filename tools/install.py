@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -55,7 +56,12 @@ def build(version):
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, package)
     shutil.copytree(ROOT / "docs", package / "docs")
-    subprocess.run([str(package / "python/python.exe"), str(ROOT / "tools/package_smoke.py"), str(package)], check=True, timeout=90)
+    (package / "tools").mkdir()
+    shutil.copy2(ROOT / "tools/package_smoke.py", package / "tools/package_smoke.py")
+    compiler = Path(os.environ["WINDIR"]) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    subprocess.run([str(compiler), "/nologo", "/target:winexe", "/reference:System.Windows.Forms.dll",
+                    f"/out:{package / 'MaaBanG.exe'}", str(ROOT / "tools/MaaBanGLauncher.cs")], check=True)
+    subprocess.run([str(package / "MaaBanG.exe"), "--check-agent"], check=True, timeout=90)
     # Smoke logs are build diagnostics, not user configuration.
     if (package / "debug").exists():
         shutil.rmtree(package / "debug")
