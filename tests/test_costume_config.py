@@ -12,7 +12,7 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(resource.post_bundle(ROOT/'assets/resource').wait().succeeded)
         interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf-8'))
         target=interface['option']['服装目标数量']['pipeline_override']
-        target=json.loads(json.dumps(target).replace('"{x}"','66'))
+        target=json.loads(json.dumps(target, ensure_ascii=False).replace('"{目标数量}"','66'))
         mode=interface['option']['服装执行模式']['cases'][1]['pipeline_override']
         self.assertTrue(resource.override_pipeline(target))
         self.assertTrue(resource.override_pipeline(mode))
