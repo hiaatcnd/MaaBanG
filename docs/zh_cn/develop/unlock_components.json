@@ -1,0 +1,422 @@
+[
+  {
+    "file": "unlock/rating_entry.png",
+    "source": "debug/band-home.png",
+    "roi": [
+      977,
+      469,
+      160,
+      115
+    ]
+  },
+  {
+    "file": "unlock/back.png",
+    "source": "debug/band-home.png",
+    "roi": [
+      16,
+      16,
+      75,
+      76
+    ]
+  },
+  {
+    "file": "unlock/rating_header.png",
+    "source": "debug/rating-select.png",
+    "roi": [
+      124,
+      22,
+      95,
+      27
+    ]
+  },
+  {
+    "file": "unlock/select_character.png",
+    "source": "debug/rating-select.png",
+    "roi": [
+      129,
+      56,
+      108,
+      28
+    ]
+  },
+  {
+    "file": "unlock/tasks_tab.png",
+    "source": "debug/rating-detail.png",
+    "roi": [
+      1023,
+      130,
+      109,
+      25
+    ]
+  },
+  {
+    "file": "unlock/collection.png",
+    "source": "debug/rating-tasks.png",
+    "roi": [
+      649,
+      408,
+      64,
+      32
+    ]
+  },
+  {
+    "file": "unlock/collection_header.png",
+    "source": "debug/rating-collection.png",
+    "roi": [
+      628,
+      188,
+      96,
+      33
+    ]
+  },
+  {
+    "file": "unlock/task_detail.png",
+    "source": "debug/rating-task-detail.png",
+    "roi": [
+      268,
+      79,
+      128,
+      30
+    ]
+  },
+  {
+    "file": "unlock/goto_3d.png",
+    "source": "debug/rating-task-detail.png",
+    "roi": [
+      653,
+      570,
+      233,
+      63
+    ]
+  },
+  {
+    "file": "unlock/tab_3d.png",
+    "source": "debug/costume-detail-owned.png",
+    "roi": [
+      766,
+      121,
+      39,
+      26
+    ]
+  },
+  {
+    "file": "unlock/clothing_tab.png",
+    "source": "debug/costume-detail-owned.png",
+    "roi": [
+      774,
+      180,
+      58,
+      27
+    ]
+  },
+  {
+    "file": "unlock/lock.png",
+    "source": "debug/costume-grid-locks.png",
+    "roi": [
+      697,
+      279,
+      42,
+      42
+    ]
+  },
+  {
+    "file": "unlock/unlock_button.png",
+    "source": "debug/costume-unlock-ready.png",
+    "roi": [
+      1124,
+      588,
+      104,
+      57
+    ]
+  },
+  {
+    "file": "unlock/unlock_confirm_title.png",
+    "source": "debug/costume-confirm.png",
+    "roi": [
+      396,
+      60,
+      126,
+      30
+    ]
+  },
+  {
+    "file": "unlock/tailoring_kit.png",
+    "source": "debug/costume-confirm.png",
+    "roi": [
+      580,
+      383,
+      95,
+      72
+    ]
+  },
+  {
+    "file": "unlock/confirm_unlock.png",
+    "source": "debug/costume-confirm.png",
+    "roi": [
+      658,
+      594,
+      224,
+      54
+    ]
+  },
+  {
+    "file": "unlock/cancel_unlock.png",
+    "source": "debug/costume-confirm.png",
+    "roi": [
+      394,
+      592,
+      233,
+      59
+    ]
+  },
+  {
+    "file": "unlock/leave_preview.png",
+    "source": "debug/costume-leave-confirm.png",
+    "roi": [
+      460,
+      297,
+      348,
+      80
+    ]
+  },
+  {
+    "file": "unlock/leave_confirm.png",
+    "source": "debug/costume-leave-confirm.png",
+    "roi": [
+      658,
+      421,
+      224,
+      54
+    ]
+  },
+  {
+    "file": "unlock/band_poppin_party.png",
+    "source": "assets/resource/image/costume_poppin_party_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_afterglow.png",
+    "source": "assets/resource/image/costume_afterglow_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_pastel_palettes.png",
+    "source": "assets/resource/image/costume_pastel_palettes_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_roselia.png",
+    "source": "assets/resource/image/costume_roselia_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_hello_happy_world.png",
+    "source": "assets/resource/image/costume_hello_happy_world_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_morfonica.png",
+    "source": "assets/resource/image/costume_morfonica_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_raise_a_suilen.png",
+    "source": "assets/resource/image/costume_raise_a_suilen_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/band_mygo.png",
+    "source": "assets/resource/image/costume_mygo_selected.png",
+    "roi": [
+      28,
+      25,
+      186,
+      58
+    ]
+  },
+  {
+    "file": "unlock/unlock_success.png",
+    "source": "debug/test-one-after.png",
+    "roi": [
+      397,
+      155,
+      119,
+      30
+    ]
+  },
+  {
+    "file": "unlock/keep_costume.png",
+    "source": "debug/test-one-after.png",
+    "roi": [
+      393,
+      491,
+      236,
+      69
+    ]
+  },
+  {
+    "file": "unlock/reward_confirm.png",
+    "source": "debug/rating-reward.png",
+    "roi": [
+      524,
+      456,
+      230,
+      56
+    ]
+  },
+  {
+    "file": "unlock/collection_claim.png",
+    "source": "debug/rating-collection-claimable.png",
+    "roi": [
+      1060,
+      310,
+      140,
+      85
+    ]
+  },
+  {
+    "file": "unlock/collection_complete.png",
+    "source": "debug/rating-collection-complete.png",
+    "roi": [
+      790,
+      440,
+      340,
+      75
+    ]
+  },
+  {
+    "file": "unlock/progress_ratio.png",
+    "source": "debug/rating-task-detail.png",
+    "roi": [
+      389,
+      210,
+      622,
+      30
+    ]
+  },
+  {
+    "file": "unlock/default_color.png",
+    "source": "debug/costume-unlock-ready.png",
+    "roi": [
+      755,
+      607,
+      151,
+      42
+    ]
+  },
+  {
+    "file": "unlock/kits_ratio.png",
+    "source": "debug/costume-confirm.png",
+    "roi": [
+      575,
+      459,
+      110,
+      28
+    ]
+  },
+  {
+    "file": "unlock/coins_ratio.png",
+    "source": "debug/costume-confirm.png",
+    "roi": [
+      716,
+      527,
+      207,
+      35
+    ]
+  },
+  {
+    "file": "unlock/owned_one.png",
+    "source": "debug/costume-detail-owned.png",
+    "roi": [
+      650,
+      231,
+      40,
+      23
+    ]
+  },
+  {
+    "file": "unlock/owned_one_five.png",
+    "source": "debug/costume-detail-owned.png",
+    "roi": [
+      942,
+      231,
+      40,
+      23
+    ]
+  },
+  {
+    "file": "unlock/owned_five.png",
+    "source": "debug/costume-detail-owned.png",
+    "roi": [
+      1088,
+      377,
+      40,
+      23
+    ]
+  },
+  {
+    "file": "unlock/owned_three.png",
+    "source": "debug/costume-hairstyles.png",
+    "roi": [
+      1088,
+      231,
+      40,
+      23
+    ]
+  },
+  {
+    "file": "unlock/hair_tab.png",
+    "source": "debug/costume-hairstyles.png",
+    "roi": [
+      1040,
+      179,
+      110,
+      29
+    ]
+  },
+  {
+    "file": "unlock/selected_band_frame.png",
+    "source": "assets/resource/image/costume_poppin_party_selected.png",
+    "roi": [
+      0,
+      0,
+      10,
+      103
+    ]
+  }
+]

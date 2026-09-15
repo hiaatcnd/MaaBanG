@@ -1,109 +1,625 @@
 {
-    // 本文件主要定义了通用 UI 的行为和显示内容
-    // 可参考文档和示例添加更多您需要的功能
-    // 文档：https://maafw.xyz/docs/3.3-ProjectInterfaceV2
-    // 示例：https://github.com/MaaXYZ/MaaFramework/blob/main/sample/interface.json
     "interface_version": 2,
-    "name": "MaaXXX",
-    "description": "这是一个使用 MaaFramework 创建的新项目。",
-    "contact": "QQ群: 123456789",
+    "name": "MaaBanG",
+    "description": "基于 MaaFramework 的 BanG Dream 手游中国服自动化助手。",
+    "contact": "问题反馈：https://github.com/hiaatcnd/MaaBanG/issues",
     "license": "MIT",
-    "welcome": "首次使用！欢迎使用 MAA!",
-    // 填写项目地址和版本号可实现自动更新功能
-    "github": "https://github.com/MaaXYZ/MaaPracticeBoilerplate",
-    "version": "1.0.0",
-    // Mirror酱为第三方分发服务，新项目默认关闭
-    // 若有需要请联系 Mirror酱 开通，直接自行开启是无法使用的
-    // "mirrorchyan_rid": "MaaXXX",
-    // "mirrorchyan_multiplatform": true,
+    "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
+    "github": "https://github.com/hiaatcnd/MaaBanG",
+    "version": "v0.1.0",
     "controller": [
         {
             "name": "安卓端",
             "type": "Adb",
-            "display_short_side": 720 // 默认缩放分辨率的短边长度
-        },
-        {
-            "name": "桌面端",
-            "type": "Win32",
-            "win32": {
-                "class_regex": ".*",
-                "window_regex": "Visual Studio",
-                // 截图及控制方式，请根据项目实际情况修改
-                // 文档: https://maafw.xyz/docs/2.4-ControlMethods
-                "screencap": "PrintWindow", // 截图方式
-                "mouse": "PostMessageWithCursorPos", // 鼠标控制方式
-                "keyboard": "PostMessageWithCursorPos" // 键盘控制方式
-            }
+            "display_short_side": 720
         }
     ],
     "resource": [
         {
-            "name": "官服",
+            "name": "中国服",
             "path": [
                 "./resource"
-            ]
-        },
-        {
-            "name": "B 服",
-            "path": [
-                "./resource"
-                // "./resource_bilibili"
             ]
         }
     ],
-    // 可选的 agent 示例
-    // "agent": {
-    //     "child_exec": "python",
-    //     "child_args": [
-    //         "./agent/main.py"
-    //     ]
-    // },
     "task": [
         {
-            "name": "普通任务",
-            "entry": "MyTask1"
-        },
-        {
-            "name": "选项任务",
-            "entry": "MyTask2",
+            "name": "解锁默认3D演出服装",
+            "entry": "UnlockCostumes",
+            "description": "支持全部成员、指定乐队或指定成员，根据评级进度将默认3D演出服装补到目标 x；收集任务全部完成的角色直接跳过。裁缝套装或金币不足时停止。请从主页、乐队或角色评级页面启动。",
             "option": [
-                "任务选项1"
+                "服装执行范围",
+                "服装目标数量",
+                "服装执行模式"
             ]
-        },
-        {
-            "name": "参数任务",
-            "entry": "MyTask3",
-            "option": [
-                "任务选项1"
-            ],
-            "pipeline_override": {}
-        },
-        {
-            "name": "自定义识别与动作示例",
-            "entry": "FindSmallestNumber"
         }
     ],
     "option": {
-        "任务选项1": {
+        "服装目标数量": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "x",
+                    "label": "每位角色的目标数量 x",
+                    "default": "0",
+                    "verify": "^(0|[1-9][0-9]{0,2})$",
+                    "pattern_msg": "请输入0–999的整数，0表示不解锁",
+                    "pipeline_type": "int"
+                }
+            ],
+            "pipeline_override": {
+                "UnlockCostumes": {
+                    "custom_action_param": {
+                        "target": "{x}"
+                    }
+                }
+            }
+        },
+        "服装执行模式": {
             "type": "select",
             "cases": [
                 {
-                    "name": "文本1",
+                    "name": "解锁服装",
                     "pipeline_override": {
-                        "OcrTask": {
-                            "text": "文本1"
+                        "CU_ExecutionOptions": {
+                            "attach": {
+                                "inspect_only": false
+                            }
                         }
                     }
                 },
                 {
-                    "name": "文本2",
+                    "name": "仅检查（不消耗道具）",
                     "pipeline_override": {
-                        "OcrTask": {
-                            "text": "文本2"
+                        "CU_ExecutionOptions": {
+                            "attach": {
+                                "inspect_only": true
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "服装执行范围": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "全部成员",
+                    "pipeline_override": {
+                        "CU_ScopeMode": {
+                            "attach": {
+                                "kind": "all"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "指定乐队",
+                    "option": [
+                        "服装指定乐队"
+                    ],
+                    "pipeline_override": {
+                        "CU_ScopeMode": {
+                            "attach": {
+                                "kind": "band"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "指定成员",
+                    "option": [
+                        "服装指定成员"
+                    ],
+                    "pipeline_override": {
+                        "CU_ScopeMode": {
+                            "attach": {
+                                "kind": "member"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "服装指定乐队": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "Poppin'Party",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "poppin_party"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Afterglow",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "afterglow"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Pastel＊Palettes",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "pastel_palettes"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Roselia",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "roselia"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Hello, Happy World!",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "hello_happy_world"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Morfonica",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "morfonica"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "RAISE A SUILEN",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "raise_a_suilen"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MyGO!!!!!",
+                    "pipeline_override": {
+                        "CU_SelectedBand": {
+                            "attach": {
+                                "value": "mygo"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "服装指定成员": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "Poppin'Party / 牛込里美",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "牛込里美"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Poppin'Party / 山吹沙绫",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "山吹沙绫"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Poppin'Party / 户山香澄",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "户山香澄"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Poppin'Party / 市谷有咲",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "市谷有咲"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Poppin'Party / 花园多惠",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "花园多惠"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Afterglow / 上原绯玛丽",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "上原绯玛丽"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Afterglow / 羽泽鸫",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "羽泽鸫"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Afterglow / 美竹兰",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "美竹兰"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Afterglow / 宇田川巴",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "宇田川巴"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Afterglow / 青叶摩卡",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "青叶摩卡"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Pastel＊Palettes / 白鹭千圣",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "白鹭千圣"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Pastel＊Palettes / 若宫伊芙",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "若宫伊芙"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Pastel＊Palettes / 丸山彩",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "丸山彩"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Pastel＊Palettes / 大和麻弥",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "大和麻弥"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Pastel＊Palettes / 冰川日菜",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "冰川日菜"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Roselia / 冰川纱夜",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "冰川纱夜"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Roselia / 宇田川亚子",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "宇田川亚子"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Roselia / 凑友希那",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "凑友希那"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Roselia / 白金燐子",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "白金燐子"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Roselia / 今井莉莎",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "今井莉莎"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Hello, Happy World! / 北泽育美",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "北泽育美"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Hello, Happy World! / 奥泽美咲",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "奥泽美咲"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Hello, Happy World! / 弦卷心",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "弦卷心"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Hello, Happy World! / 濑田薰",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "濑田薰"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Hello, Happy World! / 松原花音",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "松原花音"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Morfonica / 八潮瑠唯",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "八潮瑠唯"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Morfonica / 广町七深",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "广町七深"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Morfonica / 仓田真白",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "仓田真白"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Morfonica / 二叶筑紫",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "二叶筑紫"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Morfonica / 桐谷透子",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "桐谷透子"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "RAISE A SUILEN / PAREO",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "PAREO"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "RAISE A SUILEN / MASKING",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "MASKING"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "RAISE A SUILEN / LAYER",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "LAYER"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "RAISE A SUILEN / CHU²",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "CHU²"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "RAISE A SUILEN / LOCK",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "LOCK"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MyGO!!!!! / 千早爱音",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "千早爱音"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MyGO!!!!! / 长崎爽世",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "长崎爽世"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MyGO!!!!! / 高松灯",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "高松灯"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MyGO!!!!! / 椎名立希",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "椎名立希"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MyGO!!!!! / 要乐奈",
+                    "pipeline_override": {
+                        "CU_SelectedMember": {
+                            "attach": {
+                                "value": "要乐奈"
+                            }
                         }
                     }
                 }
             ]
         }
+    },
+    "agent": {
+        "child_exec": "uv",
+        "child_args": [
+            "run",
+            "--project",
+            "../agent",
+            "python",
+            "../agent/main.py"
+        ]
     }
 }
