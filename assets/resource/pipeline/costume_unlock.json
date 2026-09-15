@@ -1,0 +1,438 @@
+{
+    "UnlockCostumes": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "UnlockDefault3DCostumes",
+        "custom_action_param": {
+            "target": 0
+        }
+    },
+    "CU_OCR": {
+        "recognition": "OCR",
+        "expected": ".+"
+    },
+    "CU_HomeBand": {
+        "recognition": "TemplateMatch",
+        "template": "band.png",
+        "roi": [
+            760,
+            580,
+            190,
+            135
+        ],
+        "threshold": 0.8
+    },
+    "CU_RatingEntry": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/rating_entry.png",
+        "roi": [
+            940,
+            450,
+            240,
+            150
+        ],
+        "threshold": 0.8
+    },
+    "CU_Back": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/back.png",
+        "roi": [
+            0,
+            0,
+            110,
+            110
+        ],
+        "threshold": 0.8
+    },
+    "CU_RatingHeader": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/rating_header.png",
+        "roi": [
+            110,
+            10,
+            170,
+            44
+        ],
+        "threshold": 0.8
+    },
+    "CU_SelectCharacter": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/select_character.png",
+        "roi": [
+            110,
+            50,
+            190,
+            45
+        ],
+        "threshold": 0.8
+    },
+    "CU_TasksTab": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/tasks_tab.png",
+        "roi": [
+            990,
+            118,
+            210,
+            47
+        ],
+        "threshold": 0.8
+    },
+    "CU_Collection": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/collection.png",
+        "roi": [
+            630,
+            390,
+            160,
+            70
+        ],
+        "threshold": 0.8
+    },
+    "CU_CollectionHeader": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/collection_header.png",
+        "roi": [
+            610,
+            172,
+            170,
+            65
+        ],
+        "threshold": 0.8
+    },
+    "CU_TaskDetail": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/task_detail.png",
+        "roi": [
+            230,
+            60,
+            210,
+            60
+        ],
+        "threshold": 0.8
+    },
+    "CU_Goto3D": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/goto_3d.png",
+        "roi": [
+            635,
+            550,
+            272,
+            95
+        ],
+        "threshold": 0.8
+    },
+    "CU_Tab3D": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/tab_3d.png",
+        "roi": [
+            744,
+            111,
+            92,
+            50
+        ],
+        "threshold": 0.8
+    },
+    "CU_ClothingTab": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/clothing_tab.png",
+        "roi": [
+            745,
+            170,
+            111,
+            45
+        ],
+        "threshold": 0.8
+    },
+    "CU_Lock": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/lock.png",
+        "roi": [
+            650,
+            225,
+            573,
+            285
+        ],
+        "threshold": 0.7
+    },
+    "CU_UnlockButton": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/unlock_button.png",
+        "roi": [
+            1110,
+            575,
+            136,
+            85
+        ],
+        "threshold": 0.8
+    },
+    "CU_UnlockConfirmTitle": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/unlock_confirm_title.png",
+        "roi": [
+            350,
+            41,
+            210,
+            64
+        ],
+        "threshold": 0.8
+    },
+    "CU_TailoringKit": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/tailoring_kit.png",
+        "roi": [
+            558,
+            365,
+            145,
+            98
+        ],
+        "threshold": 0.8
+    },
+    "CU_ConfirmUnlock": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/confirm_unlock.png",
+        "roi": [
+            640,
+            575,
+            264,
+            89
+        ],
+        "threshold": 0.8
+    },
+    "CU_CancelUnlock": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/cancel_unlock.png",
+        "roi": [
+            380,
+            575,
+            264,
+            89
+        ],
+        "threshold": 0.8
+    },
+    "CU_LeavePreview": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/leave_preview.png",
+        "roi": [
+            425,
+            280,
+            422,
+            118
+        ],
+        "threshold": 0.8
+    },
+    "CU_LeaveConfirm": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/leave_confirm.png",
+        "roi": [
+            640,
+            403,
+            264,
+            90
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_poppin_party": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_poppin_party.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_afterglow": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_afterglow.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_pastel_palettes": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_pastel_palettes.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_roselia": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_roselia.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_hello_happy_world": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_hello_happy_world.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_morfonica": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_morfonica.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_raise_a_suilen": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_raise_a_suilen.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_Band_mygo": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/band_mygo.png",
+        "roi": [
+            30,
+            95,
+            250,
+            623
+        ],
+        "threshold": 0.8
+    },
+    "CU_RewardConfirm": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/reward_confirm.png",
+        "roi": [
+            506,
+            439,
+            270,
+            90
+        ],
+        "threshold": 0.85
+    },
+    "CU_CostumeEntry": {
+        "recognition": "TemplateMatch",
+        "template": "live_costume.png",
+        "roi": [
+            685,
+            432,
+            252,
+            178
+        ],
+        "threshold": 0.8
+    },
+    "CU_CostumeList": {
+        "recognition": "OCR",
+        "expected": "请选择角色",
+        "roi": [
+            677,
+            632,
+            238,
+            54
+        ]
+    },
+    "CU_ExecutionOptions": {
+        "recognition": "DirectHit",
+        "attach": {
+            "inspect_only": false
+        }
+    },
+    "CU_UnlockSuccess": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/unlock_success.png",
+        "roi": [
+            397,
+            155,
+            119,
+            30
+        ],
+        "threshold": 0.85
+    },
+    "CU_KeepCostume": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/keep_costume.png",
+        "roi": [
+            393,
+            491,
+            236,
+            69
+        ],
+        "threshold": 0.85
+    },
+    "CU_OwnedBadge": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "unlock/owned_one.png",
+            "unlock/owned_one_five.png",
+            "unlock/owned_five.png",
+            "unlock/owned_three.png"
+        ],
+        "roi": [
+            650,
+            222,
+            573,
+            291
+        ],
+        "threshold": 0.8
+    },
+    "CU_HairTab": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/hair_tab.png",
+        "roi": [
+            1040,
+            179,
+            110,
+            29
+        ],
+        "threshold": 0.8
+    },
+    "CU_ScopeMode": {
+        "recognition": "DirectHit",
+        "attach": {
+            "kind": "all"
+        }
+    },
+    "CU_SelectedBand": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": "poppin_party"
+        }
+    },
+    "CU_SelectedMember": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": "牛込里美"
+        }
+    },
+    "CU_SelectedBandFrame": {
+        "recognition": "TemplateMatch",
+        "template": "unlock/selected_band_frame.png",
+        "roi": [
+            18,
+            165,
+            18,
+            110
+        ],
+        "threshold": 0.85
+    }
+}
