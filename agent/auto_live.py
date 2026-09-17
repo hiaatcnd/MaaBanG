@@ -183,6 +183,21 @@ class LiveFlow(DailyFlow):
             raise FlowError('未确认指定火数的单选按钮')
         self.tap(640,641)
 
+    def fire_preview(self):
+        # The counter reflows for one/two digits. Split at the pink arrow,
+        # which OCR otherwise reads as an extra 1.
+        area=self.image[548:568,1058:1093].astype(float)
+        b,g,r=(area[:,:,i] for i in range(3))
+        _,xs=np.where((r>180)&(r-g>60)&(g<170))
+        if len(xs)<10 or not 3<=int(xs.max()-xs.min())<=13:
+            raise FlowError('未定位火数预览箭头')
+        left,right=1058+int(xs.min()),1058+int(xs.max())
+        before=normalized(self.text([1043,540,left-1043-2,33]))
+        after=normalized(self.text([right+3,540,32,33]))
+        if not re.fullmatch(r'\d{1,2}',before) or not re.fullmatch(r'\d{1,2}',after):
+            raise FlowError(f'无法读取火数预览：{before} → {after}')
+        return int(before),int(after)
+
     def verify_start(self, index, difficulty, amount, required_auto):
         self.wait_ready(index)
         title=normalized(self.text([111 if self.options.mode=='tour' else 220,541,
@@ -205,9 +220,10 @@ class LiveFlow(DailyFlow):
         if remaining<required_auto: raise FlowError('自动演出剩余次数不足，不开演')
         balance=self.fire_balance()
         # Read the actual before/after preview immediately before the one spending click.
-        # Exclude the pink arrow: OCR can read it as an extra 1 after a value of 11.
-        before=self.stable_integer([1042,540,32,33])
-        after=self.stable_integer([1090,540,45,33])
+        before,after=self.fire_preview()
+        self.pause(.15)
+        self.snap()
+        if self.fire_preview()!=(before,after): raise FlowError('火数预览读数不稳定')
         if before!=balance or before-after!=amount:
             raise FlowError(f'火数预览不一致：{balance} / {before} → {after}，设置 {amount}')
         return remaining,balance

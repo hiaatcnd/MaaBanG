@@ -142,6 +142,20 @@ class LiveFlowTests(unittest.TestCase):
         f.favorites.assert_called_once()
         self.assertEqual([c.args for c in f.tap.call_args_list],[(1051,540),(1070,648)])
 
+    def test_fire_preview_excludes_arrow_in_both_counter_layouts(self):
+        import numpy as np
+        for arrow,before,after in ((1069,'8','6'),(1077,'11','8')):
+            f=self.flow()
+            f.image=np.full((720,1280,3),255,dtype=np.uint8)
+            f.image[551:563,arrow:arrow+7]=[123,60,255]
+            f.text=Mock(side_effect=[before,after])
+            self.assertEqual(f.fire_preview(),(int(before),int(after)))
+            left,right=[call.args[0] for call in f.text.call_args_list]
+            self.assertLess(left[0]+left[2],arrow)
+            self.assertGreater(right[0],arrow+6)
+        f.image[:]=255
+        with self.assertRaises(FlowError): f.fire_preview()
+
     def test_ui_options_merge_independently_and_allow_blank_limit(self):
         import itertools
         import json
