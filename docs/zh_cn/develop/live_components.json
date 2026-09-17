@@ -388,5 +388,20 @@
       580,
       99
     ]
+  },
+  "RankReward": {
+    "source": "debug/live-final-free-check.png",
+    "crop": [
+      398,
+      87,
+      169,
+      32
+    ],
+    "roi": [
+      365,
+      67,
+      290,
+      65
+    ]
   }
 }

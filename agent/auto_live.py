@@ -265,7 +265,7 @@ class LiveFlow(DailyFlow):
                 self.tap(640,526)
                 self.pause(2)
                 continue
-            if self.reco('LV_RewardModal'):
+            if self.reco('LV_RewardModal') or self.reco('LV_RankReward'):
                 self.tap(640,602)
                 self.pause(2)
                 continue

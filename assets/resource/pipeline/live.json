@@ -285,6 +285,17 @@
         ],
         "threshold": 0.85
     },
+    "LV_RankReward": {
+        "recognition": "TemplateMatch",
+        "template": "live/RankReward.png",
+        "roi": [
+            365,
+            67,
+            290,
+            65
+        ],
+        "threshold": 0.85
+    },
     "AutoLive": {
         "recognition": "DirectHit",
         "action": "Custom",

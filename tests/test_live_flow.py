@@ -119,17 +119,18 @@ class LiveFlowTests(unittest.TestCase):
         f.tap.assert_called_once_with(640,526)
         f.tap_hit.assert_called_once_with(button)
 
-    def test_daily_reward_is_closed_before_underlying_rewards_page(self):
-        f=self.flow()
-        f.settle_results=LiveFlow.settle_results.__get__(f)
-        scenes=iter(['daily','home']); state={}
-        f.snap=Mock(side_effect=lambda:state.update(scene=next(scenes)))
-        f.pause=Mock()
-        f.reco=Mock(side_effect=lambda node:node in {
-            'daily':{'LV_DailyReward','LV_Rewards'}, 'home':{'CU_HomeBand'},
-        }[state['scene']])
-        f.settle_results()
-        f.tap.assert_called_once_with(640,544)
+    def test_reward_modals_are_closed_before_underlying_rewards_page(self):
+        for modal,y in (('LV_DailyReward',544),('LV_RankReward',602)):
+            f=self.flow()
+            f.settle_results=LiveFlow.settle_results.__get__(f)
+            scenes=iter(['reward','home']); state={}
+            f.snap=Mock(side_effect=lambda:state.update(scene=next(scenes)))
+            f.pause=Mock()
+            f.reco=Mock(side_effect=lambda node:node in {
+                'reward':{modal,'LV_Rewards','LV_Experience'}, 'home':{'CU_HomeBand'},
+            }[state['scene']])
+            f.settle_results()
+            f.tap.assert_called_once_with(640,y)
 
     def test_wait_song_polls_without_clicking_and_requires_next_tour_index(self):
         f=self.flow(mode='tour')
