@@ -1,0 +1,329 @@
+{
+    "LV_HomeEntry": {
+        "recognition": "TemplateMatch",
+        "template": "live/HomeEntry.png",
+        "roi": [
+            1050,
+            550,
+            230,
+            170
+        ],
+        "threshold": 0.85
+    },
+    "LV_Menu": {
+        "recognition": "TemplateMatch",
+        "template": "live/Menu.png",
+        "roi": [
+            105,
+            45,
+            320,
+            50
+        ],
+        "threshold": 0.85
+    },
+    "LV_FreeEntry": {
+        "recognition": "TemplateMatch",
+        "template": "live/FreeEntry.png",
+        "roi": [
+            683,
+            366,
+            255,
+            178
+        ],
+        "threshold": 0.85
+    },
+    "LV_TourEntry": {
+        "recognition": "TemplateMatch",
+        "template": "live/TourEntry.png",
+        "roi": [
+            683,
+            182,
+            254,
+            179
+        ],
+        "threshold": 0.85
+    },
+    "LV_TourHome": {
+        "recognition": "TemplateMatch",
+        "template": "live/TourHome.png",
+        "roi": [
+            110,
+            47,
+            324,
+            50
+        ],
+        "threshold": 0.85
+    },
+    "LV_TourFree": {
+        "recognition": "TemplateMatch",
+        "template": "live/TourFree.png",
+        "roi": [
+            686,
+            304,
+            311,
+            125
+        ],
+        "threshold": 0.85
+    },
+    "LV_SongPage": {
+        "recognition": "TemplateMatch",
+        "template": "live/SongPage.png",
+        "roi": [
+            112,
+            46,
+            300,
+            48
+        ],
+        "threshold": 0.85
+    },
+    "LV_FreeHeader": {
+        "recognition": "TemplateMatch",
+        "template": "live/FreeHeader.png",
+        "roi": [
+            114,
+            12,
+            166,
+            40
+        ],
+        "threshold": 0.85
+    },
+    "LV_TourHeader": {
+        "recognition": "TemplateMatch",
+        "template": "live/TourHeader.png",
+        "roi": [
+            114,
+            12,
+            166,
+            40
+        ],
+        "threshold": 0.85
+    },
+    "LV_TourSetup": {
+        "recognition": "TemplateMatch",
+        "template": "live/TourSetup.png",
+        "roi": [
+            112,
+            46,
+            300,
+            48
+        ],
+        "threshold": 0.85
+    },
+    "LV_FreeReady": {
+        "recognition": "TemplateMatch",
+        "template": "live/FreeReady.png",
+        "roi": [
+            112,
+            46,
+            300,
+            48
+        ],
+        "threshold": 0.85
+    },
+    "LV_FireDialog": {
+        "recognition": "TemplateMatch",
+        "template": "live/FireDialog.png",
+        "roi": [
+            230,
+            25,
+            420,
+            62
+        ],
+        "threshold": 0.85
+    },
+    "LV_AutoOn": {
+        "recognition": "TemplateMatch",
+        "template": "live/AutoOn.png",
+        "roi": [
+            790,
+            558,
+            198,
+            47
+        ],
+        "threshold": 0.85
+    },
+    "LV_AutoOff": {
+        "recognition": "TemplateMatch",
+        "template": "live/AutoOff.png",
+        "roi": [
+            786,
+            558,
+            211,
+            47
+        ],
+        "threshold": 0.85
+    },
+    "LV_AutoPlaying": {
+        "recognition": "TemplateMatch",
+        "template": "live/AutoPlaying.png",
+        "roi": [
+            18,
+            106,
+            214,
+            49
+        ],
+        "threshold": 0.85
+    },
+    "LV_TourSummary": {
+        "recognition": "TemplateMatch",
+        "template": "live/TourSummary.png",
+        "roi": [
+            95,
+            15,
+            328,
+            44
+        ],
+        "threshold": 0.85
+    },
+    "LV_ScoreAuto": {
+        "recognition": "TemplateMatch",
+        "template": "live/ScoreAuto.png",
+        "roi": [
+            645,
+            104,
+            210,
+            65
+        ],
+        "threshold": 0.85
+    },
+    "LV_Rewards": {
+        "recognition": "TemplateMatch",
+        "template": "live/Rewards.png",
+        "roi": [
+            87,
+            412,
+            166,
+            56
+        ],
+        "threshold": 0.85
+    },
+    "LV_Experience": {
+        "recognition": "TemplateMatch",
+        "template": "live/Experience.png",
+        "roi": [
+            110,
+            89,
+            184,
+            54
+        ],
+        "threshold": 0.85
+    },
+    "LV_RewardModal": {
+        "recognition": "TemplateMatch",
+        "template": "live/RewardModal.png",
+        "roi": [
+            362,
+            68,
+            241,
+            60
+        ],
+        "threshold": 0.85
+    },
+    "LV_TalkMenu": {
+        "recognition": "TemplateMatch",
+        "template": "live/TalkMenu.png",
+        "roi": [
+            1090,
+            16,
+            177,
+            87
+        ],
+        "threshold": 0.85
+    },
+    "LV_TalkSkip": {
+        "recognition": "TemplateMatch",
+        "template": "live/TalkSkip.png",
+        "roi": [
+            521,
+            22,
+            116,
+            76
+        ],
+        "threshold": 0.85
+    },
+    "LV_TalkSkipConfirm": {
+        "recognition": "TemplateMatch",
+        "template": "live/TalkSkipConfirm.png",
+        "roi": [
+            481,
+            310,
+            337,
+            62
+        ],
+        "threshold": 0.85
+    },
+    "LV_RankUp": {
+        "recognition": "TemplateMatch",
+        "template": "live/RankUp.png",
+        "roi": [
+            463,
+            92,
+            354,
+            114
+        ],
+        "threshold": 0.85
+    },
+    "LV_DailyReward": {
+        "recognition": "TemplateMatch",
+        "template": "live/DailyReward.png",
+        "roi": [
+            371,
+            122,
+            340,
+            60
+        ],
+        "threshold": 0.85
+    },
+    "LV_LoginReward": {
+        "recognition": "TemplateMatch",
+        "template": "live/LoginReward.png",
+        "roi": [
+            340,
+            8,
+            580,
+            99
+        ],
+        "threshold": 0.85
+    },
+    "AutoLive": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "AutoLive"
+    },
+    "LV_Mode": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": "free"
+        }
+    },
+    "LV_Song": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": "SAVIOR OF SONG"
+        }
+    },
+    "LV_Difficulty": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": "expert"
+        }
+    },
+    "LV_Fire": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": 3
+        }
+    },
+    "LV_Shortage": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": "stop"
+        }
+    },
+    "LV_MaxRounds": {
+        "recognition": "DirectHit",
+        "attach": {
+            "value": ""
+        }
+    }
+}

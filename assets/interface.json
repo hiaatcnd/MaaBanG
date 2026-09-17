@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.2.0",
+    "version": "v0.3.0",
     "controller": [
         {
             "name": "安卓端",
@@ -59,6 +59,20 @@
             "entry": "DailyFreeRecruit",
             "description": "仅执行每日3次免费演出招募的剩余可用次数，不使用星石或招募券，完成后返回主页。",
             "default_check": false
+        },
+        {
+            "name": "清火自动演出",
+            "entry": "AutoLive",
+            "default_check": false,
+            "description": "只使用游戏内自动演出，从收藏选择歌曲。自由巡演同一首歌选三次；每首消耗一次自动额度，每日最多10次。SPECIAL不可用时使用EXPERT。最大次数按完整演出流程计数，巡演三首计一次；留空运行到自动额度不足或火不足策略停止。",
+            "option": [
+                "演出模式",
+                "演出歌曲",
+                "演出难度",
+                "每首消耗火数",
+                "火不足策略",
+                "最大演出次数"
+            ]
         }
     ],
     "option": {
@@ -700,6 +714,207 @@
                     }
                 }
             ]
+        },
+        "演出模式": {
+            "type": "select",
+            "default_case": "自由演出",
+            "cases": [
+                {
+                    "name": "自由演出",
+                    "pipeline_override": {
+                        "LV_Mode": {
+                            "attach": {
+                                "value": "free"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "巡回演出（自由巡演）",
+                    "pipeline_override": {
+                        "LV_Mode": {
+                            "attach": {
+                                "value": "tour"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "演出歌曲": {
+            "type": "select",
+            "default_case": "SAVIOR OF SONG",
+            "cases": [
+                {
+                    "name": "SAVIOR OF SONG",
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "SAVIOR OF SONG"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "EXIST",
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "EXIST"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "演出难度": {
+            "type": "select",
+            "default_case": "EXPERT",
+            "cases": [
+                {
+                    "name": "EASY",
+                    "pipeline_override": {
+                        "LV_Difficulty": {
+                            "attach": {
+                                "value": "easy"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "NORMAL",
+                    "pipeline_override": {
+                        "LV_Difficulty": {
+                            "attach": {
+                                "value": "normal"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "HARD",
+                    "pipeline_override": {
+                        "LV_Difficulty": {
+                            "attach": {
+                                "value": "hard"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "EXPERT",
+                    "pipeline_override": {
+                        "LV_Difficulty": {
+                            "attach": {
+                                "value": "expert"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "SPECIAL",
+                    "pipeline_override": {
+                        "LV_Difficulty": {
+                            "attach": {
+                                "value": "special"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "每首消耗火数": {
+            "type": "select",
+            "default_case": "3",
+            "cases": [
+                {
+                    "name": "0",
+                    "pipeline_override": {
+                        "LV_Fire": {
+                            "attach": {
+                                "value": 0
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "1",
+                    "pipeline_override": {
+                        "LV_Fire": {
+                            "attach": {
+                                "value": 1
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "2",
+                    "pipeline_override": {
+                        "LV_Fire": {
+                            "attach": {
+                                "value": 2
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "3",
+                    "pipeline_override": {
+                        "LV_Fire": {
+                            "attach": {
+                                "value": 3
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "火不足策略": {
+            "type": "select",
+            "default_case": "停止",
+            "cases": [
+                {
+                    "name": "停止",
+                    "pipeline_override": {
+                        "LV_Shortage": {
+                            "attach": {
+                                "value": "stop"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "降低火数（最低0火）",
+                    "pipeline_override": {
+                        "LV_Shortage": {
+                            "attach": {
+                                "value": "lower"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "最大演出次数": {
+            "type": "input",
+            "description": "自由演出一首计一次；巡演连续三首计一次。留空不限次数，但自动演出次数不足时仍停止。",
+            "inputs": [
+                {
+                    "name": "次数",
+                    "label": "最大演出次数（留空不限）",
+                    "default": "",
+                    "verify": "^([1-9][0-9]{0,2})?$",
+                    "pattern_msg": "留空或填写1–999",
+                    "pipeline_type": "string"
+                }
+            ],
+            "pipeline_override": {
+                "LV_MaxRounds": {
+                    "attach": {
+                        "value": "{次数}"
+                    }
+                }
+            }
         }
     },
     "agent": {
