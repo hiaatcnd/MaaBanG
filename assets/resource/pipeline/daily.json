@@ -1,0 +1,308 @@
+{
+    "DY_MenuButton": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MenuButton.png",
+        "roi": [
+            1180,
+            10,
+            95,
+            85
+        ],
+        "threshold": 0.85
+    },
+    "DY_MenuHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MenuHeader.png",
+        "roi": [
+            140,
+            90,
+            150,
+            70
+        ],
+        "threshold": 0.85
+    },
+    "DY_MenuHome": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MenuHome.png",
+        "roi": [
+            150,
+            165,
+            250,
+            90
+        ],
+        "threshold": 0.85
+    },
+    "DY_MenuExchange": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MenuExchange.png",
+        "roi": [
+            889,
+            170,
+            230,
+            80
+        ],
+        "threshold": 0.85
+    },
+    "DY_GiftEntry": {
+        "recognition": "TemplateMatch",
+        "template": "daily/GiftEntry.png",
+        "roi": [
+            1190,
+            215,
+            80,
+            90
+        ],
+        "threshold": 0.85
+    },
+    "DY_MissionEntry": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MissionEntry.png",
+        "roi": [
+            1190,
+            315,
+            75,
+            85
+        ],
+        "threshold": 0.85
+    },
+    "DY_RecruitEntry": {
+        "recognition": "TemplateMatch",
+        "template": "daily/RecruitEntry.png",
+        "roi": [
+            620,
+            610,
+            160,
+            100
+        ],
+        "threshold": 0.85
+    },
+    "DY_GiftHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/GiftHeader.png",
+        "roi": [
+            109,
+            11,
+            150,
+            45
+        ],
+        "threshold": 0.85
+    },
+    "DY_GiftEmpty": {
+        "recognition": "TemplateMatch",
+        "template": "daily/GiftEmpty.png",
+        "roi": [
+            390,
+            300,
+            510,
+            220
+        ],
+        "threshold": 0.85
+    },
+    "DY_ClaimedHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/ClaimedHeader.png",
+        "roi": [
+            365,
+            60,
+            420,
+            80
+        ],
+        "threshold": 0.85
+    },
+    "DY_MissionHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MissionHeader.png",
+        "roi": [
+            109,
+            11,
+            150,
+            45
+        ],
+        "threshold": 0.85
+    },
+    "DY_MissionNext": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MissionNext.png",
+        "roi": [
+            925,
+            112,
+            70,
+            62
+        ],
+        "threshold": 0.85
+    },
+    "DY_ExchangeHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/ExchangeHeader.png",
+        "roi": [
+            109,
+            11,
+            150,
+            45
+        ],
+        "threshold": 0.85
+    },
+    "DY_MichelleEntry": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MichelleEntry.png",
+        "roi": [
+            565,
+            125,
+            430,
+            200
+        ],
+        "threshold": 0.85
+    },
+    "DY_MichelleHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MichelleHeader.png",
+        "roi": [
+            108,
+            48,
+            290,
+            42
+        ],
+        "threshold": 0.85
+    },
+    "DY_ExchangeQuantity": {
+        "recognition": "TemplateMatch",
+        "template": "daily/ExchangeQuantity.png",
+        "roi": [
+            388,
+            72,
+            470,
+            70
+        ],
+        "threshold": 0.85
+    },
+    "DY_ExchangeVerify": {
+        "recognition": "TemplateMatch",
+        "template": "daily/ExchangeVerify.png",
+        "roi": [
+            388,
+            72,
+            470,
+            70
+        ],
+        "threshold": 0.85
+    },
+    "DY_ExchangeSuccess": {
+        "recognition": "TemplateMatch",
+        "template": "daily/ExchangeSuccess.png",
+        "roi": [
+            380,
+            130,
+            470,
+            73
+        ],
+        "threshold": 0.85
+    },
+    "DY_StickerConfirm": {
+        "recognition": "TemplateMatch",
+        "template": "daily/StickerConfirm.png",
+        "roi": [
+            395,
+            400,
+            65,
+            85
+        ],
+        "threshold": 0.85
+    },
+    "DY_FreeTab": {
+        "recognition": "TemplateMatch",
+        "template": "daily/FreeTab.png",
+        "roi": [
+            28,
+            98,
+            197,
+            610
+        ],
+        "threshold": 0.85
+    },
+    "DY_FreeBanner": {
+        "recognition": "TemplateMatch",
+        "template": "daily/FreeBanner.png",
+        "roi": [
+            250,
+            340,
+            300,
+            150
+        ],
+        "threshold": 0.85
+    },
+    "DY_FreeConfirm": {
+        "recognition": "TemplateMatch",
+        "template": "daily/FreeConfirm.png",
+        "roi": [
+            480,
+            260,
+            330,
+            125
+        ],
+        "threshold": 0.85
+    },
+    "DY_RecruitSkip": {
+        "recognition": "TemplateMatch",
+        "template": "daily/RecruitSkip.png",
+        "roi": [
+            1140,
+            20,
+            115,
+            75
+        ],
+        "threshold": 0.85
+    },
+    "DY_ObtainedHeader": {
+        "recognition": "TemplateMatch",
+        "template": "daily/ObtainedHeader.png",
+        "roi": [
+            365,
+            60,
+            420,
+            80
+        ],
+        "threshold": 0.85
+    },
+    "DY_RecruitResult": {
+        "recognition": "TemplateMatch",
+        "template": "daily/RecruitResult.png",
+        "roi": [
+            110,
+            48,
+            210,
+            43
+        ],
+        "threshold": 0.85
+    },
+    "DY_MemberReveal": {
+        "recognition": "TemplateMatch",
+        "template": "daily/MemberReveal.png",
+        "roi": [
+            0,
+            620,
+            145,
+            100
+        ],
+        "threshold": 0.85
+    },
+    "ClaimHomeGifts": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "ClaimHomeGifts"
+    },
+    "ClaimHomeMissions": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "ClaimHomeMissions"
+    },
+    "ExchangeMichelle": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "ExchangeMichelle"
+    },
+    "DailyFreeRecruit": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "DailyFreeRecruit"
+    }
+}

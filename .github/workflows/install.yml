@@ -23,7 +23,7 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.1.1-ci' }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.2.0-ci' }
           python tools/install.py $version
       - uses: actions/upload-artifact@v4
         with:

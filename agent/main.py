@@ -19,8 +19,11 @@ def main():
     from maa.agent.agent_server import AgentServer
     from maa.toolkit import Toolkit
     import costume_unlock
+    import daily_tasks
 
     AgentServer.custom_action("UnlockDefault3DCostumes")(costume_unlock.UnlockDefault3DCostumes)
+    for name in ("ClaimHomeGifts", "ClaimHomeMissions", "ExchangeMichelle", "DailyFreeRecruit"):
+        AgentServer.custom_action(name)(getattr(daily_tasks, name))
     Toolkit.init_option("./")
 
     socket_id = sys.argv[-1]
