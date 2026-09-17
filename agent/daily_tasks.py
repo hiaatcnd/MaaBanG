@@ -8,7 +8,8 @@ from maa.custom_action import CustomAction
 
 from costume_unlock import CostumeFlow, FlowError, normalized
 from daily_policy import (EXCHANGE_CATEGORIES, MISSION_CATEGORIES, integer,
-                          remaining_draws, verify_exchange, verify_free_confirmation)
+                          remaining_draws, verify_exchange, verify_free_confirmation,
+                          selected_exchange_categories)
 
 
 class DailyFlow(CostumeFlow):
@@ -181,9 +182,18 @@ class DailyFlow(CostumeFlow):
         print(f"[贴纸交换] {category}：{name}，消耗 {cost} 贴纸",flush=True)
         return True
 
-    def exchange(self):
+    def exchange(self, categories=None):
+        if categories is None:
+            categories = selected_exchange_categories(self.ctx)
+        if any(category not in EXCHANGE_CATEGORIES for category in categories):
+            raise ValueError("未知交换分类")
+        categories = [category for category in EXCHANGE_CATEGORIES if category in categories]
+        self.report["categories"] = categories
+        if not categories:
+            self.report["status"] = "no_categories_selected"
+            return
         self.open_exchange()
-        for category in EXCHANGE_CATEGORIES:
+        for category in categories:
             self.select_exchange_category(category)
             previous = None
             for _ in range(1500):

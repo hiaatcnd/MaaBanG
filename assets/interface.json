@@ -48,8 +48,11 @@
         {
             "name": "米歇尔贴纸交换",
             "entry": "ExchangeMichelle",
-            "description": "使用米歇尔贴纸，交换成员、表情、服装、背景、其他分类中所有未拥有且未达到交换上限的项目。余额不足时停止，完成后返回主页。",
-            "default_check": false
+            "description": "使用米歇尔贴纸，交换所选分类中未拥有且未达到交换上限的项目。可多选成员、表情、服装、背景、其他；不选则不执行。余额不足时停止，完成后返回主页。",
+            "default_check": false,
+            "option": [
+                "贴纸交换分类"
+            ]
         },
         {
             "name": "每日免费招募",
@@ -629,6 +632,69 @@
                         "CU_SelectedMember": {
                             "attach": {
                                 "value": "要乐奈"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "贴纸交换分类": {
+            "type": "checkbox",
+            "description": "只交换勾选分类中的可交换项目。默认全选；全部取消时不执行。",
+            "default_case": [
+                "成员",
+                "表情",
+                "服装",
+                "背景",
+                "其他"
+            ],
+            "cases": [
+                {
+                    "name": "成员",
+                    "pipeline_override": {
+                        "DY_ExchangeMembers": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "表情",
+                    "pipeline_override": {
+                        "DY_ExchangeEmotes": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "服装",
+                    "pipeline_override": {
+                        "DY_ExchangeCostumes": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "背景",
+                    "pipeline_override": {
+                        "DY_ExchangeBackgrounds": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "其他",
+                    "pipeline_override": {
+                        "DY_ExchangeOther": {
+                            "attach": {
+                                "enabled": true
                             }
                         }
                     }
