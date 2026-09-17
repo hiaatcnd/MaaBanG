@@ -16,6 +16,8 @@ class SimulatedFlow(CostumeFlow):
         self.counts=iter(counts)
         self.results=iter(results)
         self.attempts=[]
+        self.collect_after_unlock=Mock()
+        self.return_home=Mock()
 
     def rating_select(self): pass
     def select_band(self, *args): pass
@@ -68,6 +70,8 @@ class FlowTests(unittest.TestCase):
         flow.reco=reco
         flow.clicks=[]
         flow.click=lambda node: flow.clicks.append(node)
+        flow.collect_after_unlock=Mock()
+        flow.return_home=Mock()
         return flow
 
     @patch('costume_unlock.time.sleep')
@@ -93,6 +97,8 @@ class FlowTests(unittest.TestCase):
         flow.goto_costumes.assert_called_once_with('牛込里美')
         flow.reset_costume_scroll.assert_called_once()
         flow.return_from_costumes.assert_called_once_with('牛込里美')
+        flow.collect_after_unlock.assert_called_once_with('牛込里美')
+        flow.return_home.assert_called_once()
         self.assertEqual(flow.clicks.count('CU_ConfirmUnlock'),2)
         self.assertEqual(flow.report['characters'][0]['after'],3)
 
@@ -105,10 +111,14 @@ class FlowTests(unittest.TestCase):
         flow.select_band=lambda *_: None
         flow.read_count=Mock(return_value=65)
         flow.stable_ratio=Mock(side_effect=[(200,200),(20000,10000),(0,200),(10000,10000)])
-        flow.return_from_costumes=Mock()
+        def returned(*_):
+            flow.costume_character=None
+        flow.return_from_costumes=Mock(side_effect=returned)
         flow.run()
         flow.read_count.assert_called_once()
         flow.return_from_costumes.assert_called_once()
+        flow.collect_after_unlock.assert_called_once_with('牛込里美')
+        flow.return_home.assert_called_once()
         self.assertEqual(flow.clicks.count('CU_ConfirmUnlock'),1)
         self.assertEqual(flow.report['characters'][0]['after'],66)
         self.assertEqual(flow.report['status'],'insufficient_kits')

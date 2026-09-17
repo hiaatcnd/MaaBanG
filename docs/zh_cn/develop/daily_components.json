@@ -1,0 +1,392 @@
+{
+  "MenuButton": {
+    "source": "debug/home.png",
+    "crop": [
+      1205,
+      37,
+      46,
+      34
+    ],
+    "roi": [
+      1180,
+      10,
+      95,
+      85
+    ]
+  },
+  "MenuHeader": {
+    "source": "debug/menu-open.png",
+    "crop": [
+      156,
+      111,
+      80,
+      38
+    ],
+    "roi": [
+      140,
+      90,
+      150,
+      70
+    ]
+  },
+  "MenuHome": {
+    "source": "debug/menu-open.png",
+    "crop": [
+      169,
+      187,
+      157,
+      47
+    ],
+    "roi": [
+      150,
+      165,
+      250,
+      90
+    ]
+  },
+  "MenuExchange": {
+    "source": "debug/menu-open.png",
+    "crop": [
+      909,
+      185,
+      166,
+      48
+    ],
+    "roi": [
+      889,
+      170,
+      230,
+      80
+    ]
+  },
+  "GiftEntry": {
+    "source": "debug/home.png",
+    "crop": [
+      1207,
+      233,
+      52,
+      50
+    ],
+    "roi": [
+      1190,
+      215,
+      80,
+      90
+    ]
+  },
+  "MissionEntry": {
+    "source": "debug/home-return.png",
+    "crop": [
+      1213,
+      338,
+      38,
+      37
+    ],
+    "roi": [
+      1190,
+      315,
+      75,
+      85
+    ]
+  },
+  "RecruitEntry": {
+    "source": "debug/home.png",
+    "crop": [
+      667,
+      626,
+      70,
+      66
+    ],
+    "roi": [
+      620,
+      610,
+      160,
+      100
+    ]
+  },
+  "GiftHeader": {
+    "source": "debug/gift-open.png",
+    "crop": [
+      124,
+      23,
+      48,
+      24
+    ],
+    "roi": [
+      109,
+      11,
+      150,
+      45
+    ]
+  },
+  "GiftEmpty": {
+    "source": "debug/gift-empty.png",
+    "crop": [
+      526,
+      387,
+      217,
+      33
+    ],
+    "roi": [
+      390,
+      300,
+      510,
+      220
+    ]
+  },
+  "ClaimedHeader": {
+    "source": "debug/gift-confirm.png",
+    "crop": [
+      395,
+      85,
+      212,
+      34
+    ],
+    "roi": [
+      365,
+      60,
+      420,
+      80
+    ]
+  },
+  "MissionHeader": {
+    "source": "debug/missions-open.png",
+    "crop": [
+      126,
+      22,
+      45,
+      24
+    ],
+    "roi": [
+      109,
+      11,
+      150,
+      45
+    ]
+  },
+  "MissionNext": {
+    "source": "debug/missions-open.png",
+    "crop": [
+      943,
+      126,
+      23,
+      33
+    ],
+    "roi": [
+      925,
+      112,
+      70,
+      62
+    ]
+  },
+  "ExchangeHeader": {
+    "source": "debug/exchange-list.png",
+    "crop": [
+      126,
+      23,
+      68,
+      25
+    ],
+    "roi": [
+      109,
+      11,
+      150,
+      45
+    ]
+  },
+  "MichelleEntry": {
+    "source": "debug/exchange-list.png",
+    "crop": [
+      606,
+      174,
+      218,
+      32
+    ],
+    "roi": [
+      565,
+      125,
+      430,
+      200
+    ]
+  },
+  "MichelleHeader": {
+    "source": "debug/exchange-members.png",
+    "crop": [
+      126,
+      53,
+      211,
+      30
+    ],
+    "roi": [
+      108,
+      48,
+      290,
+      42
+    ]
+  },
+  "ExchangeQuantity": {
+    "source": "debug/exchange-confirm.png",
+    "crop": [
+      414,
+      95,
+      190,
+      36
+    ],
+    "roi": [
+      388,
+      72,
+      470,
+      70
+    ]
+  },
+  "ExchangeVerify": {
+    "source": "debug/exchange-success.png",
+    "crop": [
+      414,
+      95,
+      267,
+      36
+    ],
+    "roi": [
+      388,
+      72,
+      470,
+      70
+    ]
+  },
+  "ExchangeSuccess": {
+    "source": "debug/exchange-result.png",
+    "crop": [
+      414,
+      151,
+      135,
+      37
+    ],
+    "roi": [
+      380,
+      130,
+      470,
+      73
+    ]
+  },
+  "StickerConfirm": {
+    "source": "debug/exchange-confirm.png",
+    "crop": [
+      412,
+      445,
+      30,
+      28
+    ],
+    "roi": [
+      395,
+      400,
+      65,
+      85
+    ]
+  },
+  "FreeTab": {
+    "source": "debug/recruit-list.png",
+    "crop": [
+      62,
+      389,
+      132,
+      52
+    ],
+    "roi": [
+      28,
+      98,
+      197,
+      610
+    ]
+  },
+  "FreeBanner": {
+    "source": "debug/recruit-free.png",
+    "crop": [
+      270,
+      358,
+      245,
+      101
+    ],
+    "roi": [
+      250,
+      340,
+      300,
+      150
+    ]
+  },
+  "FreeConfirm": {
+    "source": "debug/recruit-confirm.png",
+    "crop": [
+      508,
+      277,
+      266,
+      85
+    ],
+    "roi": [
+      480,
+      260,
+      330,
+      125
+    ]
+  },
+  "RecruitSkip": {
+    "source": "debug/recruit-result.png",
+    "crop": [
+      1177,
+      34,
+      48,
+      48
+    ],
+    "roi": [
+      1140,
+      20,
+      115,
+      75
+    ]
+  },
+  "ObtainedHeader": {
+    "source": "debug/recruit-result-ready.png",
+    "crop": [
+      396,
+      84,
+      115,
+      34
+    ],
+    "roi": [
+      365,
+      60,
+      420,
+      80
+    ]
+  },
+  "RecruitResult": {
+    "source": "debug/recruit-result-final.png",
+    "crop": [
+      125,
+      53,
+      109,
+      29
+    ],
+    "roi": [
+      110,
+      48,
+      210,
+      43
+    ]
+  },
+  "MemberReveal": {
+    "source": "debug/daily-running.png",
+    "crop": [
+      9,
+      638,
+      112,
+      68
+    ],
+    "roi": [
+      0,
+      620,
+      145,
+      100
+    ]
+  }
+}

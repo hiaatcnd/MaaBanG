@@ -18,6 +18,7 @@ class ScopeTests(unittest.TestCase):
         clicks = []
         flow.tap = lambda x, y: clicks.append((flow.active_band, flow.active_index, x))
         flow.read_count = lambda _: 1
+        flow.return_home = lambda: None
         flow.run()
         return flow.report['characters'], clicks
 

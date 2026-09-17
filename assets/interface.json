@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.1.1",
+    "version": "v0.2.0",
     "controller": [
         {
             "name": "安卓端",
@@ -26,12 +26,36 @@
         {
             "name": "解锁默认3D演出服装",
             "entry": "UnlockCostumes",
-            "description": "支持全部成员、指定乐队或指定成员，根据评级进度将默认3D演出服装补到目标数量；收集任务全部完成的角色直接跳过。裁缝套装或金币不足时停止。请从主页、乐队或角色评级页面启动。",
+            "description": "支持全部成员、指定乐队或指定成员，根据评级进度将默认3D演出服装补到目标数量；收集任务全部完成的角色直接跳过。裁缝套装或金币不足时停止。请从主页、乐队或角色评级页面启动。 每位成员解锁结束后领取服装收集奖励，任务完成后返回主页；不会更换穿搭。",
             "option": [
                 "服装执行范围",
                 "服装目标数量",
                 "服装执行模式"
             ]
+        },
+        {
+            "name": "领取主页礼物",
+            "entry": "ClaimHomeGifts",
+            "description": "领取礼物箱中所有可领取礼物，完成后返回主页。",
+            "default_check": false
+        },
+        {
+            "name": "领取任务奖励",
+            "entry": "ClaimHomeMissions",
+            "description": "依次领取各类任务中已达成的奖励，不自动完成演出条件；结束后返回主页。",
+            "default_check": false
+        },
+        {
+            "name": "米歇尔贴纸交换",
+            "entry": "ExchangeMichelle",
+            "description": "使用米歇尔贴纸，交换成员、表情、服装、背景、其他分类中所有未拥有且未达到交换上限的项目。余额不足时停止，完成后返回主页。",
+            "default_check": false
+        },
+        {
+            "name": "每日免费招募",
+            "entry": "DailyFreeRecruit",
+            "description": "仅执行每日3次免费演出招募的剩余可用次数，不使用星石或招募券，完成后返回主页。",
+            "default_check": false
         }
     ],
     "option": {
@@ -623,4 +647,3 @@
         ]
     }
 }
-

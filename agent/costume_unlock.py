@@ -414,6 +414,23 @@ class CostumeFlow:
         self.return_from_costumes(character)
         return "no_unlockable_costumes"
 
+    def collect_after_unlock(self, character):
+        # Once per member after the entire batch, never between purchases.
+        self.reopen_rating_character(character)
+        self.read_count(character)  # Claims all reached default-3D milestones.
+
+    def finish_character(self, character, row):
+        if self.costume_character == character:
+            self.return_from_costumes(character)
+        if row["after"] is not None and row["after"] > row["before"]:
+            self.collect_after_unlock(character)
+            row["rewards_collected"] = True
+
+    def return_home(self):
+        from daily_tasks import DailyFlow
+        DailyFlow(self.ctx).home()
+        self.report["returned_home"] = True
+
     def run(self):
         if self.target == 0:
             self.report["status"] = "target_reached"
@@ -454,15 +471,17 @@ class CostumeFlow:
                             row["after"] = None
                         if result.startswith("insufficient_"):
                             self.report["status"] = result
+                            self.finish_character(character, row)
+                            self.return_home()
                             return
                         break
                 else:
                     row["status"] = "target_reached"
-                if self.costume_character == character:
-                    self.return_from_costumes(character)
+                self.finish_character(character, row)
                 self.rating_select()
                 self.select_band(band)
         self.report["status"] = "finished"
+        self.return_home()
 
 
 class UnlockDefault3DCostumes(CustomAction):
