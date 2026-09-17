@@ -205,7 +205,8 @@ class LiveFlow(DailyFlow):
         if remaining<required_auto: raise FlowError('自动演出剩余次数不足，不开演')
         balance=self.fire_balance()
         # Read the actual before/after preview immediately before the one spending click.
-        before=self.stable_integer([1045,540,37,33])
+        # Exclude the pink arrow: OCR can read it as an extra 1 after a value of 11.
+        before=self.stable_integer([1042,540,32,33])
         after=self.stable_integer([1090,540,45,33])
         if before!=balance or before-after!=amount:
             raise FlowError(f'火数预览不一致：{balance} / {before} → {after}，设置 {amount}')
