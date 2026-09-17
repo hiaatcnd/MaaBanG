@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'agent'))
 from auto_live import LiveFlow
@@ -30,6 +30,20 @@ class LiveFlowTests(unittest.TestCase):
         f.home.assert_called_once()
         self.assertEqual(f.report['completed_rounds'],1)
         self.assertEqual(f.report['status'],'max_rounds_reached')
+
+    def test_navigation_retries_lost_click_only_on_known_source(self):
+        for known_source in (True,False):
+            f=self.flow(); f.click=Mock(); clock={'now':0}
+            f.pause=Mock(side_effect=lambda seconds:clock.update(now=clock['now']+seconds))
+            f.reco=Mock(side_effect=lambda node:
+                f.click.call_count==2 if node=='destination' else known_source)
+            with patch('auto_live.time.monotonic',side_effect=lambda:clock['now']):
+                if known_source:
+                    f.open_page('source','destination')
+                    self.assertEqual(f.click.call_count,2)
+                else:
+                    with self.assertRaises(FlowError): f.open_page('source','destination')
+                    f.click.assert_called_once()
 
     def test_tour_checks_each_song_and_counts_one_round(self):
         f=self.flow(mode='tour',max_rounds='1',fire=1)

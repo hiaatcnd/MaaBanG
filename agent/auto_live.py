@@ -52,6 +52,19 @@ class LiveFlow(DailyFlow):
             self.pause(.5)
         raise FlowError(f'未到达第 {index} 首准备页')
 
+    def open_page(self, button, destination):
+        # Non-spending navigation only: a click during a closing animation may be lost.
+        for _ in range(3):
+            self.click(button)
+            deadline=time.monotonic()+4
+            while time.monotonic()<deadline:
+                self.snap()
+                if self.reco(destination): return
+                self.pause(.5)
+            if not self.reco(button):
+                raise FlowError(f'导航后出现未知页面：{destination}')
+        raise FlowError(f'无法打开页面：{destination}')
+
     def navigate_menu(self):
         # Only unwind pre-live screens. Never abandon an in-progress tour automatically.
         for _ in range(5):
@@ -64,7 +77,7 @@ class LiveFlow(DailyFlow):
                 self.back()
                 continue
             self.home()
-            self.click('LV_HomeEntry')
+            self.open_page('LV_HomeEntry','LV_Menu')
         self.wait('LV_Menu')
 
     def favorites(self):
@@ -143,12 +156,11 @@ class LiveFlow(DailyFlow):
     def prepare_round(self):
         self.navigate_menu()
         if self.options.mode=='free':
-            self.click('LV_FreeEntry')
+            self.open_page('LV_FreeEntry','LV_SongPage')
             difficulty=self.choose_song()
         else:
-            self.click('LV_TourEntry')
-            self.wait('LV_TourHome')
-            self.click('LV_TourFree')
+            self.open_page('LV_TourEntry','LV_TourHome')
+            self.open_page('LV_TourFree','LV_TourSetup')
             difficulties=[]
             for x in (324,736,1148):
                 self.wait('LV_TourSetup')
