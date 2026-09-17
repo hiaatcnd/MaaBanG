@@ -7,7 +7,8 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'agent'))
-from daily_policy import integer, remaining_draws, verify_exchange, verify_free_confirmation, EXCHANGE_CATEGORIES
+from daily_policy import (integer, remaining_draws, verify_exchange, verify_free_confirmation,
+                          EXCHANGE_CATEGORIES, EXCHANGE_OPTION_NODES, selected_exchange_categories)
 from daily_tasks import DailyFlow
 from costume_unlock import CostumeFlow, FlowError
 
@@ -36,7 +37,8 @@ class DailyPolicyTests(unittest.TestCase):
 
 class DailyFlowTests(unittest.TestCase):
     def flow(self):
-        f=DailyFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)))
+        f=DailyFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False),
+                                   get_node_data=lambda node: {'attach': {'enabled': True}}))
         f.home=Mock()
         f.tap=Mock()
         f.wait=Mock()
@@ -89,6 +91,46 @@ class DailyFlowTests(unittest.TestCase):
         self.assertEqual(f.report['status'],'insufficient_stickers')
         f.select_exchange_category.assert_called_once_with('成员')
         f.home.assert_called_once()
+
+    def test_exchange_only_visits_selected_categories(self):
+        f=self.flow(); f.open_exchange=Mock(); f.select_exchange_category=Mock()
+        f.ctx.get_node_data=lambda node: {'attach': {'enabled': node in (
+            EXCHANGE_OPTION_NODES['表情'], EXCHANGE_OPTION_NODES['背景'])}}
+        f.ocr=Mock(return_value=[]); f.swipe=Mock(); f.image=np.zeros((720,1280,3),dtype=np.uint8)
+        f.exchange()
+        self.assertEqual([c.args[0] for c in f.select_exchange_category.call_args_list],['表情','背景'])
+        self.assertEqual(f.report['categories'],['表情','背景'])
+
+    def test_no_categories_performs_no_device_actions(self):
+        f=self.flow(); f.ctx.get_node_data=lambda node: {'attach': {'enabled': False}}
+        f.open_exchange=Mock()
+        f.exchange()
+        f.open_exchange.assert_not_called(); f.home.assert_not_called(); f.tap.assert_not_called()
+        self.assertEqual(f.report['status'],'no_categories_selected')
+
+    def test_invalid_category_configuration_does_not_open_shop(self):
+        for data in (None, {}, {'attach': {'enabled': 'true'}}):
+            f=self.flow(); f.ctx.get_node_data=lambda node: data; f.open_exchange=Mock()
+            with self.assertRaises(ValueError): f.exchange()
+            f.open_exchange.assert_not_called()
+
+    def test_ui_checkbox_combinations_preserve_every_selection(self):
+        import itertools
+        import json
+        from copy import deepcopy
+        root=Path(__file__).resolve().parents[1]
+        interface=json.loads((root/'assets/interface.json').read_text(encoding='utf-8'))
+        pipeline=json.loads((root/'assets/resource/pipeline/daily.json').read_text(encoding='utf-8'))
+        option=interface['option']['贴纸交换分类']
+        self.assertEqual(option['default_case'],list(EXCHANGE_CATEGORIES))
+        for flags in itertools.product((False,True),repeat=5):
+            selected=[c for c,enabled in zip(EXCHANGE_CATEGORIES,flags) if enabled]
+            nodes=deepcopy(pipeline)
+            for case in option['cases']:
+                if case['name'] in selected:
+                    for name,override in case['pipeline_override'].items():
+                        nodes[name].update(override)
+            self.assertEqual(selected_exchange_categories(SimpleNamespace(get_node_data=nodes.get)),selected)
 
     def test_costume_rewards_collected_once_after_batch(self):
         f=CostumeFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),3)

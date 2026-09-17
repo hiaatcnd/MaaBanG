@@ -16,7 +16,11 @@ def main():
     parser.add_argument('task',choices=['ClaimHomeGifts','ClaimHomeMissions','ExchangeMichelle','DailyFreeRecruit'])
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',default='127.0.0.1:16416')
+    parser.add_argument('--categories',nargs='+',choices=['成员','表情','服装','背景','其他'],
+                        help='贴纸交换分类，可填写多个；省略时全部交换')
     args = parser.parse_args()
+    if args.categories is not None and args.task != 'ExchangeMichelle':
+        parser.error('--categories 仅适用于 ExchangeMichelle')
     from maa.resource import Resource
     from maa.controller import AdbController
     from maa.tasker import Tasker
@@ -32,7 +36,13 @@ def main():
     assert controller.post_connection().wait().succeeded
     tasker=Tasker()
     tasker.bind(resource,controller)
-    job=tasker.post_task(args.task)
+    from daily_policy import EXCHANGE_CATEGORIES, EXCHANGE_OPTION_NODES
+    overrides = {}
+    if args.task == 'ExchangeMichelle':
+        selected = args.categories if args.categories is not None else EXCHANGE_CATEGORIES
+        overrides = {node: {'attach': {'enabled': category in selected}}
+                     for category, node in EXCHANGE_OPTION_NODES.items()}
+    job=tasker.post_task(args.task, overrides)
     try:
         while not job.done:
             time.sleep(.2)

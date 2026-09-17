@@ -304,5 +304,35 @@
         "recognition": "DirectHit",
         "action": "Custom",
         "custom_action": "DailyFreeRecruit"
+    },
+    "DY_ExchangeMembers": {
+        "recognition": "DirectHit",
+        "attach": {
+            "enabled": false
+        }
+    },
+    "DY_ExchangeEmotes": {
+        "recognition": "DirectHit",
+        "attach": {
+            "enabled": false
+        }
+    },
+    "DY_ExchangeCostumes": {
+        "recognition": "DirectHit",
+        "attach": {
+            "enabled": false
+        }
+    },
+    "DY_ExchangeBackgrounds": {
+        "recognition": "DirectHit",
+        "attach": {
+            "enabled": false
+        }
+    },
+    "DY_ExchangeOther": {
+        "recognition": "DirectHit",
+        "attach": {
+            "enabled": false
+        }
     }
 }

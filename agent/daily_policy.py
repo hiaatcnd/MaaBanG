@@ -3,6 +3,24 @@ import re
 import unicodedata
 
 EXCHANGE_CATEGORIES = ("成员", "表情", "服装", "背景", "其他")
+EXCHANGE_OPTION_NODES = dict(zip(EXCHANGE_CATEGORIES, (
+    "DY_ExchangeMembers", "DY_ExchangeEmotes", "DY_ExchangeCostumes",
+    "DY_ExchangeBackgrounds", "DY_ExchangeOther",
+)))
+
+
+def selected_exchange_categories(context):
+    selected = []
+    for category, node in EXCHANGE_OPTION_NODES.items():
+        data = context.get_node_data(node)
+        enabled = (data or {}).get("attach", {}).get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError(f"交换分类配置缺失或无效：{category}")
+        if enabled:
+            selected.append(category)
+    return selected
+
+
 MISSION_CATEGORIES = ("期间限定", "限时招募券", "通常任务", "每月", "邀请邦友", "EX任务")
 
 
