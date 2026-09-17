@@ -1,0 +1,407 @@
+{
+  "HomeEntry": {
+    "source": "debug/final-home.png",
+    "crop": [
+      1128,
+      600,
+      111,
+      95
+    ],
+    "roi": [
+      1050,
+      550,
+      230,
+      170
+    ]
+  },
+  "Menu": {
+    "source": "debug/live-start.png",
+    "crop": [
+      126,
+      56,
+      154,
+      32
+    ],
+    "roi": [
+      105,
+      45,
+      320,
+      50
+    ]
+  },
+  "FreeEntry": {
+    "source": "debug/live-start.png",
+    "crop": [
+      728,
+      389,
+      164,
+      130
+    ],
+    "roi": [
+      683,
+      366,
+      255,
+      178
+    ]
+  },
+  "TourEntry": {
+    "source": "debug/live-start.png",
+    "crop": [
+      735,
+      209,
+      158,
+      124
+    ],
+    "roi": [
+      683,
+      182,
+      254,
+      179
+    ]
+  },
+  "TourHome": {
+    "source": "debug/live-tour.png",
+    "crop": [
+      127,
+      55,
+      208,
+      33
+    ],
+    "roi": [
+      110,
+      47,
+      324,
+      50
+    ]
+  },
+  "TourFree": {
+    "source": "debug/live-tour.png",
+    "crop": [
+      755,
+      350,
+      160,
+      40
+    ],
+    "roi": [
+      686,
+      304,
+      311,
+      125
+    ]
+  },
+  "SongPage": {
+    "source": "debug/live-free-list.png",
+    "crop": [
+      128,
+      56,
+      136,
+      29
+    ],
+    "roi": [
+      112,
+      46,
+      300,
+      48
+    ]
+  },
+  "FreeHeader": {
+    "source": "debug/live-free-list.png",
+    "crop": [
+      129,
+      19,
+      98,
+      29
+    ],
+    "roi": [
+      114,
+      12,
+      166,
+      40
+    ]
+  },
+  "TourHeader": {
+    "source": "debug/live-tour.png",
+    "crop": [
+      129,
+      19,
+      99,
+      29
+    ],
+    "roi": [
+      114,
+      12,
+      166,
+      40
+    ]
+  },
+  "TourSetup": {
+    "source": "debug/live-three-verified.png",
+    "crop": [
+      129,
+      56,
+      124,
+      29
+    ],
+    "roi": [
+      112,
+      46,
+      300,
+      48
+    ]
+  },
+  "FreeReady": {
+    "source": "debug/live-free-ready.png",
+    "crop": [
+      128,
+      56,
+      140,
+      29
+    ],
+    "roi": [
+      112,
+      46,
+      300,
+      48
+    ]
+  },
+  "FireDialog": {
+    "source": "debug/live-fire.png",
+    "crop": [
+      269,
+      42,
+      326,
+      27
+    ],
+    "roi": [
+      230,
+      25,
+      420,
+      62
+    ]
+  },
+  "AutoOn": {
+    "source": "debug/live-tour-start-check.png",
+    "crop": [
+      840,
+      570,
+      93,
+      24
+    ],
+    "roi": [
+      790,
+      558,
+      198,
+      47
+    ]
+  },
+  "AutoOff": {
+    "source": "debug/live-auto-off.png",
+    "crop": [
+      847,
+      570,
+      95,
+      24
+    ],
+    "roi": [
+      786,
+      558,
+      211,
+      47
+    ]
+  },
+  "AutoPlaying": {
+    "source": "debug/live-tour-progress.png",
+    "crop": [
+      70,
+      115,
+      111,
+      30
+    ],
+    "roi": [
+      18,
+      106,
+      214,
+      49
+    ]
+  },
+  "TourSummary": {
+    "source": "debug/live-tour-summary.png",
+    "crop": [
+      151,
+      27,
+      139,
+      28
+    ],
+    "roi": [
+      95,
+      15,
+      328,
+      44
+    ]
+  },
+  "ScoreAuto": {
+    "source": "debug/live-tour-song-result.png",
+    "crop": [
+      705,
+      121,
+      92,
+      25
+    ],
+    "roi": [
+      645,
+      104,
+      210,
+      65
+    ]
+  },
+  "Rewards": {
+    "source": "debug/live-tour-summary.png",
+    "crop": [
+      120,
+      432,
+      97,
+      27
+    ],
+    "roi": [
+      87,
+      412,
+      166,
+      56
+    ]
+  },
+  "Experience": {
+    "source": "debug/live-tour-exp-ready.png",
+    "crop": [
+      161,
+      108,
+      88,
+      22
+    ],
+    "roi": [
+      110,
+      89,
+      184,
+      54
+    ]
+  },
+  "RewardModal": {
+    "source": "debug/live-tour-event-ready.png",
+    "crop": [
+      397,
+      87,
+      119,
+      32
+    ],
+    "roi": [
+      362,
+      68,
+      241,
+      60
+    ]
+  },
+  "TalkMenu": {
+    "source": "debug/live-talk-closed.png",
+    "crop": [
+      1120,
+      43,
+      111,
+      38
+    ],
+    "roi": [
+      1090,
+      16,
+      177,
+      87
+    ]
+  },
+  "TalkSkip": {
+    "source": "debug/live-talk-open.png",
+    "crop": [
+      552,
+      35,
+      54,
+      52
+    ],
+    "roi": [
+      521,
+      22,
+      116,
+      76
+    ]
+  },
+  "TalkSkipConfirm": {
+    "source": "debug/live-talk-skip.png",
+    "crop": [
+      521,
+      328,
+      230,
+      29
+    ],
+    "roi": [
+      481,
+      310,
+      337,
+      62
+    ]
+  },
+  "RankUp": {
+    "source": "debug/live-free-current.png",
+    "crop": [
+      489,
+      119,
+      301,
+      59
+    ],
+    "roi": [
+      463,
+      92,
+      354,
+      114
+    ]
+  },
+  "DailyReward": {
+    "source": "debug/live-free-settle-check.png",
+    "crop": [
+      398,
+      137,
+      240,
+      31
+    ],
+    "roi": [
+      371,
+      122,
+      340,
+      60
+    ]
+  },
+  "LoginReward": {
+    "source": "debug/live-settle-after-daily.png",
+    "crop": [
+      377,
+      25,
+      489,
+      64
+    ],
+    "roi": [
+      340,
+      8,
+      580,
+      99
+    ]
+  },
+  "RankReward": {
+    "source": "debug/live-final-free-check.png",
+    "crop": [
+      398,
+      87,
+      169,
+      32
+    ],
+    "roi": [
+      365,
+      67,
+      290,
+      65
+    ]
+  }
+}
