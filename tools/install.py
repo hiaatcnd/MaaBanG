@@ -20,9 +20,10 @@ def build(version):
     manifest = json.loads((ROOT / "tools/release-inputs.json").read_text())
     cache = ROOT / "deps/release-cache"
     cache.mkdir(parents=True, exist_ok=True)
-    package = ROOT / "install" / f"MaaBanG-{version}-win-x64"
-    if package.exists():
-        raise FileExistsError(f"Use a fresh output directory: {package}")
+    release = ROOT / "install" / f"MaaBanG-{version}-win-x64"
+    if release.exists():
+        raise FileExistsError(f"Use a fresh output directory: {release}")
+    package = release / "app"
     package.mkdir(parents=True)
     for name, spec in manifest.items():
         archive = cache / f"{name}.zip"
@@ -51,17 +52,20 @@ def build(version):
         "python312.zip\n.\nLib/site-packages\n../agent\nimport site\n", encoding="utf-8")
     interface = json.loads((ROOT / "assets/interface.json").read_text(encoding="utf-8"))
     interface["version"] = version
+    interface["icon"] = "MaaBanG.ico"
+    shutil.copy2(ROOT / "assets/branding/MaaBanG.ico", package / "MaaBanG.ico")
     interface["agent"] = {"child_exec": "./python/python.exe", "child_args": ["./agent/main.py"]}
     (package / "interface.json").write_text(json.dumps(interface, ensure_ascii=False, indent=4), encoding="utf-8")
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
-        shutil.copy2(ROOT / name, package)
-    shutil.copytree(ROOT / "docs", package / "docs")
+        shutil.copy2(ROOT / name, release)
+    shutil.copytree(ROOT / "docs", release / "docs")
     (package / "tools").mkdir()
     shutil.copy2(ROOT / "tools/package_smoke.py", package / "tools/package_smoke.py")
     compiler = Path(os.environ["WINDIR"]) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
     subprocess.run([str(compiler), "/nologo", "/target:winexe", "/reference:System.Windows.Forms.dll",
-                    f"/out:{package / 'MaaBanG.exe'}", str(ROOT / "tools/MaaBanGLauncher.cs")], check=True)
-    subprocess.run([str(package / "MaaBanG.exe"), "--check-agent"], check=True, timeout=90)
+                    f"/win32icon:{ROOT / 'assets/branding/MaaBanG.ico'}",
+                    f"/out:{release / 'MaaBanG.exe'}", str(ROOT / "tools/MaaBanGLauncher.cs")], check=True)
+    subprocess.run([str(release / "MaaBanG.exe"), "--check-agent"], check=True, timeout=90)
     # Smoke logs are build diagnostics, not user configuration.
     if (package / "debug").exists():
         shutil.rmtree(package / "debug")
@@ -69,7 +73,7 @@ def build(version):
         shutil.rmtree(bytecode)
     output = ROOT / "dist"
     output.mkdir(exist_ok=True)
-    archive = Path(shutil.make_archive(str(output / package.name), "zip", package.parent, package.name))
+    archive = Path(shutil.make_archive(str(output / release.name), "zip", release.parent, release.name))
     (output / "SHA256SUMS.txt").write_text(f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n", encoding="utf-8")
     print(f"Built {archive}")
 

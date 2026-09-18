@@ -12,7 +12,9 @@ assert Path(sys.executable).resolve().is_relative_to(package)
 interface = json.loads(Path("interface.json").read_text(encoding="utf-8"))
 assert interface["agent"]["child_exec"] == "./python/python.exe"
 assert Path("MFAAvalonia.exe").is_file()
-assert Path("MaaBanG.exe").is_file()
+assert {p.name for p in package.parent.glob('*.exe')} == {'MaaBanG.exe'}
+assert package.name == 'app'
+assert Path(interface['icon']).is_file()
 assert Path(os.environ["TEMP"]).resolve() == Path.home() / ".maabang" / "temp"
 assert Path("resource/model/ocr/rec.onnx").is_file()
 for library in ("MaaFramework.dll", "MaaAgentClient.dll", "MaaAgentServer.dll"):

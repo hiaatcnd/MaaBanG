@@ -9,6 +9,7 @@ from maa.custom_action import CustomAction
 
 from costume_unlock import FlowError, normalized
 from daily_tasks import DailyFlow
+from song_catalog import BY_ID, needs_band_check
 from live_policy import (LiveOptions, DIFFICULTIES, parse_auto_remaining,
                          fire_for_song, round_stop_reason)
 
@@ -127,7 +128,7 @@ class LiveFlow(DailyFlow):
 
     def choose_song(self):
         # SPECIAL filters out songs without that chart, including EXIST.
-        # Both supported songs have EXPERT; restore it before searching favorites.
+        # Selectable catalog entries have EXPERT; restore it before searching favorites.
         self.wait('LV_SongPage')
         self.tap(1051,540)
         self.favorites()
@@ -136,14 +137,19 @@ class LiveFlow(DailyFlow):
             previous=None
             for _ in range(60):
                 self.wait('LV_SongPage')
-                hits=self.ocr([201,100,365,594],re.escape(self.options.song))
+                hits=self.ocr([201,100,365,594])
                 matches=[h for h in hits if normalized(h.text)==expected]
-                if matches:
-                    self.tap_hit(matches[0])
+                for match in matches:
+                    self.tap_hit(match)
                     self.wait('LV_SongPage')
                     title=normalized(self.text([210,332,356,32]))
                     if title != expected:
                         raise FlowError(f'选中歌曲不一致：{title}')
+                    if self.options.song_id and needs_band_check(self.options.song_id):
+                        band=normalized(self.text([201,365,374,35]))
+                        aliases={normalized(s) for s in BY_ID[self.options.song_id]['band_aliases']}
+                        if band not in aliases:
+                            continue
                     actual=self.choose_difficulty()
                     self.tap(1070,648)
                     return actual

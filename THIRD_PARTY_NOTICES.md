@@ -11,3 +11,7 @@ The Windows package includes unmodified upstream UI and runtime components:
 - OCR models come from the pinned MaaCommonAssets submodule: https://github.com/MaaXYZ/MaaCommonAssets/tree/232724783340245a93e304c4209a4d0f34e78c2f
 
 Game screenshots are recognition templates from BanG Dream and remain the property of their respective rights holders. MaaBanG is an unofficial community project.
+
+The MaaBanG icon uses Aya Maruyama character artwork as its reference, supplied from https://bestdori.com/assets/cn/characters/resourceset/res016005_rip/card_normal.png, with image-generated badge and wordmark composition. The character and source artwork remain the property of their respective rights holders.
+
+Song metadata in agent/data/songs_cn.json and docs/data/songs_cn.csv comes from Bestdori (https://bestdori.com/info/songs), using its public songs/all.7.json and bands/all.1.json APIs. The snapshot records source URLs and retrieval time. This factual metadata and upstream game assets retain their respective rights; the project's MIT license does not relicense third-party content.

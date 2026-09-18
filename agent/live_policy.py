@@ -2,8 +2,8 @@
 from dataclasses import dataclass
 import re
 import unicodedata
+from song_catalog import SONGS, resolve_song, available_difficulties
 
-SONGS = ("SAVIOR OF SONG", "EXIST")
 DIFFICULTIES = ("easy", "normal", "hard", "expert", "special")
 
 
@@ -24,6 +24,7 @@ class LiveOptions:
     fire: int = 3
     shortage: str = "stop"
     max_rounds: int | None = None
+    song_id: str | None = None
 
     @classmethod
     def parse(cls, data):
@@ -31,16 +32,23 @@ class LiveOptions:
         song = data.get("song", SONGS[0])
         difficulty = data.get("difficulty", "expert")
         shortage = data.get("shortage", "stop")
-        if mode not in ("free", "tour") or song not in SONGS:
+        if mode not in ("free", "tour"):
             raise ValueError("不支持的演出模式或歌曲")
+        catalog_song = resolve_song(song)
         if difficulty not in DIFFICULTIES or shortage not in ("stop", "lower"):
             raise ValueError("不支持的难度或火不足策略")
+        available = available_difficulties(catalog_song)
+        if difficulty not in available:
+            if difficulty == 'special' and 'expert' in available:
+                difficulty = 'expert'
+            else:
+                raise ValueError('该歌曲在中国服没有所选难度')
         fire = number(data.get("fire", 3), "每首火数", 3)
         limit = data.get("max_rounds", "")
         max_rounds = None if limit is None or limit == "" else number(limit, "最大演出次数", 999)
         if max_rounds == 0:
             raise ValueError("最大演出次数请留空或填写 1–999")
-        return cls(mode, song, difficulty, fire, shortage, max_rounds)
+        return cls(mode, catalog_song['title'], difficulty, fire, shortage, max_rounds, catalog_song['id'])
 
     @property
     def songs_per_round(self):

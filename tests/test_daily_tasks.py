@@ -75,12 +75,26 @@ class DailyFlowTests(unittest.TestCase):
         self.assertEqual(f.report['draws'],0)
         self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),1)
 
-    def test_exchange_scans_every_category_to_stationary_bottom(self):
+    def test_exchange_empty_top_finishes_each_category_without_scrolling(self):
         f=self.flow(); f.open_exchange=Mock(); f.select_exchange_category=Mock()
         f.ocr=Mock(return_value=[]); f.swipe=Mock(); f.image=np.zeros((720,1280,3),dtype=np.uint8)
         f.exchange()
         self.assertEqual([c.args[0] for c in f.select_exchange_category.call_args_list],list(EXCHANGE_CATEGORIES))
-        self.assertEqual(f.swipe.call_count,5)
+        f.swipe.assert_not_called()
+        self.assertEqual(f.ocr.call_count,5)
+        f.home.assert_called_once()
+
+    def test_exchange_rechecks_top_after_each_purchase_then_stops(self):
+        f=self.flow(); f.open_exchange=Mock(); f.select_exchange_category=Mock()
+        first=SimpleNamespace(box=[250,492,42,25])
+        second=SimpleNamespace(box=[490,492,42,25])
+        f.ocr=Mock(side_effect=[[second,first],[second],[]])
+        f.exchange_item=Mock(return_value=True); f.swipe=Mock()
+        f.exchange(['背景'])
+        self.assertEqual([c.args for c in f.exchange_item.call_args_list],
+                         [('背景',first),('背景',second)])
+        f.swipe.assert_not_called()
+        self.assertEqual(f.report['status'],'finished')
         f.home.assert_called_once()
 
     def test_exchange_insufficient_balance_stops_without_next_category(self):
@@ -101,11 +115,11 @@ class DailyFlowTests(unittest.TestCase):
         self.assertEqual([c.args[0] for c in f.select_exchange_category.call_args_list],['表情','背景'])
         self.assertEqual(f.report['categories'],['表情','背景'])
 
-    def test_no_categories_performs_no_device_actions(self):
+    def test_no_categories_returns_home_without_opening_exchange(self):
         f=self.flow(); f.ctx.get_node_data=lambda node: {'attach': {'enabled': False}}
         f.open_exchange=Mock()
         f.exchange()
-        f.open_exchange.assert_not_called(); f.home.assert_not_called(); f.tap.assert_not_called()
+        f.open_exchange.assert_not_called(); f.home.assert_called_once(); f.tap.assert_not_called()
         self.assertEqual(f.report['status'],'no_categories_selected')
 
     def test_invalid_category_configuration_does_not_open_shop(self):

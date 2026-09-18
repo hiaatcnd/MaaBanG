@@ -12,6 +12,7 @@ internal static class MaaBanGLauncher
     private static int Main(string[] args)
     {
         string root = AppDomain.CurrentDomain.BaseDirectory;
+        string app = Path.Combine(root, "app");
         bool check = args.Length == 1 && args[0] == "--check-agent";
         try
         {
@@ -22,9 +23,9 @@ internal static class MaaBanGLauncher
             Directory.CreateDirectory(temp);
             var start = new ProcessStartInfo
             {
-                FileName = Path.Combine(root, check ? "python\\python.exe" : "MFAAvalonia.exe"),
-                Arguments = check ? "\"" + Path.Combine(root, "tools\\package_smoke.py") + "\" \"" + root.TrimEnd('\\') + "\"" : "",
-                WorkingDirectory = root,
+                FileName = Path.Combine(app, check ? "python\\python.exe" : "MFAAvalonia.exe"),
+                Arguments = check ? "\"" + Path.Combine(app, "tools\\package_smoke.py") + "\" \"" + app.TrimEnd('\\') + "\"" : "",
+                WorkingDirectory = app,
                 UseShellExecute = false,
                 CreateNoWindow = check
             };

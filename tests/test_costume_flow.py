@@ -150,10 +150,12 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(len(flow.attempts),1)
         self.assertEqual(flow.report['characters'][0]['status'],'no_unlockable_costumes')
 
-    def test_zero_target_performs_no_navigation(self):
+    def test_zero_target_returns_home_without_opening_costumes(self):
         flow=SimulatedFlow(0,[],[])
         flow.rating_select=lambda: self.fail('should not navigate')
         flow.run()
+        flow.return_home.assert_called_once()
+        self.assertEqual(flow.attempts,[])
 
     def test_cancellation_is_honored_before_capture(self):
         flow=SimulatedFlow(3,[],[])

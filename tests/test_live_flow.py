@@ -186,7 +186,10 @@ class LiveFlowTests(unittest.TestCase):
         pattern=limit['inputs'][0]['verify']
         for value in ('','1','999'): self.assertIsNotNone(re.fullmatch(pattern,value))
         for value in ('0','-1','1.5','1000'): self.assertIsNone(re.fullmatch(pattern,value))
-        for cases in itertools.product(*(interface['option'][name]['cases'] for name in names)):
+        case_lists=[interface['option'][name]['cases'] if name!='演出歌曲' else
+                    [c for c in interface['option'][name]['cases'] if c['name']=='SAVIOR OF SONG']
+                    for name in names]
+        for cases in itertools.product(*case_lists):
             nodes=deepcopy(pipeline)
             expected={}
             for case in cases:
