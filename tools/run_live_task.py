@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',default='127.0.0.1:16416')
     parser.add_argument('--mode',choices=['free','tour'],default='free')
-    parser.add_argument('--song',choices=SONGS,default=SONGS[0])
+    parser.add_argument('--song',default=SONGS[0],help='中国服歌名或 Bestdori 歌曲ID；同名歌曲使用ID')
     parser.add_argument('--difficulty',choices=DIFFICULTIES,default='expert')
     parser.add_argument('--fire',type=int,choices=range(4),default=3)
     parser.add_argument('--shortage',choices=['stop','lower'],default='stop')

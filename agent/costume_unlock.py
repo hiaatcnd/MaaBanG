@@ -434,6 +434,7 @@ class CostumeFlow:
     def run(self):
         if self.target == 0:
             self.report["status"] = "target_reached"
+            self.return_home()
             return
         self.rating_select()
         for band, members in self.roster:

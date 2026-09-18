@@ -191,11 +191,11 @@ class DailyFlow(CostumeFlow):
         self.report["categories"] = categories
         if not categories:
             self.report["status"] = "no_categories_selected"
+            self.home()
             return
         self.open_exchange()
         for category in categories:
             self.select_exchange_category(category)
-            previous = None
             for _ in range(1500):
                 self.wait("DY_MichelleHeader")
                 hits = [h for h in self.ocr([156,244,965,409], "^交换$")
@@ -206,15 +206,11 @@ class DailyFlow(CostumeFlow):
                         self.report["status"] = "insufficient_stickers"
                         self.home()
                         return
-                    previous = None
                     continue
-                area = self.image[243:650,155:1120].astype(float)
-                if previous is not None and np.mean(np.abs(area-previous)) < 1:
-                    break
-                previous = area
-                self.swipe(1090,605,365)
+                # Exchangeable items sort first; an empty top page finishes this category.
+                break
             else:
-                raise FlowError(f"交换列表未到达底部：{category}")
+                raise FlowError(f"交换操作未收敛：{category}")
         self.report["status"] = "finished"
         self.home()
 
