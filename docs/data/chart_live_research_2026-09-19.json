@@ -1,0 +1,124 @@
+{
+  "research_date": "2026-09-19",
+  "maafw_version": "5.12.2",
+  "gameplay_validated": false,
+  "zero_fire_capture_verified": true,
+  "1_expert": {
+    "sha256": "300f1765885c02b064dca5a2980c23d0aab879165ce06fbb80ace53b4332d09d",
+    "objects": 390,
+    "types": {
+      "BPM": 1,
+      "System": 4,
+      "Single": 321,
+      "Long": 59,
+      "Slide": 5
+    },
+    "bpm_events": [
+      {
+        "type": "BPM",
+        "bpm": 185,
+        "beat": 0
+      }
+    ],
+    "judged_points_assuming_nonhidden": 459,
+    "flick_points": 20,
+    "hidden_points": 0,
+    "max_same_beat_points": 2,
+    "smallest_distinct_gap_ms": 81.08108108108108,
+    "first_note_seconds": 3.2432432432432434,
+    "last_note_seconds": 117.40540540540542,
+    "max_concurrent_holds": 2
+  },
+  "1_special": {
+    "sha256": "5214f0ec7f063595c87d9d95eab933818bba2d0d42deb3dcfda640a44e37f512",
+    "objects": 718,
+    "types": {
+      "BPM": 1,
+      "System": 4,
+      "Single": 616,
+      "Long": 54,
+      "Slide": 43
+    },
+    "bpm_events": [
+      {
+        "type": "BPM",
+        "bpm": 185,
+        "beat": 0
+      }
+    ],
+    "judged_points_assuming_nonhidden": 832,
+    "flick_points": 69,
+    "hidden_points": 0,
+    "max_same_beat_points": 2,
+    "smallest_distinct_gap_ms": 54.05405405404177,
+    "first_note_seconds": 2.5945945945945947,
+    "last_note_seconds": 117.40540540540542,
+    "max_concurrent_holds": 2
+  },
+  "306_easy": {
+    "sha256": "91294eebc4f51a1a7d596c2cf47388d12b2e8788080b81e1fda14880f3aa2a69",
+    "objects": 124,
+    "types": {
+      "BPM": 1,
+      "System": 4,
+      "Single": 105,
+      "Long": 14
+    },
+    "bpm_events": [
+      {
+        "type": "BPM",
+        "bpm": 192,
+        "beat": 0
+      }
+    ],
+    "judged_points_assuming_nonhidden": 133,
+    "flick_points": 0,
+    "hidden_points": 0,
+    "max_same_beat_points": 2,
+    "smallest_distinct_gap_ms": 312.5,
+    "first_note_seconds": 1.875,
+    "last_note_seconds": 87.34375,
+    "max_concurrent_holds": 2
+  },
+  "306_expert": {
+    "sha256": "6f319531915bc2722426ac23c92f58f62a1b56d6cf1c43277ca99b244126dbbd",
+    "objects": 611,
+    "types": {
+      "BPM": 1,
+      "System": 4,
+      "Single": 494,
+      "Long": 50,
+      "Slide": 62
+    },
+    "bpm_events": [
+      {
+        "type": "BPM",
+        "bpm": 192,
+        "beat": 0
+      }
+    ],
+    "judged_points_assuming_nonhidden": 772,
+    "flick_points": 37,
+    "hidden_points": 0,
+    "max_same_beat_points": 2,
+    "smallest_distinct_gap_ms": 39.0625,
+    "first_note_seconds": 2.03125,
+    "last_note_seconds": 87.34375,
+    "max_concurrent_holds": 2
+  },
+  "screenshot_roundtrip": {
+    "samples": 54,
+    "median_ms": 266.3896500598639,
+    "p95_ms": 383.78020003437996,
+    "max_ms": 418.3796001598239,
+    "note": "Includes loading and stage; request-to-return, not image exposure timestamp."
+  },
+  "touch_roundtrip": {
+    "samples": 180,
+    "all_succeeded": true,
+    "median_ms": 0.09794998914003372,
+    "p95_ms": 0.14219991862773895,
+    "max_ms": 0.2267998643219471,
+    "note": "Two contacts, down/move/up outside modal buttons. SDK completion is not Android delivery or game judgment confirmation."
+  }
+}

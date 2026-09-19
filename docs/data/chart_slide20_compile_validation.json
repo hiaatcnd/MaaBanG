@@ -1,0 +1,47 @@
+[
+  {
+    "song": "296",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "max_contacts": 2
+  },
+  {
+    "song": "304",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "max_contacts": 2
+  },
+  {
+    "song": "359",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "max_contacts": 2
+  },
+  {
+    "song": "586",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "max_contacts": 2
+  },
+  {
+    "song": "684",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "max_contacts": 2
+  }
+]

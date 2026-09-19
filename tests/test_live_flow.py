@@ -169,16 +169,13 @@ class LiveFlowTests(unittest.TestCase):
         with self.assertRaises(FlowError): f.pause(10)
         f.snap.assert_not_called()
 
-    def test_song_search_clears_special_filter_before_reading_favorites(self):
+    def test_song_search_uses_shared_unlocked_catalog_selection(self):
         f=self.flow(song='EXIST',difficulty='special')
-        f.wait=Mock(); f.tap_hit=Mock()
-        f.favorites=Mock(side_effect=lambda:f.tap.assert_called_once_with(1051,540))
-        f.ocr=Mock(return_value=[SimpleNamespace(text='EXIST')])
-        f.text=Mock(return_value='EXIST')
+        f.find_song=Mock()
         f.choose_difficulty=Mock(return_value='expert')
         self.assertEqual(f.choose_song(),'expert')
-        f.favorites.assert_called_once()
-        self.assertEqual([c.args for c in f.tap.call_args_list],[(1051,540),(1070,648)])
+        self.assertEqual(f.find_song.call_args.args[0]['title'],'EXIST')
+        f.tap.assert_called_once_with(1070,648)
 
     def test_fire_preview_excludes_arrow_in_both_counter_layouts(self):
         import numpy as np

@@ -1,0 +1,708 @@
+{
+  "distribution": "truncated_normal",
+  "sigma": "bound/3",
+  "samples": 12000,
+  "statistics": {
+    "time_ms": {
+      "mean": -0.12618251192710103,
+      "stddev": 29.826590917824817,
+      "bound": 90,
+      "within_one_sigma": 0.67875,
+      "within_two_sigma": 0.9545833333333333,
+      "on_boundary": 0
+    },
+    "horizontal_px": {
+      "mean": 0.04524993204197136,
+      "stddev": 3.935116093379187,
+      "bound": 12,
+      "within_one_sigma": 0.6859166666666666,
+      "within_two_sigma": 0.9584166666666667,
+      "on_boundary": 0
+    },
+    "vertical_px": {
+      "mean": -0.012753833486266672,
+      "stddev": 1.9766207203924975,
+      "bound": 6,
+      "within_one_sigma": 0.6803333333333333,
+      "within_two_sigma": 0.9583333333333334,
+      "on_boundary": 0
+    }
+  },
+  "charts_checked": 56,
+  "passed": 56,
+  "compiler_sha256": "2414b80cc591282e83f00d70b53963e957435c0a4f9f96f397dca61e9c8e21ff",
+  "rows": [
+    {
+      "song": "296",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "fe50d8de550b759e70c6bfb10fd9eb3c588b26cc37bc817b8002b286b1c504f0",
+      "notes": 188,
+      "first_anchor": [
+        3.287671232876712,
+        2,
+        "green"
+      ]
+    },
+    {
+      "song": "296",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "ec92c24c58a4f4de0a4d6ef9bb54614373f61ae6f8073389fbd9c3029e296b9f",
+      "notes": 304,
+      "first_anchor": [
+        3.287671232876712,
+        2,
+        "green"
+      ]
+    },
+    {
+      "song": "296",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "ebc7ca99d1bf7f529d772a9c752c08f56113091b363914e458a20639b20c171b",
+      "notes": 554,
+      "first_anchor": [
+        3.287671232876712,
+        4,
+        "green"
+      ]
+    },
+    {
+      "song": "296",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "7af051800f15757337eaf0ca5057ef898a92a734ae6d28a686be05121aa61523",
+      "notes": 1034,
+      "first_anchor": [
+        3.287671232876712,
+        4,
+        "green"
+      ]
+    },
+    {
+      "song": "296",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "6a76baa5b7df554e52720412051fd3836d3b1e86dcb1ce6d0022c7c1f6328eae",
+      "notes": 1087,
+      "first_anchor": [
+        3.287671232876712,
+        4,
+        "green"
+      ]
+    },
+    {
+      "song": "304",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "b711e00fcb0529a1a21570dfabd2f54986f36578ad89926d835e8ead46b6c740",
+      "notes": 152,
+      "first_anchor": [
+        2.4,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "304",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "f8b036cd6cc0f206e8ebe8872135cab114ce429f38be393c538c2c975d6d07f7",
+      "notes": 256,
+      "first_anchor": [
+        2.4,
+        2,
+        "cyan"
+      ]
+    },
+    {
+      "song": "304",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "0a8bcc504d5a8f500880c4556bfc8559e3d33580faedc8ddd4a75529526be869",
+      "notes": 477,
+      "first_anchor": [
+        2.4,
+        6,
+        "cyan"
+      ]
+    },
+    {
+      "song": "304",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "095dd8ecb9cb9b0031e4a6ec43ba1673ef627d91c6a17cd0f1ec3b4541b07846",
+      "notes": 851,
+      "first_anchor": [
+        2.4,
+        0,
+        "cyan"
+      ]
+    },
+    {
+      "song": "304",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "5d1c7209782f18a27e8ab50289c7acda4021fde07dee9c279ea1ed44af101cca",
+      "notes": 972,
+      "first_anchor": [
+        2.4,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "359",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "d4b7548437dc3f043f91d17682d4e426b86c2a96313121fc23046db59a27c02b",
+      "notes": 196,
+      "first_anchor": [
+        2.436548223350254,
+        4,
+        "cyan"
+      ]
+    },
+    {
+      "song": "359",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "55bf959f25407bd243d42935f14c31d28d8a38235116a97e853860abf4cbf233",
+      "notes": 338,
+      "first_anchor": [
+        2.436548223350254,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "359",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "a0970b49ba98a08ca7e2eb517ca7d74e2c83940fde3bef5ff0b4dc9c8f73d1c2",
+      "notes": 598,
+      "first_anchor": [
+        2.436548223350254,
+        2,
+        "cyan"
+      ]
+    },
+    {
+      "song": "359",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "5c6c8eea572316f017a24c62cf95f8a4b226dcb38e2a71db0e97b3acd51f7657",
+      "notes": 999,
+      "first_anchor": [
+        2.436548223350254,
+        2,
+        "cyan"
+      ]
+    },
+    {
+      "song": "359",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "20d179e67c983f0c7eb518b4611d6f88270fc00123e0ad08d9a834a6cacee946",
+      "notes": 1196,
+      "first_anchor": [
+        2.436548223350254,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "586",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "ee05e80994e24c7623588f50dd9720df7d9f307c0015ca6c91cd382fdfd0161b",
+      "notes": 226,
+      "first_anchor": [
+        6.0,
+        4,
+        "cyan"
+      ]
+    },
+    {
+      "song": "586",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "54b8d404654a42ad893a3026e89400d78547a93c0908aec08c4a8bc4e49fb421",
+      "notes": 436,
+      "first_anchor": [
+        6.0,
+        6,
+        "cyan"
+      ]
+    },
+    {
+      "song": "586",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "ca861b3a1df607dc0e57df1fc19ca9b3bffb74bf41ad0078d94732d8c1c063d9",
+      "notes": 705,
+      "first_anchor": [
+        5.25,
+        0,
+        "green"
+      ]
+    },
+    {
+      "song": "586",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "2ee8ff80f5a86ba73e1cac391ab13e8d5612434ec845e332b3ea32d42529e3ad",
+      "notes": 1030,
+      "first_anchor": [
+        5.25,
+        0,
+        "green"
+      ]
+    },
+    {
+      "song": "586",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "291af5a9a8eafb24467783bff9d31746585ac769add79118f6dc5665e81438e7",
+      "notes": 1161,
+      "first_anchor": [
+        5.25,
+        5,
+        "green"
+      ]
+    },
+    {
+      "song": "684",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "97df6a84dcdd708d8a12fa98f3c181a09c77c649506530350490aa6b5e2f27fc",
+      "notes": 222,
+      "first_anchor": [
+        2.526315789473684,
+        1,
+        "green"
+      ]
+    },
+    {
+      "song": "684",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "1c3f49403839cdf2ae1b4b8681ee5feb98611284e73f9d90d70875f24cd434e5",
+      "notes": 527,
+      "first_anchor": [
+        2.526315789473684,
+        0,
+        "green"
+      ]
+    },
+    {
+      "song": "684",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "e1e4be26352c13a90280ba0aa6b6f8183ba54a91362ebd7a7b282f97bb87ce55",
+      "notes": 809,
+      "first_anchor": [
+        2.526315789473684,
+        0,
+        "green"
+      ]
+    },
+    {
+      "song": "684",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "8c14353cfe09ac39f8837eb019959b754ca4f0e6ff63cb33aaa97772b76ac4bf",
+      "notes": 1122,
+      "first_anchor": [
+        2.526315789473684,
+        0,
+        "green"
+      ]
+    },
+    {
+      "song": "684",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "e6dbfdd7cb702e579dca19603ecf81d75ce438085fe8fcab28d0dde25cc38093",
+      "notes": 1598,
+      "first_anchor": [
+        2.526315789473684,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "585",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "311e72b96c4592c5a71e2052a225a6f6ca3519ad2a30d93d4869bb6a2a7a6a9f",
+      "notes": 119,
+      "first_anchor": [
+        2.5945945945945947,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "585",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "f7fbb3f86ab46bcc9636ba91a530112fe54532cea9d7b21fe3d4c52d42542716",
+      "notes": 262,
+      "first_anchor": [
+        2.5945945945945947,
+        1,
+        "green"
+      ]
+    },
+    {
+      "song": "585",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "8877d09e5613afd2420acfb213d25c62edb6a6851b26cd84599a8867279c3db4",
+      "notes": 444,
+      "first_anchor": [
+        2.5945945945945947,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "585",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "080d3432d5e91b635c41359f1117a341b99c6d3b477aca08474f83bb2df6cc28",
+      "notes": 838,
+      "first_anchor": [
+        2.5945945945945947,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "667",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "8dd6b8083dec1f0e96231b40d5fa783e9c1c3748696042125e27360048e67b54",
+      "notes": 106,
+      "first_anchor": [
+        2.438194374937444,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "667",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "dfe0159d87914b940d2dde8c7e7cb8c4e8a9e0851b8296fbc10094a7f0274efd",
+      "notes": 245,
+      "first_anchor": [
+        2.438194374937444,
+        6,
+        "cyan"
+      ]
+    },
+    {
+      "song": "667",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "90d0a7ab1017d3f5fe883b8c7e1e94f1dc3e9017514899a5f5368a1a390f98f4",
+      "notes": 409,
+      "first_anchor": [
+        2.438194374937444,
+        0,
+        "cyan"
+      ]
+    },
+    {
+      "song": "667",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "c8e71ffab135918aa7c1bf3ad4bef0593a2e440af04fcaebb81d7c87c18d0b68",
+      "notes": 571,
+      "first_anchor": [
+        2.438194374937444,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "386",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "035f98257c02dc57c1e37ea97547c3d60999070dc274ef5c161ab8899fd4eb7c",
+      "notes": 112,
+      "first_anchor": [
+        4.8,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "386",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "8179ddc984fc50d5d5893ae204020867a93ea7c23e4ab9e9cce30ce8bfd0a299",
+      "notes": 187,
+      "first_anchor": [
+        4.8,
+        0,
+        "cyan"
+      ]
+    },
+    {
+      "song": "386",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "91442076c2df3c39df8786ec12db41cea165e5ec63e121c8dc2a4ce65d6740ad",
+      "notes": 317,
+      "first_anchor": [
+        4.8,
+        6,
+        "pink"
+      ]
+    },
+    {
+      "song": "386",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "4b157a67da2dbbbf29cf338b094dd009ba8e6f2bf2b17aa1ca49f91e79807c75",
+      "notes": 458,
+      "first_anchor": [
+        4.8,
+        0,
+        "pink"
+      ]
+    },
+    {
+      "song": "96",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "57c0f04ca4c33b2f3fa03b461c297a3644a4ed3851e5a11642f1618d47cf4f63",
+      "notes": 165,
+      "first_anchor": [
+        4.8,
+        2,
+        "cyan"
+      ]
+    },
+    {
+      "song": "96",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "969f7ebc1e02061bb4f02acfd68163778629019480c89aaa5b196b013df124ae",
+      "notes": 262,
+      "first_anchor": [
+        4.8,
+        2,
+        "green"
+      ]
+    },
+    {
+      "song": "96",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "e45fdc8068911cbb1d008e12dc15e4c455e7147eb8ea4e0280a0da62fcbdf67e",
+      "notes": 445,
+      "first_anchor": [
+        4.8,
+        2,
+        "green"
+      ]
+    },
+    {
+      "song": "96",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "c8a3e279242642f900ee637bc8c865008d5da4afa13b82284ceebb0951042136",
+      "notes": 746,
+      "first_anchor": [
+        4.8,
+        2,
+        "green"
+      ]
+    },
+    {
+      "song": "96",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "fd962610dec1e604221bd8ab6333ed044a5724b996c67e19fcdbb2194e8c3325",
+      "notes": 771,
+      "first_anchor": [
+        4.8,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "186",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "22b3ddd5d599c24980e9e99d27ee7121884538e4978363f2532693b5686df54e",
+      "notes": 145,
+      "first_anchor": [
+        2.622950819672131,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "186",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "59085075e5e4c836f897b53bd4f24cd4df4aa197e70760cdd0b6f298aeb7bb65",
+      "notes": 216,
+      "first_anchor": [
+        2.622950819672131,
+        1,
+        "green"
+      ]
+    },
+    {
+      "song": "186",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "ee4a41bd4080219ab1bae30d95b3cff4840f4e485d5ffd98dc05f29201e1f9cc",
+      "notes": 452,
+      "first_anchor": [
+        2.622950819672131,
+        1,
+        "green"
+      ]
+    },
+    {
+      "song": "186",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "999b7d4939c2ff3989de5687b87c0ed027252e7b636d994f70137f9455e529ff",
+      "notes": 702,
+      "first_anchor": [
+        2.622950819672131,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "186",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "0a57d82ceb7b0afa1138ebfb2cffaa5d4351e86dab470f3ba771314d60acf604",
+      "notes": 800,
+      "first_anchor": [
+        2.622950819672131,
+        0,
+        "cyan"
+      ]
+    },
+    {
+      "song": "306",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "91294eebc4f51a1a7d596c2cf47388d12b2e8788080b81e1fda14880f3aa2a69",
+      "notes": 133,
+      "first_anchor": [
+        1.875,
+        2,
+        "cyan"
+      ]
+    },
+    {
+      "song": "306",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "4ed55c287b50ea69a938a86ee58768962180b42b975f65877fa39bd3b91cbb41",
+      "notes": 246,
+      "first_anchor": [
+        2.03125,
+        0,
+        "cyan"
+      ]
+    },
+    {
+      "song": "306",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "dae89fde59c35e80b2380922528c2b1b0c29f7420d38301f007008bf6de28c5b",
+      "notes": 401,
+      "first_anchor": [
+        2.03125,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "306",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "6f319531915bc2722426ac23c92f58f62a1b56d6cf1c43277ca99b244126dbbd",
+      "notes": 772,
+      "first_anchor": [
+        2.03125,
+        1,
+        "cyan"
+      ]
+    },
+    {
+      "song": "306",
+      "difficulty": "special",
+      "ok": true,
+      "sha256": "f65e25400e59e5e1c7cbfcb42d42a6124b22dd5804f6585a9943b0675cb454bc",
+      "notes": 727,
+      "first_anchor": [
+        1.875,
+        0,
+        "green"
+      ]
+    },
+    {
+      "song": "772",
+      "difficulty": "easy",
+      "ok": true,
+      "sha256": "1e122728557f545825aa46d0cde8a170794a787ae70753ac2482feef6e1b399d",
+      "notes": 99,
+      "first_anchor": [
+        3.0,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "772",
+      "difficulty": "normal",
+      "ok": true,
+      "sha256": "572a22480139f2c019a4d61e8ba7845e6d8d305f7445c42d750b0f8c00ee2b90",
+      "notes": 177,
+      "first_anchor": [
+        3.0,
+        5,
+        "cyan"
+      ]
+    },
+    {
+      "song": "772",
+      "difficulty": "hard",
+      "ok": true,
+      "sha256": "31f53212c2be7f68771944c2b90c9ab01244e7ff751b26c15d685a0eac6eeeb2",
+      "notes": 433,
+      "first_anchor": [
+        3.0,
+        6,
+        "cyan"
+      ]
+    },
+    {
+      "song": "772",
+      "difficulty": "expert",
+      "ok": true,
+      "sha256": "5e7ea9a3d5a4f1facb2c2c309d31358448fbd4b4712214a6c4638d023d564510",
+      "notes": 640,
+      "first_anchor": [
+        3.0,
+        1,
+        "cyan"
+      ]
+    }
+  ]
+}

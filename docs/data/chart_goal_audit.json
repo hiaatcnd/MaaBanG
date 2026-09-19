@@ -1,0 +1,172 @@
+{
+  "highest_level": 30,
+  "charts": [
+    {
+      "chart": {
+        "song_id": "296",
+        "title": "セツナトリップ",
+        "difficulty": "special",
+        "level": 30,
+        "notes": 1087
+      },
+      "consecutive_verified": 0,
+      "distinct_seeds": 0,
+      "runs": [],
+      "errors": [],
+      "passed": false
+    },
+    {
+      "chart": {
+        "song_id": "304",
+        "title": "SENSENFUKOKU",
+        "difficulty": "special",
+        "level": 30,
+        "notes": 972
+      },
+      "consecutive_verified": 3,
+      "distinct_seeds": 3,
+      "runs": [
+        {
+          "run": "lv30_304_sync2_seed88",
+          "seed": 88,
+          "judgment": {
+            "perfect": 971,
+            "great": 1,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 972,
+            "score": 1985663
+          }
+        },
+        {
+          "run": "lv30_304_sync2_seed99",
+          "seed": 99,
+          "judgment": {
+            "perfect": 972,
+            "great": 0,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 972,
+            "score": 1997936
+          }
+        },
+        {
+          "run": "lv30_304_sync2_seed111",
+          "seed": 111,
+          "judgment": {
+            "perfect": 972,
+            "great": 0,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 972,
+            "score": 1986688
+          }
+        }
+      ],
+      "errors": [],
+      "passed": true
+    },
+    {
+      "chart": {
+        "song_id": "359",
+        "title": "HELL! or HELL?",
+        "difficulty": "special",
+        "level": 30,
+        "notes": 1196
+      },
+      "consecutive_verified": 1,
+      "distinct_seeds": 1,
+      "runs": [
+        {
+          "run": "lv30_359_sync2_seed11",
+          "seed": 11,
+          "judgment": {
+            "perfect": 1196,
+            "great": 0,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 1196,
+            "score": 1949983
+          }
+        }
+      ],
+      "errors": [],
+      "passed": false
+    },
+    {
+      "chart": {
+        "song_id": "586",
+        "title": "誓いのWingbeat",
+        "difficulty": "special",
+        "level": 30,
+        "notes": 1161
+      },
+      "consecutive_verified": 3,
+      "distinct_seeds": 3,
+      "runs": [
+        {
+          "run": "lv30_586_sync2_seed11",
+          "seed": 11,
+          "judgment": {
+            "perfect": 1157,
+            "great": 4,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 1161,
+            "score": 1949859
+          }
+        },
+        {
+          "run": "lv30_586_sync2_seed22",
+          "seed": 22,
+          "judgment": {
+            "perfect": 1161,
+            "great": 0,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 1161,
+            "score": 1957099
+          }
+        },
+        {
+          "run": "lv30_586_sync2_seed33",
+          "seed": 33,
+          "judgment": {
+            "perfect": 1160,
+            "great": 1,
+            "good": 0,
+            "bad": 0,
+            "miss": 0,
+            "max_combo": 1161,
+            "score": 1960070
+          }
+        }
+      ],
+      "errors": [],
+      "passed": true
+    },
+    {
+      "chart": {
+        "song_id": "684",
+        "title": "焚音打",
+        "difficulty": "special",
+        "level": 30,
+        "notes": 1598
+      },
+      "consecutive_verified": 0,
+      "distinct_seeds": 0,
+      "runs": [],
+      "errors": [],
+      "passed": false
+    }
+  ],
+  "all_verified": false,
+  "historical_audit": true,
+  "superseded_by_user_instruction": "2026-09-19: occasional misses accepted; repeated full combo is no longer required. This historical strict audit is not the current feature acceptance gate."
+}

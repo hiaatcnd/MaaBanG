@@ -90,11 +90,16 @@ def update_interface(interface, catalog):
                       'option': [profile],
                       'pipeline_override': {'LV_Song': {'attach': {'value': song_key(song, songs)}}}})
     options['演出歌曲'].update(cases=cases, default_case='SAVIOR OF SONG',
-        label='演出歌曲（仅游戏收藏）',
-        description='仅从游戏内“收藏→所有”选歌，请先收藏目标歌曲。此列表是中国服歌曲目录，不代表已收藏；未收藏则无法找到。难度候选随歌曲变化，同名歌曲按乐队区分。')
+        label='演出歌曲',
+        description='从已解锁歌曲选择，无需收藏；进入游戏后按所属乐队筛选查找。难度候选随歌曲变化，同名歌曲按乐队区分。')
+    for key in list(options):
+        if key.startswith('清火筛选_'):
+            del options[key]
     for task in interface['task']:
         if task['entry'] == 'AutoLive':
-            task['option'] = [name for name in task['option'] if name != '演出难度']
+            task['description']=task['description'].replace('从收藏选择歌曲','从全部已解锁歌曲按乐队筛选选歌，无需收藏')
+            task['option'] = ['演出歌曲' if name in ('演出歌曲','清火筛选_乐队') else name
+                              for name in task['option'] if name != '演出难度']
     return interface
 
 
@@ -121,6 +126,9 @@ def main():
     out = ROOT/'agent/data/songs_cn.json'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    # Import after writing the catalog so generated chart choices use the refresh.
+    from update_chart_interface import update as update_chart_interface
+    interface = update_chart_interface(interface)
     interface_path.write_text(json.dumps(interface, ensure_ascii=False, indent=4)+'\n', encoding='utf-8')
     csv_out = io.StringIO(newline='')
     writer = csv.writer(csv_out)

@@ -1,0 +1,88 @@
+{
+  "server": "cn",
+  "catalog_fetched_at": "2026-09-18T12:42:23Z",
+  "acceptance": "All available highest numerical level charts; repeated runs with bounded jitter, full combo, GREAT or better.",
+  "charts": [
+    {
+      "song_id": "306",
+      "title": "SAVIOR OF SONG",
+      "difficulty": "easy",
+      "level": 9,
+      "notes": 133,
+      "sha256": "91294eebc4f51a1a7d596c2cf47388d12b2e8788080b81e1fda14880f3aa2a69",
+      "source": "https://bestdori.com/api/charts/306/easy.json"
+    },
+    {
+      "song_id": "306",
+      "title": "SAVIOR OF SONG",
+      "difficulty": "expert",
+      "level": 28,
+      "notes": 772,
+      "sha256": "6f319531915bc2722426ac23c92f58f62a1b56d6cf1c43277ca99b244126dbbd",
+      "source": "https://bestdori.com/api/charts/306/expert.json"
+    },
+    {
+      "song_id": "304",
+      "title": "SENSENFUKOKU",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 972,
+      "sha256": "5d1c7209782f18a27e8ab50289c7acda4021fde07dee9c279ea1ed44af101cca",
+      "source": "https://bestdori.com/api/charts/304/special.json"
+    },
+    {
+      "song_id": "296",
+      "title": "セツナトリップ",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1087,
+      "sha256": "6a76baa5b7df554e52720412051fd3836d3b1e86dcb1ce6d0022c7c1f6328eae",
+      "source": "https://bestdori.com/api/charts/296/special.json"
+    },
+    {
+      "song_id": "359",
+      "title": "HELL! or HELL?",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1196,
+      "sha256": "20d179e67c983f0c7eb518b4611d6f88270fc00123e0ad08d9a834a6cacee946",
+      "source": "https://bestdori.com/api/charts/359/special.json"
+    },
+    {
+      "song_id": "586",
+      "title": "誓いのWingbeat",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1161,
+      "sha256": "291af5a9a8eafb24467783bff9d31746585ac769add79118f6dc5665e81438e7",
+      "source": "https://bestdori.com/api/charts/586/special.json"
+    },
+    {
+      "song_id": "684",
+      "title": "焚音打",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1598,
+      "sha256": "e6dbfdd7cb702e579dca19603ecf81d75ce438085fe8fcab28d0dde25cc38093",
+      "source": "https://bestdori.com/api/charts/684/special.json"
+    },
+    {
+      "song_id": "306",
+      "title": "SAVIOR OF SONG",
+      "difficulty": "normal",
+      "level": 14,
+      "notes": 246,
+      "sha256": "4ed55c287b50ea69a938a86ee58768962180b42b975f65877fa39bd3b91cbb41",
+      "source": "https://bestdori.com/api/charts/306/normal.json"
+    },
+    {
+      "song_id": "306",
+      "title": "SAVIOR OF SONG",
+      "difficulty": "hard",
+      "level": 20,
+      "notes": 401,
+      "sha256": "dae89fde59c35e80b2380922528c2b1b0c29f7420d38301f007008bf6de28c5b",
+      "source": "https://bestdori.com/api/charts/306/hard.json"
+    }
+  ]
+}

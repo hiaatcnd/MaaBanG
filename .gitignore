@@ -455,3 +455,4 @@ debug
 .pnpm-store/
 
 dist/
+cache/charts/

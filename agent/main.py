@@ -21,9 +21,11 @@ def main():
     import costume_unlock
     import daily_tasks
     from auto_live import AutoLive
+    from chart_live import ChartLive
 
     AgentServer.custom_action("UnlockDefault3DCostumes")(costume_unlock.UnlockDefault3DCostumes)
     AgentServer.custom_action("AutoLive")(AutoLive)
+    AgentServer.custom_action("ChartLive")(ChartLive)
     for name in ("ClaimHomeGifts", "ClaimHomeMissions", "ExchangeMichelle", "DailyFreeRecruit"):
         AgentServer.custom_action(name)(getattr(daily_tasks, name))
     Toolkit.init_option("./")

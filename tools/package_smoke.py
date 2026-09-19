@@ -43,7 +43,7 @@ process = subprocess.Popen([str(package / interface["agent"]["child_exec"]),
 try:
     assert client.connect(), "Agent handshake failed"
     assert {"UnlockDefault3DCostumes", "ClaimHomeGifts", "ClaimHomeMissions",
-            "ExchangeMichelle", "DailyFreeRecruit", "AutoLive"}.issubset(client.custom_action_list)
+            "ExchangeMichelle", "DailyFreeRecruit", "AutoLive", "ChartLive"}.issubset(client.custom_action_list)
 finally:
     client.disconnect()
     try:
