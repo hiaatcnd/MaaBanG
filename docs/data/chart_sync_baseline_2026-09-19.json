@@ -1,0 +1,79 @@
+{
+  "date": "2026-09-19",
+  "phase": "zero-jitter visual synchronization baseline",
+  "song_id": 306,
+  "difficulty": "easy",
+  "fire": 0,
+  "game_auto": false,
+  "jitter": false,
+  "fast_capture_ms": {
+    "median": 12.018050067126751,
+    "p95": 13.793599791824818,
+    "max": 14.496200019493699
+  },
+  "runs": [
+    {
+      "run": "sync2",
+      "score": 1686762,
+      "perfect": 133,
+      "great": 0,
+      "good": 0,
+      "bad": 0,
+      "miss": 0,
+      "max_combo": 133,
+      "result": "ALL PERFECT",
+      "events": 238,
+      "dispatch_lateness_ms": {
+        "median": 0.2893918426707387,
+        "p95": 0.5377416964620352,
+        "max": 4.705241648480296
+      },
+      "sdk_completion_ms": {
+        "median": 0.19720010459423065,
+        "p95": 0.283100176602602,
+        "max": 4.808200057595968
+      },
+      "evidence": "debug/chart_research/sync2/judgment.png"
+    },
+    {
+      "run": "sync3",
+      "result": "failed",
+      "reason": "First-note fit was rejected; old acquisition loop incorrectly locked a later same-lane note",
+      "score_at_failure": 5323,
+      "evidence": "debug/chart_research/sync3/result.png"
+    },
+    {
+      "run": "sync4",
+      "result": "aborted_before_input",
+      "reason": "White loading page triggered stage/health guard; corrected using cyan judgment-line edges",
+      "events": 0
+    },
+    {
+      "run": "sync5",
+      "result": "FULL COMBO",
+      "score": 1312820,
+      "perfect": 84,
+      "great": 49,
+      "good": 0,
+      "bad": 0,
+      "miss": 0,
+      "max_combo": 133,
+      "offset_ms": 0,
+      "events": 238,
+      "lock": {
+        "crossing": 10.831415083763414,
+        "residual_ms": 2.7309466168728043,
+        "points": 9,
+        "y": 456.0
+      },
+      "dispatch_lateness_ms": {
+        "median": 0.31281623523682356,
+        "p95": 0.5299162585288286,
+        "max": 0.7093162275850773
+      },
+      "evidence": "debug/chart_research/sync5/judgment.png"
+    }
+  ],
+  "tests_passed": 84,
+  "current_implementation_validation": "One full-combo real-device run after first-note acquisition and loading-page fixes; broader stability not established."
+}

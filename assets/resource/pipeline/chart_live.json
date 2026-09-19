@@ -1,0 +1,61 @@
+{
+    "ChartLive": {
+        "action": "Custom",
+        "custom_action": "ChartLive"
+    },
+    "CL_mode": {
+        "attach": {
+            "value": "free"
+        }
+    },
+    "CL_jitter": {
+        "attach": {
+            "value": "small"
+        }
+    },
+    "CL_fire": {
+        "attach": {
+            "value": 1
+        }
+    },
+    "CL_shortage": {
+        "attach": {
+            "value": "stop"
+        }
+    },
+    "CL_max_rounds": {
+        "attach": {
+            "value": "1"
+        }
+    },
+    "CL_song1": {
+        "attach": {
+            "value": "306"
+        }
+    },
+    "CL_song2": {
+        "attach": {
+            "value": "306"
+        }
+    },
+    "CL_song3": {
+        "attach": {
+            "value": "306"
+        }
+    },
+    "CL_difficulty1": {
+        "attach": {
+            "value": "expert"
+        }
+    },
+    "CL_difficulty2": {
+        "attach": {
+            "value": "expert"
+        }
+    },
+    "CL_difficulty3": {
+        "attach": {
+            "value": "expert"
+        }
+    }
+}

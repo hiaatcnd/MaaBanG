@@ -1,0 +1,12 @@
+{
+    "CL_TourFixedEntry": {
+        "recognition": "OCR",
+        "roi": [290, 328, 304, 80],
+        "expected": ["^课题巡演$"]
+    },
+    "CL_TourFixedSetup": {
+        "recognition": "OCR",
+        "roi": [125, 50, 270, 42],
+        "expected": ["^课题巡演$"]
+    }
+}

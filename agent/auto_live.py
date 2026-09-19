@@ -1,4 +1,4 @@
-"""Run only the game's built-in auto mode, selecting songs from favorites."""
+"""Run only the game's built-in auto mode, selecting unlocked songs by band."""
 import json
 from pathlib import Path
 import re
@@ -9,7 +9,8 @@ from maa.custom_action import CustomAction
 
 from costume_unlock import FlowError, normalized
 from daily_tasks import DailyFlow
-from song_catalog import BY_ID, needs_band_check
+from song_catalog import resolve_song
+from song_navigation import SongNavigationMixin
 from live_policy import (LiveOptions, DIFFICULTIES, parse_auto_remaining,
                          fire_for_song, round_stop_reason)
 
@@ -18,7 +19,7 @@ OPTION_NODES = {key: 'LV_' + suffix for key, suffix in (
     ('fire','Fire'), ('shortage','Shortage'), ('max_rounds','MaxRounds'))}
 
 
-class LiveFlow(DailyFlow):
+class LiveFlow(SongNavigationMixin, DailyFlow):
     def __init__(self, context, options):
         super().__init__(context)
         self.options = options
@@ -83,27 +84,6 @@ class LiveFlow(DailyFlow):
             self.open_page('LV_HomeEntry','LV_Menu')
         self.wait('LV_Menu')
 
-    def favorites(self):
-        for _ in range(8):
-            self.wait('LV_SongPage')
-            hit = self.hit_text([0,103,187,605], '^收藏$')
-            if hit:
-                x,y,w,h=hit.box
-                if not self.pink(self.image[y:y+h,150:183]):
-                    self.tap_hit(hit)
-                self.wait('LV_SongPage')
-                header=self.hit_text([0,103,187,605], '^收藏$')
-                if not header or not self.pink(self.image[header.box[1]:header.box[1]+header.box[3],150:183]):
-                    raise FlowError('未确认收藏分类已选中')
-                y=header.box[1]+header.box[3]
-                all_hit=self.hit_text([0,y,187,min(100,720-y)], '所有')
-                if not all_hit:
-                    raise FlowError('收藏分类中未找到所有收藏')
-                self.tap_hit(all_hit)
-                return
-            self.swipe(90,620,245)
-        raise FlowError('未找到收藏分类，不扫描全部歌曲')
-
     def selected_difficulty(self, centers, y):
         found=[]
         for difficulty,x in zip(DIFFICULTIES,centers):
@@ -129,37 +109,13 @@ class LiveFlow(DailyFlow):
         return actual
 
     def choose_song(self):
-        # SPECIAL filters out songs without that chart, including EXIST.
-        # Selectable catalog entries have EXPERT; restore it before searching favorites.
-        self.wait('LV_SongPage')
-        self.tap(1051,540)
-        self.favorites()
-        expected=normalized(self.options.song)
-        for start,end in ((230,600),(620,200)):
-            previous=None
-            for _ in range(60):
-                self.wait('LV_SongPage')
-                hits=self.ocr([201,100,365,594])
-                matches=[h for h in hits if normalized(h.text)==expected]
-                for match in matches:
-                    self.tap_hit(match)
-                    self.wait('LV_SongPage')
-                    title=normalized(self.text([210,332,356,32]))
-                    if title != expected:
-                        raise FlowError(f'选中歌曲不一致：{title}')
-                    if self.options.song_id and needs_band_check(self.options.song_id):
-                        band=normalized(self.text([201,365,374,35]))
-                        aliases={normalized(s) for s in BY_ID[self.options.song_id]['band_aliases']}
-                        if band not in aliases:
-                            continue
-                    actual=self.choose_difficulty()
-                    self.tap(1070,648)
-                    return actual
-                area=self.image[105:703,201:565].astype(float)
-                if previous is not None and np.mean(np.abs(area-previous))<1: break
-                previous=area
-                self.swipe(385,start,end)
-        raise FlowError(f'收藏中没有找到 {self.options.song}，请先收藏并检查筛选条件')
+        song=resolve_song(self.options.song_id or self.options.song)
+        self.find_song(song)
+        if self.options.difficulty!='expert':
+            self.clear_song_level_filter(song)
+        actual=self.choose_difficulty()
+        self.tap(1070,648)
+        return actual
 
     def prepare_round(self):
         self.navigate_menu()

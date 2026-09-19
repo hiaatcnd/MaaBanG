@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-09-19T13:19:47.343629+00:00",
+  "source": "https://bestdori.com/api/songs/all.7.json",
+  "sha256": "568fe7d37a8fde105af0bedff1ac6c76fee4efff9ab8cfde5013a192f971adf1",
+  "server": "cn",
+  "highest_level": 30,
+  "charts": [
+    {
+      "song_id": "296",
+      "title": "セツナトリップ",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1087
+    },
+    {
+      "song_id": "304",
+      "title": "SENSENFUKOKU",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 972
+    },
+    {
+      "song_id": "359",
+      "title": "HELL! or HELL?",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1196
+    },
+    {
+      "song_id": "586",
+      "title": "誓いのWingbeat",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1161
+    },
+    {
+      "song_id": "684",
+      "title": "焚音打",
+      "difficulty": "special",
+      "level": 30,
+      "notes": 1598
+    }
+  ]
+}
