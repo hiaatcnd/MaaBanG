@@ -10,6 +10,7 @@ import subprocess
 import sys
 import urllib.request
 import zipfile
+from build_ui import build_ui
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,6 +35,8 @@ def build(version):
         dest = package if name == "mfaa" else package / "python" if name == "python" else cache / "framework"
         with zipfile.ZipFile(archive) as source:
             source.extractall(dest)
+    # Keep upstream runtime/dependency versions; replace only our patched UI core.
+    shutil.copy2(build_ui(), package / 'libs/MFAAvalonia.Core.dll')
     shutil.rmtree(package / "runtimes")
     framework = cache / "framework"
     shutil.copytree(framework / "bin", package / "runtimes/win-x64/native",
@@ -58,7 +61,15 @@ def build(version):
     (package / "interface.json").write_text(json.dumps(interface, ensure_ascii=False, indent=4), encoding="utf-8")
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, release)
+    readme_images = release / 'assets/branding'
+    readme_images.mkdir(parents=True)
+    shutil.copy2(ROOT / 'assets/branding/MaaBanG.png', readme_images)
     shutil.copytree(ROOT / "docs", release / "docs")
+    source_bundle = release / 'docs/upstream-ui'
+    source_bundle.mkdir()
+    shutil.copy2(cache / 'mfaa-source.zip', source_bundle)
+    shutil.copy2(ROOT / 'tools/patches/mfaa-background-startup-connection.patch', source_bundle)
+    shutil.copy2(ROOT / 'tools/build_ui.py', source_bundle)
     (package / "tools").mkdir()
     shutil.copy2(ROOT / "tools/package_smoke.py", package / "tools/package_smoke.py")
     compiler = Path(os.environ["WINDIR"]) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"

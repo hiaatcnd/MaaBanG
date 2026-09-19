@@ -42,6 +42,8 @@ class LiveFlow(DailyFlow):
 
     def ready(self, index=1):
         self.snap()
+        if self.dismiss_daily_reward():
+            return False
         if self.options.mode == 'free':
             return bool(self.reco('LV_FreeReady'))
         return bool(self.reco('LV_TourHeader')) and self.tour_index() == index
@@ -246,12 +248,23 @@ class LiveFlow(DailyFlow):
             raise FlowError(f'火数预览不一致：{balance} / {before} → {after}，设置 {amount}')
         return remaining,balance
 
+    def dismiss_daily_reward(self):
+        # This modal also appears BETWEEN tour songs. Its background remains
+        # recognizable, but counters and controls are obscured until dismissed.
+        if not self.reco('LV_DailyReward'):
+            return False
+        self.tap(640,544)
+        self.pause(2)
+        return True
+
     def wait_song(self, index):
         deadline=time.monotonic()+600
         # The game plays the notes. Poll at ten-second intervals without touching the stage.
         while time.monotonic()<deadline:
             self.pause(10)
             self.snap()
+            if self.dismiss_daily_reward():
+                continue
             if self.options.mode=='tour' and index<3:
                 if self.reco('LV_TourHeader') and self.tour_index()==index+1:
                     return
@@ -263,9 +276,7 @@ class LiveFlow(DailyFlow):
         deadline=time.monotonic()+180
         while time.monotonic()<deadline:
             self.snap()
-            if self.reco('LV_DailyReward'):
-                self.tap(640,544)
-                self.pause(2)
+            if self.dismiss_daily_reward():
                 continue
             if self.reco('LV_RankUp'):
                 self.tap(640,526)
