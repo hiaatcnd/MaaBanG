@@ -1,0 +1,16 @@
+--- a/MFAAvalonia/Views/Windows/RootView.axaml.cs
++++ b/MFAAvalonia/Views/Windows/RootView.axaml.cs
+@@ -481,7 +481,12 @@
+                             }
+                             else
+                             {
+-                                vm.TryReadAdbDeviceFromConfig();
++                                // Restore the saved target before refreshing, preserving device selection.
++                                vm.TryReadAdbDeviceFromConfig(allowAutoDetect: false, showToast: false);
++                                LoggerHelper.Info("[MaaBanG] Background startup device refresh started.");
++                                // Discovery is synchronous; never run it on the UI thread.
++                                await Task.Run(() => vm.TryReadAdbDeviceFromConfig(refresh: true));
++                                LoggerHelper.Info("[MaaBanG] Background startup device refresh completed.");
+                             }
+ 
+                             vm.Processor.TaskQueue.Enqueue(new MFATask

@@ -17,13 +17,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       - name: Build and smoke test standalone package
         shell: pwsh
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.3.1-ci' }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.3.2-ci' }
           python tools/install.py $version
       - uses: actions/upload-artifact@v4
         with:
@@ -51,4 +54,3 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: gh release create "$RELEASE_TAG" dist/* --verify-tag --title "MaaBanG $RELEASE_TAG" --notes-file docs/release-notes.md
-

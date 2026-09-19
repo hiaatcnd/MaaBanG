@@ -135,11 +135,34 @@ class LiveFlowTests(unittest.TestCase):
     def test_wait_song_polls_without_clicking_and_requires_next_tour_index(self):
         f=self.flow(mode='tour')
         f.wait_song=LiveFlow.wait_song.__get__(f)
-        f.pause=Mock(); f.reco=Mock(return_value=True)
+        f.pause=Mock(); f.reco=Mock(side_effect=lambda node:node=='LV_TourHeader')
         f.tour_index=Mock(side_effect=[1,1,2])
         f.wait_song(1)
         self.assertEqual([c.args for c in f.pause.call_args_list],[(10,),(10,),(10,)])
         f.tap.assert_not_called()
+
+    def test_first_daily_reward_is_dismissed_before_next_tour_song(self):
+        f=self.flow(mode='tour')
+        f.wait_song=LiveFlow.wait_song.__get__(f)
+        f.pause=Mock()
+        state={'modal':True}
+        f.reco=Mock(side_effect=lambda node:node=='LV_TourHeader' or
+                    (node=='LV_DailyReward' and state['modal']))
+        f.tap=Mock(side_effect=lambda *args:state.update(modal=False))
+        f.tour_index=Mock(return_value=2)
+        f.wait_song(1)
+        f.tap.assert_called_once_with(640,544)
+        f.tour_index.assert_called_once()
+        self.assertEqual(f.snap.call_count,2)
+
+    def test_reward_modal_is_not_mistaken_for_ready_screen(self):
+        f=self.flow(mode='tour')
+        f.pause=Mock()
+        f.reco=Mock(return_value=True)
+        f.tour_index=Mock(return_value=2)
+        self.assertFalse(f.ready(2))
+        f.tap.assert_called_once_with(640,544)
+        f.tour_index.assert_not_called()
 
     def test_stop_interrupts_wait_before_next_poll(self):
         f=self.flow(); f.ctx.tasker.stopping=True
