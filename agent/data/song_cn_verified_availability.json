@@ -1,0 +1,9 @@
+{
+  "690": {
+    "title": "Second to None",
+    "band_id": 5,
+    "verified_at": "2026-09-23",
+    "levels": {"easy": 10, "normal": 15, "hard": 24, "expert": 27},
+    "evidence": "docs/zh_cn/develop/free_song_recognition_audit.md"
+  }
+}

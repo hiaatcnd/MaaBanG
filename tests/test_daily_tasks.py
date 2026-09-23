@@ -163,24 +163,84 @@ class DailyFlowTests(unittest.TestCase):
 
     def test_recruit_animation_and_modal_close_before_result(self):
         f=self.flow()
-        scenes=iter(['skip','member','dimmed_result','items','result'])
+        scenes=iter(['skip','member','dimmed_result','items','result','banner'])
         current={}
         def snap():
             current['scene']=next(scenes)
             f.image=np.full((720,1280,3), 100 if current['scene']=='dimmed_result' else 255,dtype=np.uint8)
         def reco(node):
-            return node in {
+            matched = node in {
                 'skip':{'DY_RecruitSkip'}, 'member':{'DY_MemberReveal'},
                 'dimmed_result':{'DY_RecruitResult'},
                 'items':{'DY_ObtainedHeader','DY_RecruitResult'},
                 'result':{'DY_RecruitResult'},
+                'banner':{'DY_FreeBanner'},
             }[current['scene']]
+            return SimpleNamespace(box=[1177,34,48,48]) if matched else None
         f.snap=Mock(side_effect=snap); f.reco=Mock(side_effect=reco); f.click=Mock()
         with patch('daily_tasks.time.sleep'):
             f.finish_draw()
-        f.click.assert_called_once_with('DY_RecruitSkip')
-        self.assertEqual([c.args for c in f.tap.call_args_list],[(985,570),(640,602),(1067,647)])
-        f.wait.assert_called_once_with('DY_FreeBanner',25)
+        f.click.assert_not_called()
+        self.assertEqual([c.args for c in f.tap.call_args_list],[(1201,58),(985,570),(640,602),(1067,647)])
+        f.wait.assert_not_called()
+
+    def recruit_scenes(self, scenes):
+        f=self.flow()
+        frames=iter(scenes)
+        current={}
+        def snap():
+            current['node']=next(frames)
+            f.image=np.full((720,1280,3),255,dtype=np.uint8)
+        f.snap=Mock(side_effect=snap)
+        f.reco=Mock(side_effect=lambda node: SimpleNamespace(box=[470,600,340,48])
+                    if node==current['node'] else None)
+        return f
+
+    def test_obscured_skip_uses_cut_prompt_and_retries_missed_click(self):
+        f=self.recruit_scenes(['DY_RecruitCut','DY_RecruitCut',
+                               'DY_RecruitResult','DY_FreeBanner'])
+        with patch('daily_tasks.time.monotonic',side_effect=range(0,100,4)):
+            f.finish_draw()
+        self.assertEqual([c.args for c in f.tap.call_args_list],
+                         [(640,624),(640,624),(1067,647)])
+
+    def test_result_return_is_retried_after_missed_click(self):
+        f=self.recruit_scenes(['DY_RecruitResult','DY_RecruitResult','DY_FreeBanner'])
+        with patch('daily_tasks.time.monotonic',side_effect=range(0,100,4)):
+            f.finish_draw()
+        self.assertEqual([c.args for c in f.tap.call_args_list],[(1067,647)]*2)
+
+    def test_stuck_navigation_stops_after_three_attempts_without_resubmitting(self):
+        for node in ('DY_RecruitCut','DY_RecruitSkip','DY_MemberReveal',
+                     'DY_ObtainedHeader','DY_RecruitResult'):
+            with self.subTest(node=node):
+                f=self.recruit_scenes([node]*4)
+                f.free_remaining=Mock(return_value=3)
+                with patch('daily_tasks.time.monotonic',side_effect=range(0,100,4)):
+                    with self.assertRaisesRegex(FlowError,'点击 3 次'):
+                        f.recruit()
+                self.assertEqual(f.tap.call_count,5)  # Open, submit, three navigation attempts.
+                self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),1)
+                self.assertTrue(f.report['draw_in_flight'])
+                self.assertEqual(f.report['draws'],0)
+
+    def test_navigation_retry_waits_before_clicking_again(self):
+        f=self.recruit_scenes(['DY_RecruitCut','DY_RecruitCut',
+                               'DY_RecruitResult','DY_FreeBanner'])
+        with patch('daily_tasks.time.monotonic',side_effect=[0,1,1,2,2,3,3,4]), \
+             patch('daily_tasks.time.sleep'):
+            f.finish_draw()
+        self.assertEqual([c.args for c in f.tap.call_args_list],[(640,624),(1067,647)])
+
+    def test_unrecognized_or_premature_banner_times_out_without_clicking(self):
+        for node in ('unknown','DY_FreeBanner'):
+            with self.subTest(node=node):
+                f=self.recruit_scenes([node])
+                with patch('daily_tasks.time.monotonic',side_effect=[0,1,121]), \
+                     patch('daily_tasks.time.sleep'):
+                    with self.assertRaisesRegex(FlowError,'招募结果未确认'):
+                        f.finish_draw()
+                f.tap.assert_not_called()
 
     def test_gifts_claim_until_empty_then_return_home(self):
         f=self.flow(); f.click=Mock(); f.tap_hit=Mock()

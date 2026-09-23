@@ -256,9 +256,11 @@ class ChartLiveFlow(LiveFlow):
 
     def verify_chart_start(self, index, selection, amount):
         self.wait_ready(index)
-        rect=[220,541,440,38] if self.settings.mode=='free' else [111,541,420,38]
-        if not self.title_matches(self.text(rect),selection.song):
-            raise FlowError('开演前歌曲与谱面不一致')
+        # Long free-live titles extend beyond x=660; stop before the auto button.
+        rect=[220,541,570,38] if self.settings.mode=='free' else [111,541,420,38]
+        title=self.text(rect)
+        if not self.title_matches(title,selection.song):
+            raise FlowError(f'开演前歌曲与谱面不一致：识别到 {title!r}，预期 {selection.song["title"]!r}')
         if self.settings.mode=='free':
             if normalized(self.text([113,561,104,33])).lower()!=selection.difficulty:
                 raise FlowError('开演前难度与谱面不一致')
@@ -282,10 +284,13 @@ class ChartLiveFlow(LiveFlow):
         return balance
 
     def play_chart(self, index, selection, metadata, amount, row):
-        destination=self.output/f'round{self.report["completed_rounds"]+1}_song{index}'
+        online=self.settings.mode == 'team'
+        destination=self.output/(f'attempt{self.report["attempts"]}_playback' if online else
+                                 f'round{self.report["completed_rounds"]+1}_song{index}')
         destination.mkdir()
         config={'controller':self.controller.info,'chart':metadata,
-                'jitter':self.settings.jitter,'seed':secrets.randbits(32)}
+                'jitter':self.settings.jitter,'seed':secrets.randbits(32),
+                'start_mode':'online' if online else 'click'}
         (destination/'config.json').write_text(json.dumps(config),encoding='utf8')
         log=(destination/'worker.log').open('w',encoding='utf8')
         process=subprocess.Popen([sys.executable,'-X','utf8',str(Path(__file__).with_name('chart_worker.py')),
@@ -295,22 +300,33 @@ class ChartLiveFlow(LiveFlow):
             deadline=time.monotonic()+60
             while not (destination/'armed').exists():
                 self.check_stop()
+                if online:
+                    self.monitor_online_worker(destination)
                 if process.poll() is not None or time.monotonic()>deadline:
                     raise FlowError(f'演奏进程准备失败，详见 {destination}/worker.log')
                 self.pause(.1)
             row['fire_before']=self.verify_chart_start(index,selection,amount)
             row['status']='submitted'
-            self.save_frame(f'ready_{self.report["completed_rounds"]+1}_{index}.png')
+            self.save_frame(f'ready_attempt{self.report["attempts"]}.png' if online else
+                            f'ready_{self.report["completed_rounds"]+1}_{index}.png')
             (destination/'start').write_text('start')
-            deadline=time.monotonic()+metadata['duration']+90
+            if online:
+                self.submit_online_ready(selection)
+            deadline=time.monotonic()+metadata['duration']+(270 if online else 90)
             while process.poll() is None:
                 self.check_stop()
+                if online:
+                    self.monitor_online_worker(destination)
+                else:
+                    self.monitor_chart_worker(destination)
                 if time.monotonic()>deadline:
                     raise FlowError('演奏进程超时')
                 self.pause(.1)
             playback=json.loads((destination/'playback.json').read_text(encoding='utf8'))
             row['playback']=str(destination/'playback.json')
             if process.returncode!=0 or playback['status']!='input_complete':
+                if online:
+                    self.handle_online_playback_error(playback)
                 raise FlowError(playback.get('error','演奏进程失败'))
         finally:
             if process.poll() is None:
@@ -322,13 +338,18 @@ class ChartLiveFlow(LiveFlow):
                     process.wait(timeout=5)
             log.close()
 
+    def monitor_chart_worker(self, destination):
+        """Optional handling of mode-specific confirmations before notes start."""
+        pass
+
     def result_modals(self):
         if self.dismiss_daily_reward():
             return True
         for header,roi,pattern,button_roi in [
-            ('获得(?:奖励|报酬)',[380,125,280,62],'^确定$|^确认$',[520,505,240,70]),
+            ('^解锁(?:活动|主线)故事$',[370,85,350,65],'^确定$',[510,540,260,85]),
+            ('获得(?:奖励|报酬)',[380,75,280,115],'^确定$|^确认$|^OK$',[510,505,260,145]),
             ('达成(?:奖励|报酬)',[350,70,320,110],'^OK$|^确定$',[510,500,260,145]),
-            ('达成(?:奖励|报酬)一览',[175,48,700,54],'^关闭$',[510,580,260,80])]:
+            ('达成(?:奖励|报酬)一?览',[175,48,700,54],'^关闭$',[510,580,260,80])]:
             if self.hit_text(roi,header):
                 button=self.hit_text(button_roi,pattern)
                 if button:
@@ -454,7 +475,12 @@ class ChartLive(CustomAction):
             for key,node in OPTION_NODES.items():
                 data=context.get_node_data(node)
                 values[key]=(data or {}).get('attach',{}).get('value',OPTION_DEFAULTS[key])
-            flow=ChartLiveFlow(context,ChartOptions.parse(values),destination)
+            options=ChartOptions.parse(values)
+            if options.mode == 'team':
+                from online_live import OnlineLiveFlow
+                flow=OnlineLiveFlow(context,options,destination)
+            else:
+                flow=ChartLiveFlow(context,options,destination)
             report=flow.report
             flow.run()
             return True

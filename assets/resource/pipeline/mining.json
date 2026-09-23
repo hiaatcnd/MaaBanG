@@ -1,0 +1,493 @@
+{
+    "MineFullCombo": {
+        "action": "Custom",
+        "custom_action": "MineFullCombo"
+    },
+    "MineStories": {
+        "action": "Custom",
+        "custom_action": "MineStories"
+    },
+    "MineChallenges": {
+        "action": "Custom",
+        "custom_action": "MineChallenges"
+    },
+    "MN_max_rounds": {
+        "attach": {
+            "value": "10"
+        }
+    },
+    "MN_stories": {
+        "attach": {
+            "value": true
+        }
+    },
+    "MN_memories": {
+        "attach": {
+            "value": true
+        }
+    },
+    "MN_practice": {
+        "attach": {
+            "value": false
+        }
+    },
+    "MN_unlock": {
+        "attach": {
+            "value": false
+        }
+    },
+    "MN_stars": {
+        "attach": {
+            "value": "1,2,3"
+        }
+    },
+    "MN_stage": {
+        "attach": {
+            "value": "main"
+        }
+    },
+    "MN_SongFilter": {
+        "recognition": "OCR",
+        "roi": [
+            690,
+            20,
+            350,
+            50
+        ],
+        "expected": "^乐曲筛选$"
+    },
+    "MN_ChallengeEntry": {
+        "recognition": "OCR",
+        "roi": [
+            850,
+            550,
+            165,
+            150
+        ],
+        "expected": "舞台"
+    },
+    "MN_ChallengeHeader": {
+        "recognition": "OCR",
+        "roi": [
+            110,
+            10,
+            315,
+            40
+        ],
+        "expected": "^舞台挑战$"
+    },
+    "MN_ChallengeSelect": {
+        "recognition": "OCR",
+        "roi": [
+            110,
+            45,
+            315,
+            45
+        ],
+        "expected": "^舞台挑战选择$"
+    },
+    "MN_StageSelect": {
+        "recognition": "OCR",
+        "roi": [
+            110,
+            45,
+            315,
+            45
+        ],
+        "expected": "^舞台选择$"
+    },
+    "MN_BandConfirm": {
+        "recognition": "OCR",
+        "roi": [
+            110,
+            45,
+            315,
+            45
+        ],
+        "expected": "^乐队确认$"
+    },
+    "MN_Recommend": {
+        "recognition": "OCR",
+        "roi": [
+            130,
+            350,
+            170,
+            80
+        ],
+        "expected": "^推荐编组$"
+    },
+    "MN_Recommended": {
+        "recognition": "OCR",
+        "roi": [
+            360,
+            140,
+            300,
+            60
+        ],
+        "expected": "^推荐编成$"
+    },
+    "MN_AreaChange": {
+        "recognition": "OCR",
+        "roi": [
+            360,
+            140,
+            420,
+            60
+        ],
+        "expected": "^确认区域道具$"
+    },
+    "MN_AreaChangeConfirm": {
+        "recognition": "OCR",
+        "roi": [
+            650,
+            410,
+            245,
+            180
+        ],
+        "expected": "^确认更换$|^更换$|^确定$|^确认$"
+    },
+    "MN_NextStage": {
+        "recognition": "OCR",
+        "roi": [
+            330,
+            100,
+            620,
+            320
+        ],
+        "expected": "解锁.*舞台|舞台.*解锁"
+    },
+    "MN_NextStageOK": {
+        "recognition": "OCR",
+        "roi": [
+            510,
+            420,
+            260,
+            200
+        ],
+        "expected": "^确定$|^关闭$|^OK$"
+    },
+    "MN_TrainingEntry": {
+        "recognition": "OCR",
+        "roi": [
+            950,
+            315,
+            220,
+            100
+        ],
+        "expected": "^培养$"
+    },
+    "MN_Members": {
+        "recognition": "OCR",
+        "roi": [
+            10,
+            185,
+            210,
+            68
+        ],
+        "expected": "^成员一览$"
+    },
+    "MN_MemberFilter": {
+        "recognition": "OCR",
+        "roi": [
+            230,
+            88,
+            320,
+            57
+        ],
+        "expected": "^成员显示$"
+    },
+    "MN_MemberDetail": {
+        "recognition": "OCR",
+        "roi": [
+            115,
+            45,
+            300,
+            46
+        ],
+        "expected": "^成员详情$"
+    },
+    "MN_PracticeEntry": {
+        "recognition": "OCR",
+        "roi": [
+            980,
+            350,
+            190,
+            51
+        ],
+        "expected": "^练习$"
+    },
+    "MN_PracticePage": {
+        "recognition": "OCR",
+        "roi": [
+            115,
+            45,
+            300,
+            46
+        ],
+        "expected": "^练习$"
+    },
+    "MN_PracticeHelp": {
+        "recognition": "OCR",
+        "roi": [
+            200,
+            40,
+            330,
+            52
+        ],
+        "expected": "^练习成员吧"
+    },
+    "MN_PracticeConfirm": {
+        "recognition": "OCR",
+        "roi": [
+            330,
+            100,
+            620,
+            280
+        ],
+        "expected": "练习确认|消[费耗].*练习券.*练习"
+    },
+    "MN_PracticeConfirmOK": {
+        "recognition": "OCR",
+        "roi": [
+            650,
+            420,
+            245,
+            185
+        ],
+        "expected": "^确定$|^练习$"
+    },
+    "MN_PracticeSuccess": {
+        "recognition": "OCR",
+        "roi": [
+            110,
+            10,
+            1050,
+            330
+        ],
+        "expected": "练习(?:成功|结果)"
+    },
+    "MN_PracticeClose": {
+        "recognition": "OCR",
+        "roi": [
+            480,
+            480,
+            710,
+            210
+        ],
+        "expected": "^关闭$|^确定$"
+    },
+    "MN_StoryUnlock": {
+        "recognition": "OCR",
+        "roi": [
+            360,
+            125,
+            400,
+            62
+        ],
+        "expected": "^小故事解锁$"
+    },
+    "MN_StoryReward": {
+        "recognition": "OCR",
+        "roi": [
+            220,
+            80,
+            800,
+            125
+        ],
+        "expected": "小故事.*报酬|小故事.*奖励|获得奖励|获得道具|获得报酬"
+    },
+    "MN_StoryRewardOK": {
+        "recognition": "OCR",
+        "roi": [
+            500,
+            470,
+            290,
+            180
+        ],
+        "expected": "^确定$|^关闭$|^OK$"
+    },
+    "MN_StorySkipOK": {
+        "recognition": "OCR",
+        "roi": [
+            650,
+            390,
+            245,
+            180
+        ],
+        "expected": "^确定$|^跳过$|^确认$"
+    },
+    "MN_StoryVoice": {
+        "recognition": "OCR",
+        "roi": [
+            330,
+            100,
+            620,
+            330
+        ],
+        "expected": "语音"
+    },
+    "MN_StoryNoVoice": {
+        "recognition": "OCR",
+        "roi": [
+            545,
+            545,
+            190,
+            70
+        ],
+        "expected": "无语音|不下载|不含语音"
+    },
+    "MN_MemberStars": {
+        "recognition": "TemplateMatch",
+        "roi": [
+            118,
+            390,
+            40,
+            165
+        ],
+        "template": [
+            "mining/MemberStar.png",
+            "mining/MemberStarTrained.png",
+            "mining/MemberStarLarge.png"
+        ],
+        "threshold": 0.8,
+        "order_by": "Vertical"
+    },
+    "MN_StageLock": {
+        "recognition": "TemplateMatch",
+        "template": "mining/StageLock.png",
+        "roi": [
+            218,
+            95,
+            55,
+            55
+        ],
+        "threshold": 0.85
+    },
+    "MN_difficulty_easy": {
+        "attach": {
+            "enabled": false
+        }
+    },
+    "MN_difficulty_normal": {
+        "attach": {
+            "enabled": false
+        }
+    },
+    "MN_difficulty_hard": {
+        "attach": {
+            "enabled": false
+        }
+    },
+    "MN_difficulty_expert": {
+        "attach": {
+            "enabled": false
+        }
+    },
+    "MN_difficulty_special": {
+        "attach": {
+            "enabled": false
+        }
+    },
+    "MN_MainStage": {
+        "recognition": "TemplateMatch",
+        "template": "mining/MainStage.png",
+        "roi": [
+            0,
+            106,
+            95,
+            55
+        ],
+        "threshold": 0.85
+    },
+    "MN_SpecialStage": {
+        "recognition": "TemplateMatch",
+        "template": "mining/SpecialStage.png",
+        "roi": [
+            0,
+            106,
+            95,
+            55
+        ],
+        "threshold": 0.85
+    },
+    "MN_fire": {
+        "attach": {
+            "value": 0
+        }
+    },
+    "MN_shortage": {
+        "attach": {
+            "value": "stop"
+        }
+    },
+    "MN_AreaChanged": {
+        "recognition": "OCR",
+        "roi": [
+            200,
+            65,
+            885,
+            60
+        ],
+        "expected": "已为当前.*区域道具"
+    },
+    "MN_AreaChangedOK": {
+        "recognition": "OCR",
+        "roi": [
+            510,
+            555,
+            260,
+            95
+        ],
+        "expected": "^确定$"
+    },
+    "MN_SpecialBandFilter": {
+        "recognition": "OCR",
+        "roi": [
+            360,
+            174,
+            400,
+            56
+        ],
+        "expected": "^乐队指定$"
+    },
+    "MN_AutoTrainingConfirm": {
+        "recognition": "OCR",
+        "roi": [
+            390,
+            50,
+            500,
+            95
+        ],
+        "expected": "将消耗选择中的练习券和特训必须道具"
+    },
+    "MN_AutoTrainingOK": {
+        "recognition": "OCR",
+        "roi": [
+            655,
+            580,
+            245,
+            80
+        ],
+        "expected": "^特训$"
+    },
+    "MN_TrainingResult": {
+        "recognition": "OCR",
+        "roi": [
+            390,
+            90,
+            240,
+            50
+        ],
+        "expected": "^特训结果$"
+    },
+    "MN_TrainingResultOK": {
+        "recognition": "OCR",
+        "roi": [
+            515,
+            540,
+            250,
+            85
+        ],
+        "expected": "^确定$"
+    }
+}

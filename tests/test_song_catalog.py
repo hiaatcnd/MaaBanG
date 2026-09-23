@@ -11,10 +11,26 @@ sys.path.insert(0,str(ROOT/'tools'))
 from song_catalog import BY_ID, BY_KEY, resolve_song, available_difficulties
 from live_policy import LiveOptions
 from auto_live import LiveFlow
-from update_song_catalog import build_catalog
+from update_song_catalog import build_catalog, apply_verified_availability
 
 
 class SongCatalogTests(unittest.TestCase):
+    def test_verified_availability_only_fills_missing_dates_for_exact_active_song(self):
+        from copy import deepcopy
+        source = {'id':'690', 'title':'Second to None', 'band_id':5, 'active':True,
+                  'difficulties':{'expert':{'level':27, 'published_at':None, 'available':False}}}
+        proof = {'690':{'title':'Second to None', 'band_id':5,
+                        'levels':{'expert':27}, 'verified_at':'2026-09-23'}}
+        result = apply_verified_availability([deepcopy(source)], proof)[0]
+        self.assertTrue(result['difficulties']['expert']['available'])
+        self.assertIsNone(result['difficulties']['expert']['published_at'])
+        closed = deepcopy(source); closed['active'] = False
+        self.assertFalse(apply_verified_availability([closed],proof)[0]['difficulties']['expert']['available'])
+        future = deepcopy(source); future['difficulties']['expert']['published_at'] = 9999999999999
+        self.assertFalse(apply_verified_availability([future],proof)[0]['difficulties']['expert']['available'])
+        changed = deepcopy(source); changed['difficulties']['expert']['level'] = 28
+        with self.assertRaises(ValueError): apply_verified_availability([changed],proof)
+
     def test_cn_release_dates_and_special_are_independent(self):
         song={'bandId':1,'musicTitle':['JP',None,None,'CN',None],
               'publishedAt':['1',None,None,'20',None],

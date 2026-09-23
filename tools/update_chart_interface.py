@@ -47,8 +47,13 @@ def update(interface):
     options['谱面演出模式']={'type':'select','label':'演出模式','cases':[
         choice('自由演出','mode','free',[selectors[0]]),
         choice('自由巡演（三首自选）','mode','tour_free',selectors),
-        choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)])]}
-    names=['极小偏差（优先准确）','小偏差','中等偏差','大偏差','很大偏差（可能频繁MISS）']
+        choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)]),
+        choice('团队演出','mode','team',['谱面联网难度'])]}
+    options['谱面联网难度']={'type':'select','label':'演出难度','default_case':'EXPERT',
+        'description':'SPECIAL 不可用时降为 EXPERT；其他难度不替换。首次进入匹配前缓存所选难度的全部谱面。',
+        'cases':[choice(name.upper(),'difficulty1',name) for name in DIFFICULTIES]}
+    interface['task'][0]['description'] += ' 支持团队联网演出；掉房重进，房间3分钟未开演重进，仅成功结算计次。首次联网演出需预缓存全部可能谱面。协力演出暂未开放。'
+    names=['极小偏差（优先准确）','小偏差','中等偏差','中大偏差','大偏差','很大偏差（可能频繁MISS）']
     options['谱面随机偏差']={'type':'select','label':'随机偏差','default_case':'小偏差',
         'description':'时间和位置均采用以0为中心的截断正态分布：小偏差常见，大偏差少见，标准差为上限的1/3。各档均非零，不提供关闭；不保证ALL PERFECT，大偏差可能导致演出失败。',
         'cases':[dict(choice(label,'jitter',key),description=f'时间上限 ±{time:g} 毫秒，位置上限 ±{space:g} 像素。')
@@ -59,7 +64,7 @@ def update(interface):
         choice('停止','shortage','stop'),choice('使用回复道具补火','shortage','items')],
         'description':'优先小型饮料，不足时使用普通饮料。只补足本轮需要的火；不用星石。'}
     options['谱面最大演出次数']={'type':'input','label':'最大演出次数','inputs':[{'name':'次数','label':'最大演出次数',
-        'description':'自由演出一首计一次；巡演完整三首计一次。留空持续运行，直到停止、火或道具不足。',
+        'description':'自由及联网演出成功结算一首计一次；巡演完整三首计一次。掉房不计次。留空持续运行，直到停止、火或道具不足。',
         'default':'1','verify':'^$|^[1-9][0-9]{0,2}$','pattern_msg':'留空不限次数，或填写1–999'}],
         'pipeline_override':{OPTION_NODES['max_rounds']:{'attach':{'value':'{次数}'}}}}
     return interface

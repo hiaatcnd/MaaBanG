@@ -12,6 +12,15 @@ from chart_policy import JITTER_PROFILES
 from chart_timing import compile_chart, first_anchor
 
 
+def start_authorized_stage(controller, mode):
+    if mode == 'online':
+        return
+    if mode != 'click':
+        raise ValueError('未知开演方式')
+    if not controller.post_click(1130,616).wait().succeeded:
+        raise RuntimeError('开演输入未确认，不重试')
+
+
 def controller_config(info):
     if info.get('type') != 'adb':
         raise ValueError('谱面演出目前需要 MuMu 安卓模拟器')
@@ -48,6 +57,7 @@ def play(config_path):
 
     config_path = Path(config_path)
     cfg = json.loads(config_path.read_text(encoding='utf8'))
+    online = cfg.get('start_mode') == 'online'
     output = config_path.parent
     Toolkit.init_option(str(output))
     report = {'status':'preparing','events':[], 'phase_updates':[]}
@@ -95,11 +105,24 @@ def play(config_path):
         if not resource.post_bundle(bundle).wait().succeeded:
             raise RuntimeError('演出弹窗识别资源加载失败')
         popup_frame=None
+        waiting_members=False
         class CheckOverlay(CustomAction):
             def run(self,context,argv):
+                nonlocal waiting_members
+                if online:
+                    waiting=context.run_recognition('OL_WaitingMembers',popup_frame)
+                    waiting_members=bool(waiting and waiting.hit)
+                    for node in ('OL_Disconnected','CU_HomeBand','LV_Menu','OL_RoomPage','OL_TeamHome'):
+                        result=context.run_recognition(node,popup_frame)
+                        if result and result.hit:
+                            report['observer_error']='联网房间退出：'+node
+                            report['interrupted']=True
+                            observer_failed.set()
+                            return True
                 hit=context.run_recognition('ChartWorkerOverlay',popup_frame,{
                     'ChartWorkerOverlay':{'recognition':'OCR','roi':[190,180,910,230],
-                       'expected':['演出失败','^暂停$','中断演出返回主页']}})
+                       'expected':(['^暂停$','中断演出返回主页'] if online else
+                                   ['演出失败','^暂停$','中断演出返回主页'])}})
                 if hit and hit.hit:
                     report['observer_error']='检测到暂停或演出失败，停止触控'
                     observer_failed.set()
@@ -120,10 +143,10 @@ def play(config_path):
         stage_seen = origin = initial_health = None
         start = time.perf_counter()
         started = True
-        if not controller.post_click(1130,616).wait().succeeded:
-            raise RuntimeError('开演输入未确认，不重试')
+        start_authorized_stage(controller,cfg.get('start_mode','click'))
         # Account for songs with a long lead-in; chart time is independent of fall speed.
-        while time.perf_counter()-start < max(40,anchor_time+30):
+        last_start_check=0.
+        while time.perf_counter()-start < (180 if online else max(40,anchor_time+30)):
             stopped()
             before = time.perf_counter()
             if not controller.post_screencap().wait().succeeded:
@@ -132,10 +155,22 @@ def play(config_path):
             frame = controller.cached_image
             last_start_frame = frame
             state = stage_state(frame)
+            if online and state is not None and np.mean(np.all(frame[425:525,385:895]>220,axis=2))>.65:
+                popup_frame=frame
+                popup_tasker.post_task('ChartWorkerOverlayCheck',{
+                    'ChartWorkerOverlayCheck':{'action':'Custom','custom_action':'ChartWorkerOverlayCheck'}}).wait()
+                if waiting_members:
+                    continue
             if state is None:
+                if online and after-last_start_check>.5:
+                    popup_frame=frame
+                    last_start_check=after
+                    popup_tasker.post_task('ChartWorkerOverlayCheck',{
+                        'ChartWorkerOverlayCheck':{'action':'Custom','custom_action':'ChartWorkerOverlayCheck'}}).wait()
                 continue
             if stage_seen is None:
                 stage_seen = after
+                (output/'stage_started').write_text('started')
             health=frame[36:47,980:1170].astype(float)
             health_ratio=float(np.mean((health[:,:,1]>130) & (health[:,:,1]>health[:,:,2]*1.2)))
             if initial_health is None:
@@ -168,7 +203,7 @@ def play(config_path):
                     if observer.post_screencap().wait().succeeded:
                         after = time.perf_counter()
                         frame=observer.cached_image
-                        if after-last_popup_check>.5 and np.mean(np.all(frame[260:385,350:930]>220,axis=2))>.65:
+                        if after-last_popup_check>.5 and (online or np.mean(np.all(frame[260:385,350:930]>220,axis=2))>.65):
                             popup_frame=frame
                             last_popup_check=after
                             popup_tasker.post_task('ChartWorkerOverlayCheck',{
@@ -233,7 +268,7 @@ def play(config_path):
                 controller.post_touch_up(contact).wait()
         if thread:
             thread.join(timeout=3)
-        if controller and started and report['status']=='error' and not observer_failed.is_set():
+        if controller and started and report['status']=='error' and not observer_failed.is_set() and not online:
             controller.post_click(1240,50).wait()
         (output/'playback.json').write_text(json.dumps(report,ensure_ascii=False),encoding='utf8')
     return 0 if report['status']=='input_complete' else 1
