@@ -22,10 +22,13 @@ def main():
     import daily_tasks
     from auto_live import AutoLive
     from chart_live import ChartLive
+    import mining
 
     AgentServer.custom_action("UnlockDefault3DCostumes")(costume_unlock.UnlockDefault3DCostumes)
     AgentServer.custom_action("AutoLive")(AutoLive)
     AgentServer.custom_action("ChartLive")(ChartLive)
+    for name in ("MineFullCombo", "MineStories", "MineChallenges"):
+        AgentServer.custom_action(name)(getattr(mining, name))
     for name in ("ClaimHomeGifts", "ClaimHomeMissions", "ExchangeMichelle", "DailyFreeRecruit"):
         AgentServer.custom_action(name)(getattr(daily_tasks, name))
     Toolkit.init_option("./")

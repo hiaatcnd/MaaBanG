@@ -1,7 +1,7 @@
 """Shared song selection for built-in auto live and chart-driven play."""
 import numpy as np
 from costume_unlock import FlowError, normalized
-from song_catalog import needs_band_check
+from song_catalog import needs_band_check, recognition_titles
 
 BAND_BUTTONS={1:(877,208),2:(1000,208),4:(1120,208),5:(754,284),3:(877,284),
               21:(1000,284),18:(1120,284),45:(754,360)}
@@ -20,9 +20,12 @@ def level_slider_handles(image,y):
 
 
 def title_key(text):
-    return normalized(text).casefold().translate(str.maketrans(
-        'ぁぃぅぇぉゃゅょっァィゥェォャュョッ〜',
-        'あいうえおやゆよつアイウエオヤユヨツ~'))
+    key = normalized(text).casefold().translate(str.maketrans(
+        'ぁぃぅぇぉゃゅょっァィゥェォャュョッ〜へべぺ',
+        'あいうえおやゆよつアイウエオヤユヨツ~ヘベペ'))
+    # OCR varies between straight/curly quotes and may repeat boundary quotes.
+    # Keep the title body and punctuation exact; never accept a fuzzy prefix.
+    return key.translate(str.maketrans({'‘':"'", '’':"'", '“':'"', '”':'"'})).strip("\"'")
 
 
 class SongNavigationMixin:
@@ -94,7 +97,7 @@ class SongNavigationMixin:
             raise FlowError('解除等级筛选后选中歌曲发生变化')
 
     def title_matches(self,text,song):
-        return title_key(text) in {title_key(v) for v in [song['title'],*song['aliases']]}
+        return title_key(text) in {title_key(v) for v in recognition_titles(song)}
 
     def selected_song_matches(self,song):
         if not self.title_matches(self.text([210,332,356,32]),song):

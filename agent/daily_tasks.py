@@ -237,20 +237,45 @@ class DailyFlow(CostumeFlow):
 
     def finish_draw(self):
         deadline = time.monotonic()+120
+        attempts = {}
+        last_action = {}
+        result_seen = False
         while time.monotonic() < deadline:
             self.snap()
             if self.reco("DY_ObtainedHeader"):
-                self.tap(640,602)
+                stage, target = "obtained", (640,602)
             elif self.reco("DY_RecruitResult") and np.median(self.image[145:170,110:130]) > 220:
-                self.tap(1067,647)
-                self.wait("DY_FreeBanner",25)
+                result_seen = True
+                stage, target = "result", (1067,647)
+            elif result_seen and self.reco("DY_FreeBanner"):
                 return
-            elif self.reco("DY_RecruitSkip"):
-                self.click("DY_RecruitSkip")
+            elif hit := self.reco("DY_RecruitCut"):
+                # The ticket can cover SKIP. Cut it through its own visible prompt.
+                stage = "cut"
+                x, y, w, h = hit.box
+                target = (x+w//2, y+h//2)
+            elif hit := self.reco("DY_RecruitSkip"):
+                stage = "skip"
+                x, y, w, h = hit.box
+                target = (x+w//2, y+h//2)
             elif self.reco("DY_MemberReveal"):
-                self.tap(985,570)
+                stage, target = "member", (985,570)
             else:
                 time.sleep(0.4)
+                continue
+            self.report["draw_stage"] = stage
+            now = time.monotonic()
+            # Re-recognize each time; retry only navigation, never the draw submission.
+            if now-last_action.get(stage, float("-inf")) < 3:
+                time.sleep(0.4)
+                continue
+            if attempts.get(stage, 0) >= 3:
+                raise FlowError(f"招募阶段 {stage} 点击 3 次后仍未推进，不重复提交招募")
+            attempts[stage] = attempts.get(stage, 0)+1
+            last_action[stage] = now
+            self.report["draw_attempts"] = dict(attempts)
+            print(f"[免费招募] {stage}：第 {attempts[stage]}/3 次推进",flush=True)
+            self.tap(*target)
         raise FlowError("招募结果未确认，不重复提交招募")
 
     def recruit(self):

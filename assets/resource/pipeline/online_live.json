@@ -1,0 +1,13 @@
+{
+    "OL_TeamEntry": {"recognition":"OCR","expected":"^团队演出$","roi":[680,180,510,365],"threshold":0.85},
+    "OL_RoomPage": {"recognition":"OCR","expected":"^选择房间$","roi":[110,50,340,45],"threshold":0.85},
+    "OL_TeamHome": {"recognition":"OCR","expected":"^团队演出首页$","roi":[110,50,340,45],"threshold":0.85},
+    "OL_FinalConfirm": {"recognition":"OCR","expected":"^最终确认$","roi":[110,50,340,45],"threshold":0.85},
+    "OL_RandomSong": {"recognition":"OCR","expected":"^随机选曲$","roi":[110,50,340,45],"threshold":0.85},
+    "OL_WaitingMembers": {"recognition":"OCR","expected":"其他成员.*准备中|等待其他成员","roi":[490,430,415,90]},
+    "OL_Loading": {"recognition":"OCR","expected":"NOW LOADING|准备完成|准备完毕","roi":[115,180,1060,410]},
+    "OL_LeaveConfirm": {"recognition":"OCR","expected":"要退出房间|要离开房间|解散.*房间|退出此房间|退出私人房间|即将退出.*房间|确定.*退出|中断.*演出返回主页","roi":[340,220,600,230]},
+    "OL_Matching": {"recognition":"OCR","expected":"^匹配$|匹配中|正在.*匹配|正在寻找房间|正在.*对手|等待.*对手|募集中|立刻开始|立即开始|等待其他|选择中","roi":[100,50,1090,640]},
+    "OL_Disconnected": {"recognition":"OCR","expected":["房间已解散","房间解散","房间不存在","已退出房间","与房间.*连接.*断开","连接已断开","连接中断","连接错误","通信已中断","通信错误","通讯错误","网络连接失败","连接失败","即将返回团队演出主页","连接超时","匹配失败"],"roi":[240,130,800,455]},
+    "OL_Fatal": {"recognition":"OCR","expected":["维护中","正在维护","账号.*限制","帐号.*限制","综合能力不足","综合能力未达到","无法参加.*演出","暂时无法.*演出","部分功能.*受到限制","功能限制剩余时间"],"roi":[240,130,800,455]}
+}

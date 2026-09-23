@@ -16,6 +16,23 @@ from song_catalog import BY_ID, available_difficulties
 
 
 class ChartLiveTests(unittest.TestCase):
+    def test_story_unlock_modal_requires_known_header_and_own_confirm(self):
+        import re
+        for header in ('解锁活动故事','解锁主线故事','无关弹窗'):
+            with self.subTest(header=header),tempfile.TemporaryDirectory() as folder:
+                flow=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+                                   ChartOptions.parse({}),folder)
+                button=SimpleNamespace(box=[521,550,236,64])
+                flow.dismiss_daily_reward=Mock(return_value=False)
+                def hit(roi,pattern):
+                    if roi==[370,85,350,65]:
+                        return bool(re.search(pattern,header))
+                    return button if roi==[510,540,260,85] else None
+                flow.hit_text=Mock(side_effect=hit)
+                flow.tap_hit=Mock()
+                self.assertEqual(flow.result_modals(),header!='无关弹窗')
+                self.assertEqual(flow.tap_hit.call_count,int(header!='无关弹窗'))
+
     def test_nonzero_profiles_and_invalid_options(self):
         self.assertTrue(all(t>0 and p>0 for t,p in JITTER_PROFILES.values()))
         for data in ({'jitter':'none'},{'fire':4},{'max_rounds':0},{'shortage':'stars'},
@@ -188,6 +205,61 @@ class ChartLiveTests(unittest.TestCase):
                 f.fire_balance=Mock(return_value=balance)
                 with self.assertRaisesRegex(RuntimeError,'火数预览'):
                     f.verify_chart_start(1,ChartSelection('306','expert'),0)
+
+    def test_long_ready_title_with_real_ocr_preserves_song_and_difficulty_checks(self):
+        if not all((ROOT/'assets/resource/model/ocr'/name).is_file() for name in ('det.onnx','rec.onnx','keys.txt')):
+            self.skipTest('Local OCR models are required for the real-screenshot integration test')
+        import numpy as np
+        from PIL import Image
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+
+        fixture=ROOT/'tests/fixtures/mining/ready_long_title.png'
+        image=np.zeros((720,1280,3),dtype=np.uint8)
+        image[530:612,105:790]=np.asarray(Image.open(fixture))[:,:,::-1]
+        resource=Resource()
+        self.assertTrue(resource.post_bundle(ROOT/'assets/resource').wait().succeeded)
+        class ScreenshotController(CustomController):
+            def connect(self): return True
+            def request_uuid(self): return 'long-title-fixture'
+            def screencap(self): return image
+        controller=ScreenshotController()
+        self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker()
+        tasker.bind(resource,controller)
+        observed={}
+        case=self
+        with tempfile.TemporaryDirectory() as folder:
+            class Check(CustomAction):
+                def run(self,context,argv):
+                    try:
+                        flow=case.make_flow(folder,fire=1)
+                        flow.ctx=context
+                        flow.image=image
+                        flow.snap=Mock();flow.pause=Mock()
+                        original_reco=flow.reco
+                        flow.reco=lambda name,**kw: original_reco(name,**kw) if name=='CU_OCR' else name=='LV_AutoOff'
+                        flow.fire_preview=Mock(return_value=(19,18))
+                        flow.fire_balance=Mock(return_value=19)
+                        # The old crop drops the final s; a prefix match must remain invalid.
+                        truncated=flow.text([220,541,440,38])
+                        case.assertFalse(flow.title_matches(truncated,BY_ID['25']))
+                        case.assertEqual(flow.verify_chart_start(1,ChartSelection('25','easy'),1),19)
+                        with case.assertRaisesRegex(RuntimeError,'歌曲与谱面不一致'):
+                            flow.verify_chart_start(1,ChartSelection('24','easy'),1)
+                        with case.assertRaisesRegex(RuntimeError,'难度与谱面不一致'):
+                            flow.verify_chart_start(1,ChartSelection('25','expert'),1)
+                        observed['title']=flow.text([220,541,570,38])
+                        return True
+                    except Exception as error:
+                        observed['error']=repr(error)
+                        return False
+            resource.register_custom_action('LongTitleCheck',Check())
+            job=tasker.post_task('LongTitleCheck',{'LongTitleCheck':{'action':'Custom','custom_action':'LongTitleCheck'}}).wait()
+            self.assertTrue(job.succeeded,observed)
+            self.assertIn('Girls',observed['title'])
 
 
 if __name__=='__main__':unittest.main()

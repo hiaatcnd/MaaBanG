@@ -19,7 +19,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',required=True)
-    parser.add_argument('--mode',choices=['free','tour_free','tour_fixed'],default='free')
+    parser.add_argument('--mode',choices=['free','tour_free','tour_fixed','team'],default='free')
     for i in range(1,4):
         parser.add_argument(f'--song{i}',default='306')
         parser.add_argument(f'--difficulty{i}',default='expert')
@@ -34,6 +34,8 @@ def main():
         parser.error('--package tests the actual packaged task and cannot use --prepare-only')
     values={key:getattr(args,key) for key in OPTION_NODES}
     options=ChartOptions.parse(values)
+    if args.prepare_only and options.mode == 'team':
+        parser.error('--prepare-only is not supported for automatically starting online rooms')
     from maa.controller import AdbController
     from maa.custom_action import CustomAction
     from maa.resource import Resource

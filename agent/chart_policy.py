@@ -10,6 +10,7 @@ JITTER_PROFILES = {
     'precise': (3., 1.),
     'small': (9., 3.),
     'medium': (35., 6.),
+    'medium_large': (60., 9.),
     'large': (90., 12.),
     'extreme': (180., 22.),
 }
@@ -45,7 +46,7 @@ class ChartOptions:
     @classmethod
     def parse(cls, data):
         mode = data.get('mode', 'free')
-        if mode not in ('free', 'tour_free', 'tour_fixed'):
+        if mode not in ('free', 'tour_free', 'tour_fixed', 'team'):
             raise ValueError('未知谱面演出模式')
         jitter = data.get('jitter', 'small')
         if jitter not in JITTER_PROFILES:
@@ -58,18 +59,19 @@ class ChartOptions:
         rounds = None if limit in ('', None) else number(limit, '最大演出次数', 999)
         if rounds == 0:
             raise ValueError('最大演出次数请留空或填写 1–999')
-        count = 1 if mode == 'free' else 3
+        online = mode == 'team'
+        count = 1 if mode == 'free' or online else 3
         difficulties = tuple(data.get(f'difficulty{i}', 'expert') for i in range(1, count+1))
         if any(d not in DIFFICULTIES for d in difficulties):
             raise ValueError('未知演出难度')
-        selections = (() if mode == 'tour_fixed' else tuple(
+        selections = (() if mode == 'tour_fixed' or online else tuple(
             ChartSelection.parse(data.get(f'song{i}', '306'), d)
             for i, d in enumerate(difficulties, 1)))
         return cls(mode, selections, difficulties, jitter, fire, shortage, rounds)
 
     @property
     def songs_per_round(self):
-        return 1 if self.mode == 'free' else 3
+        return 3 if self.mode in ('tour_free', 'tour_fixed') else 1
 
 
 OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='1',

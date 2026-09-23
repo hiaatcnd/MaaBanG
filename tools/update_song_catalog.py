@@ -64,6 +64,28 @@ def playable(catalog):
             s['difficulties'].get('expert', {}).get('available')]
 
 
+def apply_verified_availability(catalog, overrides):
+    """Use explicit CN game observations when upstream chart dates are missing.
+
+    Do not infer release dates or extend closed/future songs. Identity and level
+    changes invalidate the observation and require another review.
+    """
+    for song in catalog:
+        evidence = overrides.get(song['id'])
+        if not evidence or not song['active']:
+            continue
+        if (song['title'], song['band_id']) != (evidence['title'], evidence['band_id']):
+            raise ValueError(f"CN availability observation identity changed: {song['id']}")
+        for difficulty, level in evidence['levels'].items():
+            chart = song['difficulties'].get(difficulty)
+            if not chart or chart['level'] != level:
+                raise ValueError(f"CN availability observation level changed: {song['id']}/{difficulty}")
+            if not chart['available'] and chart['published_at'] is None:
+                chart['available'] = True
+                chart['availability_verified_at'] = evidence['verified_at']
+    return catalog
+
+
 def song_key(song, songs):
     return (song['title'] if sum(s['title'] == song['title'] for s in songs) == 1
             else f"{song['title']} [{song['id']}]")
@@ -118,6 +140,9 @@ def main():
     bands_raw = args.bands_file.read_bytes() if args.bands_file else fetch(BANDS_URL)
     songs = build_catalog(json.loads(raw.decode('utf-8-sig')),
                           json.loads(bands_raw.decode('utf-8-sig')), int(now.timestamp()*1000))
+    observations = ROOT/'agent/data/song_cn_verified_availability.json'
+    if observations.exists():
+        apply_verified_availability(songs, json.loads(observations.read_text(encoding='utf-8')))
     payload = {'server': 'cn', 'server_index': CN, 'fetched_at': now.isoformat(),
                'sources': [SONGS_URL, BANDS_URL],
                'source_sha256': hashlib.sha256(raw).hexdigest(), 'songs': songs}
@@ -131,7 +156,7 @@ def main():
     interface = update_chart_interface(interface)
     interface_path.write_text(json.dumps(interface, ensure_ascii=False, indent=4)+'\n', encoding='utf-8')
     csv_out = io.StringIO(newline='')
-    writer = csv.writer(csv_out)
+    writer = csv.writer(csv_out, lineterminator='\n')
     writer.writerow(['ID', '中国服歌名', '乐队', '可用', '时长(秒)', *DIFFICULTIES, '来源'])
     for s in songs:
         writer.writerow([s['id'], s['title'], s['band'], s['active'], s['length_seconds'],

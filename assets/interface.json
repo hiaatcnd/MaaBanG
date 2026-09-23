@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.4.0",
+    "version": "v0.5.0",
     "controller": [
         {
             "name": "安卓端",
@@ -27,7 +27,7 @@
             "name": "Maa代打演出",
             "entry": "ChartLive",
             "default_check": false,
-            "description": "根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。当前版本需MuMu安卓15、16:9横屏（支持2560×1440，内部自动缩放）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。",
+            "description": "根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。当前版本需MuMu安卓15、16:9横屏（支持2560×1440，内部自动缩放）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。 支持团队联网演出；掉房重进，房间3分钟未开演重进，仅成功结算计次。首次联网演出需预缓存全部可能谱面。协力演出暂未开放。",
             "option": [
                 "谱面演出模式",
                 "谱面随机偏差",
@@ -84,6 +84,43 @@
             "default_check": false,
             "option": [
                 "贴纸交换分类"
+            ]
+        },
+        {
+            "name": "挖矿：自由演出 Full Combo",
+            "entry": "MineFullCombo",
+            "default_check": false,
+            "description": "按歌曲各难度的星星颜色扫描未FC谱面，以极小偏差演奏，结算后复核星星。可选难度、每首火数和火不足策略。每谱面最多尝试3次；最大演出数按实际尝试计数。歌曲需已解锁且谱面在中国服目录内。",
+            "option": [
+                "挖矿自由演出难度",
+                "挖矿每首火数",
+                "挖矿火不足策略",
+                "挖矿最大演出数"
+            ]
+        },
+        {
+            "name": "挖矿：成员小故事",
+            "entry": "MineStories",
+            "default_check": false,
+            "description": "在乐队培养中分别筛选未读小故事和回忆小故事，跳过阅读并确认奖励。材料解锁与练习均需开启对应选项；只练习所选星级。练习时开启游戏自动特训，可从1级一次练到特训后的满级，并消耗对应特训材料。材料或练习券不足时跳过。",
+            "option": [
+                "挖矿阅读小故事",
+                "挖矿阅读回忆",
+                "挖矿材料解锁",
+                "挖矿练习满级",
+                "挖矿练习星级"
+            ]
+        },
+        {
+            "name": "挖矿：舞台挑战",
+            "entry": "MineChallenges",
+            "default_check": false,
+            "description": "选择主舞台或特别舞台，使用推荐编组，确认区域道具更换，以EXPERT、极小偏差演出。可选每首火数和火不足策略。解锁下一等级则继续，否则切换其他挑战。",
+            "option": [
+                "挖矿舞台类型",
+                "挖矿每首火数",
+                "挖矿火不足策略",
+                "挖矿最大演出数"
             ]
         }
     ],
@@ -9886,6 +9923,20 @@
                     }
                 },
                 {
+                    "name": "Second to None",
+                    "label": "Second to None · Roselia",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "Second to None"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "やっほー！いっぽ！わんだふぉー！",
                     "label": "やっほー！いっぽ！わんだふぉー！ · Hello, Happy World！",
                     "option": [
@@ -11006,6 +11057,20 @@
                     }
                 },
                 {
+                    "name": "かぽーんっと極楽☆ 湯〜とぴあ！",
+                    "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "かぽーんっと極楽☆ 湯〜とぴあ！"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "雪华翩跹，笑看无常",
                     "label": "雪华翩跹，笑看无常 · 思念和哀伤无法诉说！",
                     "option": [
@@ -11185,6 +11250,306 @@
                     }
                 }
             }
+        },
+        "挖矿阅读小故事": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "启用",
+                    "pipeline_override": {
+                        "MN_stories": {
+                            "attach": {
+                                "value": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "关闭",
+                    "pipeline_override": {
+                        "MN_stories": {
+                            "attach": {
+                                "value": false
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "挖矿阅读回忆": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "启用",
+                    "pipeline_override": {
+                        "MN_memories": {
+                            "attach": {
+                                "value": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "关闭",
+                    "pipeline_override": {
+                        "MN_memories": {
+                            "attach": {
+                                "value": false
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "挖矿材料解锁": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "关闭",
+                    "pipeline_override": {
+                        "MN_unlock": {
+                            "attach": {
+                                "value": false
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "启用",
+                    "pipeline_override": {
+                        "MN_unlock": {
+                            "attach": {
+                                "value": true
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "挖矿练习满级": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "关闭",
+                    "pipeline_override": {
+                        "MN_practice": {
+                            "attach": {
+                                "value": false
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "启用",
+                    "pipeline_override": {
+                        "MN_practice": {
+                            "attach": {
+                                "value": true
+                            }
+                        }
+                    }
+                }
+            ],
+            "description": "只对所选星级启用练习和游戏自动特训，使用练习券及特训材料，按特训后的上限推荐用券；提交前检查材料，完成后核对实际等级。"
+        },
+        "挖矿舞台类型": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "主舞台",
+                    "pipeline_override": {
+                        "MN_stage": {
+                            "attach": {
+                                "value": "main"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "特别舞台",
+                    "pipeline_override": {
+                        "MN_stage": {
+                            "attach": {
+                                "value": "special"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "挖矿最大演出数": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "次数",
+                    "label": "挖矿最大演出数",
+                    "default": "10",
+                    "verify": "^$|^[1-9][0-9]{0,2}$",
+                    "pattern_msg": "留空不限次数，或填写1–999"
+                }
+            ],
+            "pipeline_override": {
+                "MN_max_rounds": {
+                    "attach": {
+                        "value": "{次数}"
+                    }
+                }
+            }
+        },
+        "挖矿练习星级": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "星级",
+                    "label": "挖矿练习星级",
+                    "default": "1,2,3",
+                    "verify": "^[1-5](,[1-5])*$",
+                    "pattern_msg": "使用英文逗号，例如1,2,3"
+                }
+            ],
+            "pipeline_override": {
+                "MN_stars": {
+                    "attach": {
+                        "value": "{星级}"
+                    }
+                }
+            }
+        },
+        "挖矿自由演出难度": {
+            "type": "checkbox",
+            "description": "只挖勾选的难度，默认全选；全部取消时不演出，直接返回主页。",
+            "default_case": [
+                "EASY",
+                "NORMAL",
+                "HARD",
+                "EXPERT",
+                "SPECIAL"
+            ],
+            "cases": [
+                {
+                    "name": "EASY",
+                    "pipeline_override": {
+                        "MN_difficulty_easy": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "NORMAL",
+                    "pipeline_override": {
+                        "MN_difficulty_normal": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "HARD",
+                    "pipeline_override": {
+                        "MN_difficulty_hard": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "EXPERT",
+                    "pipeline_override": {
+                        "MN_difficulty_expert": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "SPECIAL",
+                    "pipeline_override": {
+                        "MN_difficulty_special": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "挖矿每首火数": {
+            "type": "select",
+            "default_case": "0火",
+            "cases": [
+                {
+                    "name": "0火",
+                    "pipeline_override": {
+                        "MN_fire": {
+                            "attach": {
+                                "value": 0
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "1火",
+                    "pipeline_override": {
+                        "MN_fire": {
+                            "attach": {
+                                "value": 1
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "2火",
+                    "pipeline_override": {
+                        "MN_fire": {
+                            "attach": {
+                                "value": 2
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "3火",
+                    "pipeline_override": {
+                        "MN_fire": {
+                            "attach": {
+                                "value": 3
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "挖矿火不足策略": {
+            "type": "select",
+            "default_case": "停止",
+            "description": "使用回复道具时优先小型饮料，不足再用普通饮料；不使用星石。道具不足则停止。",
+            "cases": [
+                {
+                    "name": "停止",
+                    "pipeline_override": {
+                        "MN_shortage": {
+                            "attach": {
+                                "value": "stop"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "使用回复道具",
+                    "pipeline_override": {
+                        "MN_shortage": {
+                            "attach": {
+                                "value": "items"
+                            }
+                        }
+                    }
+                }
+            ]
         },
         "歌曲难度_easy_normal_hard_expert_special": {
             "type": "select",
@@ -20528,6 +20893,20 @@
                     "label": "again · Morfonica"
                 },
                 {
+                    "name": "Second to None",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "690"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "Second to None · Roselia"
+                },
+                {
                     "name": "やっほー！いっぽ！わんだふぉー！",
                     "pipeline_override": {
                         "CL_song1": {
@@ -21646,6 +22025,20 @@
                         "谱面第1首难度_easy_normal_hard_expert"
                     ],
                     "label": "Thanks to you. · Pastel＊Palettes"
+                },
+                {
+                    "name": "かぽーんっと極楽☆ 湯〜とぴあ！",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "773"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！"
                 },
                 {
                     "name": "雪华翩跹，笑看无常",
@@ -30973,6 +31366,20 @@
                     "label": "again · Morfonica"
                 },
                 {
+                    "name": "Second to None",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "690"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "Second to None · Roselia"
+                },
+                {
                     "name": "やっほー！いっぽ！わんだふぉー！",
                     "pipeline_override": {
                         "CL_song2": {
@@ -32091,6 +32498,20 @@
                         "谱面第2首难度_easy_normal_hard_expert"
                     ],
                     "label": "Thanks to you. · Pastel＊Palettes"
+                },
+                {
+                    "name": "かぽーんっと極楽☆ 湯〜とぴあ！",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "773"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！"
                 },
                 {
                     "name": "雪华翩跹，笑看无常",
@@ -41418,6 +41839,20 @@
                     "label": "again · Morfonica"
                 },
                 {
+                    "name": "Second to None",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "690"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "Second to None · Roselia"
+                },
+                {
                     "name": "やっほー！いっぽ！わんだふぉー！",
                     "pipeline_override": {
                         "CL_song3": {
@@ -42538,6 +42973,20 @@
                     "label": "Thanks to you. · Pastel＊Palettes"
                 },
                 {
+                    "name": "かぽーんっと極楽☆ 湯〜とぴあ！",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "773"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！"
+                },
+                {
                     "name": "雪华翩跹，笑看无常",
                     "pipeline_override": {
                         "CL_song3": {
@@ -42671,6 +43120,77 @@
                         "谱面课题第2首难度",
                         "谱面课题第3首难度"
                     ]
+                },
+                {
+                    "name": "团队演出",
+                    "pipeline_override": {
+                        "CL_mode": {
+                            "attach": {
+                                "value": "team"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面联网难度"
+                    ]
+                }
+            ]
+        },
+        "谱面联网难度": {
+            "type": "select",
+            "label": "演出难度",
+            "default_case": "EXPERT",
+            "description": "SPECIAL 不可用时降为 EXPERT；其他难度不替换。首次进入匹配前缓存所选难度的全部谱面。",
+            "cases": [
+                {
+                    "name": "EASY",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "easy"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "NORMAL",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "normal"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "HARD",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "hard"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "EXPERT",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "expert"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "SPECIAL",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "special"
+                            }
+                        }
+                    }
                 }
             ]
         },
@@ -42712,6 +43232,17 @@
                         }
                     },
                     "description": "时间上限 ±35 毫秒，位置上限 ±6 像素。"
+                },
+                {
+                    "name": "中大偏差",
+                    "pipeline_override": {
+                        "CL_jitter": {
+                            "attach": {
+                                "value": "medium_large"
+                            }
+                        }
+                    },
+                    "description": "时间上限 ±60 毫秒，位置上限 ±9 像素。"
                 },
                 {
                     "name": "大偏差",
@@ -42818,7 +43349,7 @@
                 {
                     "name": "次数",
                     "label": "最大演出次数",
-                    "description": "自由演出一首计一次；巡演完整三首计一次。留空持续运行，直到停止、火或道具不足。",
+                    "description": "自由及联网演出成功结算一首计一次；巡演完整三首计一次。掉房不计次。留空持续运行，直到停止、火或道具不足。",
                     "default": "1",
                     "verify": "^$|^[1-9][0-9]{0,2}$",
                     "pattern_msg": "留空不限次数，或填写1–999"

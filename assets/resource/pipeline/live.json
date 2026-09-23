@@ -22,13 +22,13 @@
         "threshold": 0.85
     },
     "LV_FreeEntry": {
-        "recognition": "TemplateMatch",
-        "template": "live/FreeEntry.png",
+        "recognition": "OCR",
+        "expected": "^自由演出$",
         "roi": [
-            683,
-            366,
-            255,
-            178
+            680,
+            180,
+            510,
+            365
         ],
         "threshold": 0.85
     },

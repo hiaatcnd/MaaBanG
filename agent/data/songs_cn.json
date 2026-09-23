@@ -1,12 +1,12 @@
 {
   "server": "cn",
   "server_index": 3,
-  "fetched_at": "2026-09-19T15:28:00.725020+00:00",
+  "fetched_at": "2026-09-23T05:17:08.912993+00:00",
   "sources": [
     "https://bestdori.com/api/songs/all.7.json",
     "https://bestdori.com/api/bands/all.1.json"
   ],
-  "source_sha256": "568fe7d37a8fde105af0bedff1ac6c76fee4efff9ab8cfde5013a192f971adf1",
+  "source_sha256": "b48d020d3f643fe90fdd3851eebf7107fb2f1ee2b0eec80d34f6e29ab011911b",
   "songs": [
     {
       "id": "1",
@@ -33284,25 +33284,29 @@
           "level": 10,
           "notes": 117,
           "published_at": null,
-          "available": false
+          "available": true,
+          "availability_verified_at": "2026-09-23"
         },
         "normal": {
           "level": 15,
           "notes": 245,
           "published_at": null,
-          "available": false
+          "available": true,
+          "availability_verified_at": "2026-09-23"
         },
         "hard": {
           "level": 24,
           "notes": 537,
           "published_at": null,
-          "available": false
+          "available": true,
+          "availability_verified_at": "2026-09-23"
         },
         "expert": {
           "level": 27,
           "notes": 894,
           "published_at": null,
-          "available": false
+          "available": true,
+          "availability_verified_at": "2026-09-23"
         }
       },
       "jacket_images": [
@@ -37209,6 +37213,58 @@
         "772_thanks_to_you"
       ],
       "url": "https://bestdori.com/info/songs/772"
+    },
+    {
+      "id": "773",
+      "title": "かぽーんっと極楽☆ 湯〜とぴあ！",
+      "aliases": [
+        "かぽーんっと極楽☆ 湯〜とぴあ！",
+        "Kapontto Gokuraku ☆ Yuutopia!"
+      ],
+      "band_id": 3,
+      "band": "Hello, Happy World！",
+      "band_aliases": [
+        "ハロー、ハッピーワールド！",
+        "Hello, Happy World!",
+        "Hello，Happy World！",
+        "Hello, Happy World！",
+        "헬로 해피월드!"
+      ],
+      "tag": "normal",
+      "length_seconds": 107.568,
+      "published_at": 1790053200000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 8,
+          "notes": 135,
+          "published_at": 1790053200000,
+          "available": true
+        },
+        "normal": {
+          "level": 13,
+          "notes": 227,
+          "published_at": 1790053200000,
+          "available": true
+        },
+        "hard": {
+          "level": 22,
+          "notes": 532,
+          "published_at": 1790053200000,
+          "available": true
+        },
+        "expert": {
+          "level": 27,
+          "notes": 812,
+          "published_at": 1790053200000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "773_kaponto_gokuraku"
+      ],
+      "url": "https://bestdori.com/info/songs/773"
     },
     {
       "id": "10001",

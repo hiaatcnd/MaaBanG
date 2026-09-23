@@ -241,6 +241,11 @@
         ],
         "threshold": 0.85
     },
+    "DY_RecruitCut": {
+        "recognition": "OCR",
+        "expected": "TOUCH\\s*TO\\s*CUT",
+        "roi": [450, 580, 380, 85]
+    },
     "DY_RecruitSkip": {
         "recognition": "TemplateMatch",
         "template": "daily/RecruitSkip.png",

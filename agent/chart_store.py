@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import tempfile
 import time
+from threading import Event
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED, CancelledError
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -21,7 +23,8 @@ class ChartStore:
     def __init__(self, directory='cache/charts'):
         self.directory = Path(directory)
 
-    def get(self, selection):
+    def get(self, selection, check_stop=lambda: None, timeout=30):
+        check_stop()
         key = f'{selection.song_id}_{selection.difficulty}'
         path = self.directory / (key+'.json')
         if path.exists():
@@ -31,17 +34,21 @@ class ChartStore:
             request = Request(url, headers={'User-Agent':'Mozilla/5.0 MaaBanG',
                                            'Referer':'https://bestdori.com/tool/chartsimulator'})
             for attempt in range(3):
+                check_stop()
                 try:
-                    with urlopen(request, timeout=30) as response:
+                    with urlopen(request, timeout=timeout) as response:
                         raw = response.read(8*1024*1024+1)
                     break
                 except (URLError, TimeoutError, ConnectionError) as exc:
                     if attempt==2 or isinstance(exc,HTTPError) and exc.code not in (429,500,502,503,504):
                         raise
-                    time.sleep(attempt+1)
+                    for _ in range((attempt+1)*10):
+                        check_stop()
+                        time.sleep(.1)
             if len(raw)>8*1024*1024:
                 raise ValueError('谱面文件过大')
         chart = json.loads(raw)
+        check_stop()
         if not isinstance(chart, list) or not chart:
             raise ValueError('谱面内容无效')
         count = note_count(chart)
@@ -60,3 +67,42 @@ class ChartStore:
             temporary.replace(path)
         return chart, {'path':str(path.resolve()), 'sha256':hashlib.sha256(raw).hexdigest(),
                        'notes':count, 'duration':events[-1].time}
+
+    def prepare_online(self, difficulty, check_stop, progress=lambda done,total: None):
+        """Validate the complete random-song pool before joining any online room."""
+        from chart_policy import ChartSelection
+        from song_catalog import BY_ID, available_difficulties
+        selections = [ChartSelection(song['id'], name) for song in BY_ID.values()
+                      for name in (('expert','special') if difficulty=='special' else (difficulty,))
+                      if name in available_difficulties(song)]
+        results = {}
+        cancelled = Event()
+        def worker_check():
+            if cancelled.is_set():
+                raise CancelledError('谱面准备已取消')
+            check_stop()
+        iterator = iter(selections)
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            pending = {}
+            def submit():
+                selection = next(iterator, None)
+                if selection:
+                    pending[pool.submit(self.get, selection, worker_check, 10)] = selection
+            for _ in range(4):
+                submit()
+            progress(0,len(selections))
+            try:
+                while pending:
+                    check_stop()
+                    done,_ = wait(pending,timeout=.2,return_when=FIRST_COMPLETED)
+                    for future in done:
+                        selection = pending.pop(future)
+                        _,metadata = future.result()
+                        results[(selection.song_id,selection.difficulty)] = metadata
+                        progress(len(results),len(selections))
+                        submit()
+            finally:
+                cancelled.set()
+                for future in pending:
+                    future.cancel()
+        return results

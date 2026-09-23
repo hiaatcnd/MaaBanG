@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 CATALOG = json.loads((Path(__file__).parent/'data/songs_cn.json').read_text(encoding='utf-8'))
+TITLE_OCR_ALIASES = json.loads((Path(__file__).parent/'data/song_ocr_aliases.json').read_text(encoding='utf-8'))
 _songs = [s for s in CATALOG['songs'] if s['active'] and
           s['difficulties'].get('expert', {}).get('available')]
 BY_ID = {song['id']: song for song in _songs}
@@ -28,3 +29,8 @@ def available_difficulties(song):
 def needs_band_check(song_id):
     song = BY_ID[song_id]
     return sum(s['title'] == song['title'] for s in _songs) > 1
+
+
+def recognition_titles(song):
+    """Catalog names plus exact OCR variants reviewed against game screenshots."""
+    return (song['title'], *song['aliases'], *TITLE_OCR_ALIASES.get(song['id'], ()))

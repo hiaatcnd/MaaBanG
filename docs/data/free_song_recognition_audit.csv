@@ -1,0 +1,737 @@
+﻿index,song_id,title,band,selected_ocr,band_ocr,list_ocr,baseline_selected_ok,baseline_list_ok,source_frame
+1,24,ときめきエクスペリエンス！,Poppin'Party,ときめきエクスペリエンス!,Poppin'Party,,True,True,frames/0001.jpg
+2,25,キラキラだとか夢だとか ～Sing Girls～,Poppin'Party,キラキラだとか夢だとか〜Sing Girls〜,Poppin'Party,キラキラだとか夢だとか〜SingGirls~,True,True,frames/0002.jpg
+3,1,Yes! BanG_Dream!,Poppin'Party,Yes! BanG_Dream!,Poppin'Party,Yes! BanG_Dream!,True,True,frames/0003.jpg
+4,4,ティアドロップス,Poppin'Party,ティアドロップス,Poppin'Party,ティアドロップス,True,True,frames/0004.jpg
+5,3,ぽっぴん'しゃっふる,Poppin'Party,ぽっぴん'しゃっふる,Poppin'Party,ぽっぴん'しゃっふる,True,True,frames/0005.jpg
+6,2,STAR BEAT!〜ホシノコドウ〜,Poppin'Party,STAR BEAT!~ホシノコドウ～,Poppin'Party,STAR BEAT!~ホシノコドウ～,True,True,frames/0006.jpg
+7,5,夏空 SUN! SUN! SEVEN!,Poppin'Party,夏空 SUN! SUN! SEVEN!,Poppin'Party,夏空 SUN! SUN! SEVEN!,True,True,frames/0007.jpg
+8,12,走り始めたばかりのキミに,Poppin'Party,走り始めたばかりのキミに,Poppin'Party,走り始めたばかりのキミに,True,True,frames/0008.jpg
+9,13,1000回潤んだ空,Poppin'Party,1000回潤んだ空,Poppin'Party,1000回潤んだ空,True,True,frames/0009.jpg
+10,43,前へススメ！,Poppin'Party,前ヘススメ!,Poppin'Party,前ヘススメ!,True,True,frames/0010.jpg
+11,45,夢みるSunflower,Poppin'Party,夢みるSunflower,Poppin'Party,夢みるSunflower,True,True,frames/0011.jpg
+12,47,キミにもらったもの,Poppin'Party,キミにもらったもの,Poppin'Party,キミにもらったもの,True,True,frames/0012.jpg
+13,64,八月のif,Poppin'Party,八月のif,Poppin'Party,八月のif,True,True,frames/0013.jpg
+14,73,Time Lapse,Poppin'Party,Time Lapse,Poppin'Party,Time Lapse,True,True,frames/0014.jpg
+15,91,クリスマスのうた,Poppin'Party,クリスマスのうた,Poppin'Party,クリスマスのうた,True,True,frames/0015.jpg
+16,92,B.O.F,Poppin'Party,B.O.F,Poppin'Party,B.O.F,True,True,frames/0016.jpg
+17,95,CiRCLING,Poppin'Party,CiRCLING,Poppin'Party,CiRCLING,True,True,frames/0017.jpg
+18,112,Light Delight,Poppin'Party,Light Delight,Poppin'Party,Light Delight,True,True,frames/0018.jpg
+19,115,私の心はチョココロネ,Poppin'Party,私の心はチョココロネ,Poppin'Party,私の心はチョココロネ,True,True,frames/0019.jpg
+20,122,二重の虹（ダブル レインボウ）,Poppin'Party,二重の虹（ダブルレインボウ）,Poppin'Party,二重の虹（ダブルレインボウ）,True,True,frames/0020.jpg
+21,130,最高（さあ行こう）！,Poppin'Party,最高（さあ行こう）！,Poppin'Party,最高(さあ行こう）！,True,True,frames/0021.jpg
+22,143,ガールズコード,Poppin'Party,ガールズコード,Poppin'Party,ガールズコード,True,True,frames/0022.jpg
+23,155,Home Street,Poppin'Party,Home Street,Poppin'Party,Home Street,True,True,frames/0023.jpg
+24,158,キズナミュージック♪,Poppin'Party,キズナミュージック♪,Poppin'Party,キズナミュージック♪,True,True,frames/0024.jpg
+25,170,Jumpin',Poppin'Party,Jumpin,Poppin'Party,Jumpin',False,True,frames/0025.jpg
+26,177,SAKURA MEMORIES,Poppin'Party,SAKURA MEMORIES,Poppin'Party,SAKURA MEMORIES,True,True,frames/0026.jpg
+27,180,Returns,Poppin'Party,Returns,Poppin'Party,Returns,True,True,frames/0027.jpg
+28,181,NO GIRL NO CRY,Poppin'Party,NO GIRL NO CRY,Poppin'Party,NO GIRL NO CRY,True,True,frames/0028.jpg
+29,182,Dreamers Go!,Poppin'Party,Dreamers Go!,Poppin'Party,Dreamers Go!,True,True,frames/0029.jpg
+30,202,アニバーサリー,Poppin'Party,アニバーサリー,Poppin'Party,アニバーサリー,True,True,frames/0030.jpg
+31,211,切ないSandglass,Poppin'Party,切ないSandglass,Poppin'Party,切ないSandglass,True,True,frames/0031.jpg
+32,217,[FULL]二重の虹（ダブル レインボウ）,Poppin'Party,[FULL]ニ重の虹（ダブルレインボウ),Poppin'Party,[FULL]ニ重の虹（ダブルレインボウ),False,False,frames/0032.jpg
+33,219,Hello! Wink!,Poppin'Party,Hello! Wink!,Poppin'Party,Hello! Wink!,True,True,frames/0033.jpg
+34,220,What's the POPIPA!?,Poppin'Party,What's the POPIPA!?,Poppin'Party,What's the POPIPA!?,True,True,frames/0034.jpg
+35,232,イニシャル,Poppin'Party,イニシャル,Poppin'Party,イニシャル,True,True,frames/0035.jpg
+36,234,White Afternoon,Poppin'Party,White Afternoon,Poppin'Party,White Afternoon,True,True,frames/0036.jpg
+37,239,夢を撃ち抜く瞬間に！,Poppin'Party,夢を撃ち抜く瞬間に！,Poppin'Party,夢を撃ち抜く瞬間に!,True,True,frames/0037.jpg
+38,240,開けたらDream!,Poppin'Party,開けたらDream!,Poppin'Party,開けたらDream!,True,True,frames/0038.jpg
+39,244,Step×Step！,Poppin'Party,Step×Step!,Poppin'Party,Step×Step!,True,True,frames/0039.jpg
+40,249,[FULL]キズナミュージック♪,Poppin'Party,[FULL]キズナミュージック♪,Poppin'Party,[FULL]キズナミュージック♪,True,True,frames/0040.jpg
+41,265,ミライトレイン,Poppin'Party,ミライトレイン,Poppin'Party,ミライトレイン,True,True,frames/0041.jpg
+42,278,Breakthrough!,Poppin'Party,Breakthrough!,Poppin'Party,Breakthrough!,True,True,frames/0042.jpg
+43,294,Photograph,Poppin'Party,Photograph,Poppin'Party,Photograph,True,True,frames/0043.jpg
+44,312,Sweets BAN!,Poppin'Party,Sweets BAN!,Poppin'Party,Sweets BAN!,True,True,frames/0044.jpg
+45,326,Live Beyond!!,Poppin'Party,Live Beyond!!,Poppin'Party,Live Beyond!!,True,True,frames/0045.jpg
+46,349,ここから先は歌にならない,Poppin'Party,ここから先は歌にならない,Poppin'Party,ここから先は歌にならない,True,True,frames/0046.jpg
+47,354,夏に閉じこめて,Poppin'Party,夏に閉じこめて,Poppin'Party,夏に閉じこめて,True,True,frames/0047.jpg
+48,371,勇気Limit！,Poppin'Party,勇気Limit!,Poppin'Party,勇気Limit!,True,True,frames/0048.jpg
+49,381,イントロダクション,Poppin'Party,イントロダクション,Poppin'Party,イントロダクション,True,True,frames/0049.jpg
+50,390,ぽっぴん'どりーむ！,Poppin'Party,ぽっぴん'どりーむ!,Poppin'Party,ぼっぴん'どりーむ!,True,False,frames/0050.jpg
+51,391,星の約束,Poppin'Party,星の約束,Poppin'Party,星の約束,True,True,frames/0051.jpg
+52,415,Freedom,Poppin'Party×夏希,Freedom,Poppin'Party×夏希,Freedom,True,True,frames/0052.jpg
+53,433,大好き！,Poppin'Party,大好き！,Poppin'Party,大好き！,True,True,frames/0053.jpg
+54,447,Moonlight Walk,Poppin'Party,Moonlight Walk,Poppin'Party,Moonlight Walk,True,True,frames/0054.jpg
+55,452,Future Place,Poppin'Party,Future Place,Poppin'Party,Future Place,True,True,frames/0055.jpg
+56,469,Five Letters,Poppin'Party,Five Letters,Poppin'Party,Five Letters,True,True,frames/0056.jpg
+57,476,RiNG A BELL,Poppin'Party,RiNG A BELL,Poppin'Party,RiNG A BELL,True,True,frames/0057.jpg
+58,484,キズナミュージック♪（支持3D演出模式）,Poppin'Party,キズナミュージック♪（支持3D演出模式）,Poppin'Party,キズナミュージック♪(支持3D演出模式),True,True,frames/0058.jpg
+59,490,新しい季節に,Poppin'Party,新しい季節に,Poppin'Party,新しい季節に,True,True,frames/0059.jpg
+60,493,最強☆ソング,Poppin'Party,最強☆ソング,Poppin'Party,最強☆ソング,True,True,frames/0060.jpg
+61,527,ほな！,Poppin'Party,ほな!,Poppin'Party,ほな!,True,True,frames/0061.jpg
+62,557,青春 To Be Continued,Poppin'Party,青春 To Be Continued,Poppin'Party,青春 To Be Continued,True,True,frames/0062.jpg
+63,554,Chu Chueen!,Poppin'Party,Chu Chueen!,Poppin'Party,Chu Chueen!,True,True,frames/0063.jpg
+64,599,トレモロアイズ,Poppin'Party,トレモロアィズ,Poppin'Party,トレモロアイズ,True,True,frames/0064.jpg
+65,614,雨上がり、キミと,Poppin'Party,雨上がり、キミと,Poppin'Party,雨上がり、キミと,True,True,frames/0065.jpg
+66,625,花咲く未来に,Poppin'Party,花咲く未来に,Poppin'Party,花咲く未来に,True,True,frames/0066.jpg
+67,643,DOKI DOKI SCARY,Poppin'Party,DOKI DOKI SCARY,Poppin'Party,DOKI DOKI SCARY,True,True,frames/0067.jpg
+68,650,TARINAI,Poppin'Party,TARINAI,Poppin'Party,TARINAI,True,True,frames/0068.jpg
+69,669,とっておきAnswer,Poppin'Party,とっておきAnswer,Poppin'Party,とっておきAnswer,True,True,frames/0069.jpg
+70,701,Tomorrow's Door,Poppin'Party,Tomorrow's Door,Poppin'Party,Tomorrow's Door,True,True,frames/0070.jpg
+71,712,Drive Your Heart,Poppin'Party,Drive Your Heart,Poppin'Party,Drive Your Heart,True,True,frames/0071.jpg
+72,741,世界中の青空をあつめて,Poppin'Party,世界中の青空をあつめて,Poppin'Party,世界中の青空をあつめて,True,True,frames/0072.jpg
+73,768,どきどきデエト,Poppin'Party,どきどきデエト,Poppin'Party,どきどきデエト,True,True,frames/0073.jpg
+74,41,Don't be afraid!,Glitter*Green,Don't be afraid!,Glitter*Green,Don't be afraid!,True,True,frames/0074.jpg
+75,485,Glee! Glee! Glee!,Glitter*Green,Glee! Glee! Glee!,Glitter*Green,Glee! Glee! Glee!,True,True,frames/0075.jpg
+76,40,Happy Happy Party!,Poppin'Party,Happy Happy Party!,Poppin'Party,Happy Happy Party!,True,True,frames/0076.jpg
+77,61,夏のドーン！,Poppin'Party,夏のドーン!,Poppin'Party,夏のドーン!,True,True,frames/0077.jpg
+78,51,どきどきSING OUT!,户山香澄,どきどきSINGOUT!,卢山香澄,どきどきSINGOUT!,True,True,frames/0078.jpg
+79,57,花園電気ギター！！！ ,花园多惠,花園電気ギター！！！,花园多惠,花園電気ギター!！！,True,True,frames/0079.jpg
+80,58,チョコレイトの低音レシピ,牛込里美,チョコレイトの低音レシピ,牛込里美,チョコレイトの低音レシピ,True,True,frames/0080.jpg
+81,74,遠い音楽 ～ハートビート～,山吹沙绫,遠い音楽〜ハートビート～,山吹沙绫,遠い音楽～ハートビート～,True,True,frames/0081.jpg
+82,80,す、好きなんかじゃない！,市谷有咲,す、好きなんかじゃない!,市谷有咲,す、好きなんかじゃない!,True,True,frames/0082.jpg
+83,26,That Is How I Roll!,Afterglow,That Is How I Roll!,Afterglow,That Is How I Roll!,True,True,frames/0083.jpg
+84,27,True color,Afterglow,True color,Afterglow,True color,True,True,frames/0084.jpg
+85,28,Scarlet Sky,Afterglow,Scarlet Sky,Afterglow,Scarlet Sky,True,True,frames/0085.jpg
+86,65,Hey-day狂騒曲(カプリチオ),Afterglow,Hey-day狂騒曲(カプリチオ),Afterglow,Hey-day狂騒曲(カプリチオ),True,True,frames/0086.jpg
+87,93,Y.O.L.O！！！！！,Afterglow,Y.O.L.O!!!!!,Afterglow,Y.O.L.O!!!!!,True,True,frames/0087.jpg
+88,113,Jamboree!Journey!,Afterglow,Jamboree!Journey!,Afterglow,Jamboree!Journey!,True,True,frames/0088.jpg
+89,121,COMIC PANIC!!!,Afterglow,COMIC PANIC!!,Afterglow,COMIC PANIC!!!,False,True,frames/0089.jpg
+90,144,ツナグ、ソラモヨウ,Afterglow,ツナグ、ソラモヨウ,Afterglow,ツナグ、ソラモヨウ,True,True,frames/0090.jpg
+91,156,ランブリングメモリー,Afterglow,ランブリングメモリー,Afterglow,ランブリングメモリー,True,True,frames/0091.jpg
+92,184,ON YOUR MARK,Afterglow,ON YOUR MARK,Afterglow,ON YOUR MARK,True,True,frames/0092.jpg
+93,185,いつも通りのBrand new days,Afterglow,いつも通りのBrand new days,Afterglow,いつも通りのBrand new days,True,True,frames/0093.jpg
+94,207,"Easy come, Easy go！",Afterglow,"Easy come, Easy go!",Afterglow,"Easy come, Easy go!",True,True,frames/0094.jpg
+95,222,Sasanqua,Afterglow,Sasanqua,Afterglow,Sasanqua,True,True,frames/0095.jpg
+96,223,[FULL]ON YOUR MARK,Afterglow,[FULL]ON YOUR MARK,Afterglow,[FULL]ON YOUR MARK,True,True,frames/0096.jpg
+97,251,I love your way！,Afterglow,I love your way!,Afterglow,I love your way!,True,True,frames/0097.jpg
+98,270,RED RED RED,Afterglow,RED RED RED,Afterglow,RED RED RED,True,True,frames/0098.jpg
+99,284,I knew it!,Afterglow,I knew it!,Afterglow,I knew it!,True,True,frames/0099.jpg
+100,293,ONE OF US,Afterglow,ONE OF US,Afterglow,ONE OF US,True,True,frames/0100.jpg
+101,304,SENSENFUKOKU,Afterglow,SENSENFUKOKU,Afterglow,SENSENFUKOKU,True,True,frames/0101.jpg
+102,340,カナユメ,Afterglow,カナユメ,Afterglow,カナユメ,True,True,frames/0102.jpg
+103,356,Trouble Joyful!!,Afterglow,Trouble Joyful!!,Afterglow,Trouble Joyful!!,True,True,frames/0103.jpg
+104,372,Off we go.,Afterglow,Off we go.,Afterglow,Off we go.,True,True,frames/0104.jpg
+105,414,サクラゼンセン,Afterglow,サクラゼンセン,Afterglow,サクラゼンセン,True,True,frames/0105.jpg
+106,425,SWITCH ON NOW,Afterglow,SWITCH ON NOW,Afterglow,SWITCH ON NOW,True,True,frames/0106.jpg
+107,442,独創収差,Afterglow,独創収差,Afterglow,独創収差,True,True,frames/0107.jpg
+108,451,Punchline Halloween!!!,Afterglow,Punchline Halloween!!!,Afterglow,Punchline Halloween!!,True,False,frames/0108.jpg
+109,470,IGNITE GLOW,Afterglow,IGNITE GLOW,Afterglow,IGNITE GLOW,True,True,frames/0109.jpg
+110,488,Made My Day,Afterglow,Made My Day,Afterglow,Made My Day,True,True,frames/0110.jpg
+111,510,ペトリコール・オベーション,Afterglow,ペトリコール・オベーション,Afterglow,ペトリコール・オベーション,True,True,frames/0111.jpg
+112,521,極彩色,Afterglow,極彩色,Afterglow,極彩色,True,True,frames/0112.jpg
+113,526,燦々,Afterglow,燦々,Afterglow,燦々,True,True,frames/0113.jpg
+114,551,That's why I'm here,Afterglow,That's why I'm here,Afterglow,That's why I'm here,True,True,frames/0114.jpg
+115,577,A Sunset So Bright,Afterglow,A Sunset So Bright,Afterglow,A Sunset So Bright,True,True,frames/0115.jpg
+116,611,Glowing After,Afterglow,Glowing After,Afterglow,Glowing After,True,True,frames/0116.jpg
+117,622,Start as Usual,Afterglow,Start as Usual,Afterglow,Start as Usual,True,True,frames/0117.jpg
+118,646,“Say cheese!!!!!”,Afterglow,"“Say cheese!!!!!""",Afterglow,"""Say cheese!!!""",False,False,frames/0118.jpg
+119,666,花笑みのデュオ,Afterglow,花笑みのデュオ,Afterglow,花笑みのデュオ,True,True,frames/0119.jpg
+120,700,Against the Light,Afterglow,Against the Light,Afterglow,Against the Light,True,True,frames/0120.jpg
+121,726,Feel so good!,Afterglow,Feel so good!,Afterglow,Feel so good!,True,True,frames/0121.jpg
+122,738,Part of the Life,Afterglow,Part of the Life,Afterglow,Part of the Life,True,True,frames/0122.jpg
+123,767,Choco Typhooooon!!,Afterglow,Choco Typhooooon!!,Afterglow,Choco Typhooooon!!,True,True,frames/0123.jpg
+124,32,しゅわりん☆どり～みん,Pastel＊Palettes,しゅわりん☆どり〜みん,Pastel * Palettes,しゅわりん☆どり〜みん,True,True,frames/0124.jpg
+125,33,パスパレボリューションず☆,Pastel＊Palettes,パスパレボリューションず☆,Pastel * Palettes,パスパレボリューションず☆,True,True,frames/0125.jpg
+126,34,はなまる◎アンダンテ,Pastel＊Palettes,はなまるアンダンテ,Pastel * Palettes,はなまる◎アンダンテ,False,True,frames/0126.jpg
+127,60,ゆら・ゆらRing-Dong-Dance,Pastel＊Palettes,ゆら·ゆらRing-Dong-Dance,Pastel * Palettes,ゆら·ゆらRing-Dong-Dance,False,False,frames/0127.jpg
+128,70,SURVIVOR ねばーぎぶあっぷ！,Pastel＊Palettes,SURVIVOR ねばーぎぶあっぷ!,Pastel * Palettes,SURVIVORねばーぎぶあっぷ!,True,True,frames/0128.jpg
+129,106,Wonderland Girl,Pastel＊Palettes,Wonderland Girl,Pastel * Palettes,Wonderland Girl,True,True,frames/0129.jpg
+130,125,天下トーイツ A to Z☆,Pastel＊Palettes,天下トーイツ A to Z☆,Pastel * Palettes,天下トーイツ A to Z☆,True,True,frames/0130.jpg
+131,104,もういちど ルミナス,Pastel＊Palettes,もういちどルミナス,Pastel * Palettes,もういちどルミナス,True,True,frames/0131.jpg
+132,148,ゼッタイ宣言〜Recital〜,Pastel＊Palettes,ゼッタイ宣言～Recital~,Pastel * Palettes,ゼッタイ宣言～Recital~,True,True,frames/0132.jpg
+133,169,ぎゅっDAYS♪,Pastel＊Palettes,ぎゅっDAYS♪,Pastel * Palettes,ぎゅっDAYS,True,False,frames/0133.jpg
+134,186,きゅ〜まい＊flower,Pastel＊Palettes,きゆ～まい*flower,Pastel * Palettes,きゅ～まい*flower,True,True,frames/0134.jpg
+135,193,ワクワクmeetsトリップ,Pastel＊Palettes,ワクワクmeetsトリップ,Pastel * Palettes,ワクワクmeetsトリップ,True,True,frames/0135.jpg
+136,210,あっつあつ 常夏 らぶ☆サマー！,Pastel＊Palettes,あっつあつ常夏らぶ☆サマー!,Pastel * Palettes,あっつあつ常夏らぶ☆サマー!,True,True,frames/0136.jpg
+137,226,ゆめゆめグラデーション,Pastel＊Palettes,ゆめゆめグラデーション,Pastel * Palettes,ゆめゆめグラデーション,True,True,frames/0137.jpg
+138,229,[FULL]きゅ〜まい＊flower,Pastel＊Palettes,[FULL]きゆ～まい*flower,Pastel * Palettes,[FULL]きゆ～まい*flower,True,True,frames/0138.jpg
+139,242,Wonderful Sweet！,Pastel＊Palettes,Wonderful Sweet!,Pastel * Palettes,Wonderful Sweet!,True,True,frames/0139.jpg
+140,264,Winking☆Cheer,Pastel＊Palettes,Winking☆Cheer,Pastel * Palettes,Winking☆Cheer,True,True,frames/0140.jpg
+141,290,Power of LOVE!!!,Pastel＊Palettes,Power of LOVE!!!,Pastel * Palettes,Power of LOVE!!,True,False,frames/0141.jpg
+142,303,TITLE IDOL,Pastel＊Palettes,TITLE IDOL,Pastel * Palettes,TITLE IDOL,True,True,frames/0142.jpg
+143,324,るんっ♪てぃてぃー！,Pastel＊Palettes,るんっ♪ていていー!,Pastel * Palettes,るんっ♪ていていー!,True,True,frames/0143.jpg
+144,370,パッパレ☆人生！バーン万歳！,Pastel＊Palettes,パッパレ☆人生！バーン万歳！,Pastel * Palettes,パッパレ☆人生!バーン万歳!,True,True,frames/0144.jpg
+145,396,Brand new Pastel Road！,Pastel＊Palettes,Brand new Pastel Road!,Pastel * Palettes,Brand new Pastel Road!,True,True,frames/0145.jpg
+146,420,あこがれacross,Pastel＊Palettes,あこがれacross,Pastel * Palettes,あこがれacross,True,True,frames/0146.jpg
+147,424,ハレハレ☆フォーチュン,Pastel＊Palettes,ハレハレ☆フォーチュン,Pastel * Palettes,ハレハレ☆フォーチュン,True,True,frames/0147.jpg
+148,437,ハナヒバナ,Pastel＊Palettes,ハナヒバナ,Pastel * Palettes,ハナヒバナ,True,True,frames/0148.jpg
+149,548,everyday flower,Pastel＊Palettes,everyday flower,Pastel * Palettes,everyday flower,True,True,frames/0149.jpg
+150,572,Radiate Warriors,Pastel＊Palettes,Radiate Warriors,Pastel * Palettes,Radiate Warriors,True,True,frames/0150.jpg
+151,582,ドラマチック！アライブ,Pastel＊Palettes,ドラマチック！アラィブ,Pastel * Palettes,ドラマチック！アライブ,True,True,frames/0151.jpg
+152,583,ReReReエボリューションず☆,Pastel＊Palettes,ReReReエボリューションず☆,Pastel * Palettes,ReReReエボリューションず☆,True,True,frames/0152.jpg
+153,604,トリドリ＊パレット,Pastel＊Palettes,トリドリ*パレット,Pastel * Palettes,トリドリ*パレット,True,True,frames/0153.jpg
+154,603,フレっとパレットFight Song!!,Pastel＊Palettes,フレっとパレットFight Song!!,Pastel * Palettes,フレっとパレットFight Song!!,True,True,frames/0154.jpg
+155,621,With〜きみとわたしたちの物語〜,Pastel＊Palettes,With〜きみとわたしたちの物語～,Pastel * Palettes,With~きみとわたしたちの物語~,True,True,frames/0155.jpg
+156,645,ホワイト ノスタルジア,Pastel＊Palettes,ホワィトノスタルジア,Pastel * Palettes,ホワィトノスタルジア,True,True,frames/0156.jpg
+157,687,デイオフ・ラフ・ラブ・サンクス,Pastel＊Palettes,ディオフ・ラフ・ラブ・サンクス,Pastel * Palettes,ディオフ・ラフ・ラブ・サンクス,True,True,frames/0157.jpg
+158,694,Y.O.L.O！！！！！(PasPale ver.),Pastel＊Palettes,Y.O.L.O!！！！！(PasPale ver.),Pastel * Palettes,Y.O.L.O!!!!!(PasPale ver.),True,True,frames/0158.jpg
+159,709,Shine ☆n My Life!,Pastel＊Palettes,Shine ☆n My Life!,Pastel * Palettes,Shine n My Life!,True,False,frames/0159.jpg
+160,723,スキ×すき×カラフリィ,Pastel＊Palettes,スキ×すき×カラフリィ,Pastel * Palettes,スキ×すき×カラフリィ,True,True,frames/0160.jpg
+161,742,きみCharmin',Pastel＊Palettes,きみCharmin,Pastel * Palettes,きみCharmin,False,False,frames/0161.jpg
+162,772,Thanks to you.,Pastel＊Palettes,Thanks to you.,Pastel * Palettes,Thanks to you.,True,True,frames/0162.jpg
+163,29,BLACK SHOUT,Roselia,BLACK SHOUT,Roselia,BLACK SHOUT,True,True,frames/0163.jpg
+164,30,Re:birth day,Roselia,Re:birth day,Roselia,Re:birth day,True,True,frames/0164.jpg
+165,31,LOUDER,Roselia,LOUDER,Roselia,LOUDER,True,True,frames/0165.jpg
+166,53,陽だまりロードナイト,Roselia,陽だまりロードナイト,Roselia,陽だまりロードナイト,True,True,frames/0166.jpg
+167,56,熱色スターマイン,Roselia,熱色スターマイン,Roselia,熱色スターマイン,True,True,frames/0167.jpg
+168,75,-HEROIC ADVENT-,Roselia,-HEROIC ADVENT-,Roselia,-HEROIC ADVENT-,True,True,frames/0168.jpg
+169,76,Determination Symphony,Roselia,Determination Symphony,Roselia,Determination Symphony,True,True,frames/0169.jpg
+170,96,ONENESS,Roselia,ONENESS,Roselia,ONENESS,True,True,frames/0170.jpg
+171,97,Opera of the wasteland,Roselia,Opera of the wasteland,Roselia,Opera of the wasteland,True,True,frames/0171.jpg
+172,111,軌跡,Roselia,軌跡,Roselia,軌跡,True,True,frames/0172.jpg
+173,118,Neo-Aspect,Roselia,Neo-Aspect,Roselia,Neo-Aspect,True,True,frames/0173.jpg
+174,119,Legendary,Roselia,Legendary,Roselia,Legendary,True,True,frames/0174.jpg
+175,142,Sanctuary,Roselia,Sanctuary,Roselia,Sanctuary,True,True,frames/0175.jpg
+176,149,R,Roselia,R,Roselia,R,True,True,frames/0176.jpg
+177,153,PASSIONATE ANTHEM,Roselia,PASSIONATE ANTHEM,Roselia,PASSIONATE ANTHEM,True,True,frames/0177.jpg
+178,159,BRAVE JEWEL,Roselia,BRAVE JEWEL,Roselia,BRAVE JEWEL,True,True,frames/0178.jpg
+179,168,Safe and Sound,Roselia,Safe and Sound,Roselia,Safe and Sound,True,True,frames/0179.jpg
+180,175,Ringing Bloom,Roselia,Ringing Bloom,Roselia,Ringing Bloom,True,True,frames/0180.jpg
+181,187,FIRE BIRD,Roselia,FIRE BIRD,Roselia,FIRE BIRD,True,True,frames/0181.jpg
+182,200,約束,Roselia,約束,Roselia,約束,True,True,frames/0182.jpg
+183,214,“UNIONS”Road,Roselia,“UNIONS”Road,Roselia,“UNIONS”Road,True,True,frames/0183.jpg
+184,243,[FULL]FIRE BIRD,Roselia,[FULL]FIRE BIRD,Roselia,[FULL]FIRE BIRD,True,True,frames/0184.jpg
+185,245,Song I am.,Roselia,Song I am.,Roselia,Song I am.,True,True,frames/0185.jpg
+186,250,Break your desire,Roselia,Break your desire,Roselia,Break your desire,True,True,frames/0186.jpg
+187,266,Avant-garde HISTORY,Roselia,Avant-garde HISTORY,Roselia,Avant-garde HISTORY,True,True,frames/0187.jpg
+188,271,Blessing Chord,Roselia,Blessing Chord,Roselia,Blessing Chord,True,True,frames/0188.jpg
+189,291,ZEAL of proud,Roselia,ZEAL of proud,Roselia,ZEAL of proud,True,True,frames/0189.jpg
+190,310,Keep Heart,Roselia,Keep Heart,Roselia,Keep Heart,True,True,frames/0190.jpg
+191,328,Proud of oneself,Roselia,Proud of oneself,Roselia,Proud of oneself,True,True,frames/0191.jpg
+192,330,Original Call,Roselia,Original Call,Roselia,Original Call,True,True,frames/0192.jpg
+193,337,overtuRe,Roselia,overtuRe,Roselia,overtuRe,True,True,frames/0193.jpg
+194,344,Sing Alive,Roselia,Sing Alive,Roselia,Sing Alive,True,True,frames/0194.jpg
+195,350,Singing “OURS”,Roselia,Singing g“OURS”,Roselia,Singing“OURS”,False,True,frames/0195.jpg
+196,346,Sprechchor,Roselia,Sprechchor,Roselia,Sprechchor,True,True,frames/0196.jpg
+197,373,Our Carol,Roselia,Our Carol,Roselia,Our Carol,True,True,frames/0197.jpg
+198,410,閃光,Roselia,閃光,Roselia,閃光,True,True,frames/0198.jpg
+199,416,THE HISTORIC...,Roselia,THE HISTORIC...,Roselia,THE HISTORIC...,True,True,frames/0199.jpg
+200,431,ROZEN HORIZON,Roselia,ROZEN HORIZON,Roselia,ROZEN HORIZON,True,True,frames/0200.jpg
+201,434,Swear 〜Night & Day〜,Roselia,Swear ～Night & Day~,Roselia,Swear ~Night & Day~,True,True,frames/0201.jpg
+202,453,Dear Gleam,Roselia,Dear Gleam,Roselia,Dear Gleam,True,True,frames/0202.jpg
+203,473,一逢のFull Glory,Roselia,一逢のFull Glory,Roselia,一逢のFull Glory,True,True,frames/0203.jpg
+204,492,Call the shots,Roselia,Call the shots,Roselia,Call the shots,True,True,frames/0204.jpg
+205,511,Sunlit Musical,Roselia,Sunlit Musical,Roselia,Sunlit Musical,True,True,frames/0205.jpg
+206,543,THRONE OF ROSE,Roselia,THRONE OF ROSE,Roselia,THRONE OF ROSE,True,True,frames/0206.jpg
+207,558,覚悟のLiberation,Roselia,覚悟のLiberation,Roselia,覚悟のLiberation,True,True,frames/0207.jpg
+208,584,VIOLET LINE,Roselia,VIOLET LINE,Roselia,VIOLET LINE,True,True,frames/0208.jpg
+209,585,Always recall.,Roselia,Always recall.,Roselia,Always recall.,True,True,frames/0209.jpg
+210,609,Floral Haven,Roselia,Floral Haven,Roselia,Floral Haven,True,True,frames/0210.jpg
+211,616,Sage der Rosen,Roselia,Sage der Rosen,Roselia,Sage der Rosen,True,True,frames/0211.jpg
+212,618,礎の花冠,Roselia,礎の花冠,Roselia,礎の花冠,True,True,frames/0212.jpg
+213,638,FRONTIER FANTASIA,Roselia,FRONTIER FANTASIA,Roselia,FRONTIER FANTASIA,True,True,frames/0213.jpg
+214,665,Grateful Melting,Roselia,Grateful Melting,Roselia,Grateful Melting,True,True,frames/0214.jpg
+215,690,Second to None,Roselia,Second to None,Roselia,Second to None,False,False,frames/0215.jpg
+216,696,Dazzle the Destiny,Roselia,Dazzle the Destiny,Roselia,Dazzle the Destiny,True,True,frames/0216.jpg
+217,717,Requiem for Fate,Roselia,Requiem for Fate,Roselia,Requiem for Fate,True,True,frames/0217.jpg
+218,713,紫炎,Roselia,紫炎,Roselia,紫炎,True,True,frames/0218.jpg
+219,714,Steadfast Spirits,Roselia,Steadfast Spirits,Roselia,Steadfast Spirits,True,True,frames/0219.jpg
+220,746,Fear Nothing,Roselia,Fear Nothing,Roselia,Fear Nothing,True,True,frames/0220.jpg
+221,771,Talk to My Tone,Roselia,Talk to My Tone,Roselia,Talk to My Tone,True,True,frames/0221.jpg
+222,35,えがおのオーケストラっ！,"Hello, Happy World！",えがおのオーケストラっ!,"Hello, Happy World!",えがおのオーケストラっ!,True,True,frames/0222.jpg
+223,36,ハピネスっ！ハピィーマジカルっ♪,"Hello, Happy World！",ハピネスっ!ハピィーマジカルっ♪,"Hello, Happy World!",ハピネスっ!ハピィーマジカルっ♪,True,True,frames/0223.jpg
+224,37,ゴーカ！ごーかい！？ファントムシーフ！,"Hello, Happy World！",ゴーカ!ごーかい!？ファントムシーフ!,"Hello, Happy World!",ゴーカ!ごーかい!？ファントムシーフ!,True,True,frames/0224.jpg
+225,69,せかいのっびのびトレジャー！,"Hello, Happy World！",せかいのっびのびトレジャー!,"Hello, Happy World!",せかいのっびのびトレジャー!,True,True,frames/0225.jpg
+226,68,YAPPY！SCHOOL CARNIVAL☆彡,"Hello, Happy World！",YAPPY! SCHOOL CARNIVAL☆,"Hello, Happy World!",YAPPY! SCHOOL CARNIVAL☆,False,False,frames/0226.jpg
+227,94,わちゃ・もちゃ・ぺったん行進曲,"Hello, Happy World！",わちゃ・もちゃ・ペったん行進曲,"Hello, Happy World!",わちゃ・もちゃ・ペったん行進曲,True,True,frames/0227.jpg
+228,123,ふわふわ☆ゆめいろサンドイッチ,"Hello, Happy World！",ふわふわ☆ゆめいろサンドイッチ,"Hello, Happy World!",ふわふわ☆ゆめいろサンドイッチ,True,True,frames/0228.jpg
+229,132,ハイファイブ∞あどべんちゃっ,"Hello, Happy World！",ハイファイブ∞あどベんちゃっ,"Hello, Happy World!",ハイファイブ∞あどベんちゃっ,True,True,frames/0229.jpg
+230,150,キミがいなくちゃっ！,"Hello, Happy World！",キミがいなくちゃっ!,"Hello, Happy World!",キミがいなくちゃっ!,True,True,frames/0230.jpg
+231,171,はれやか すこやか ぴかりんりん♪,"Hello, Happy World！",はれやかすこやかぴかりんりん♪,"Hello, Happy World!",はれやかすこやかぴかりんりん♪,True,True,frames/0231.jpg
+232,189,えがお･シング･あ･ソング,"Hello, Happy World！",えがお・シング・あ・ソング,"Hello, Happy World!",えがお・シング・あ・ソング,True,True,frames/0232.jpg
+233,197,にこ×にこ＝ハイパースマイルパワー！,"Hello, Happy World！",にこ×にこ＝ハイパースマィルパワー!,"Hello, Happy World!",にこ×にこ＝ハイパースマイルパワー!,True,True,frames/0233.jpg
+234,212,スマイルブーケで た〜まや〜！,"Hello, Happy World！",スマイルブーケでた〜まや〜!,"Hello, Happy World!",スマイルブーケでた〜まや~!,True,True,frames/0234.jpg
+235,230,おもいでイルミネーション,"Hello, Happy World！",おもいでイルミネーション,"Hello, Happy World!",おもいでイルミネーション,True,True,frames/0235.jpg
+236,235,[FULL]えがお･シング･あ･ソング,"Hello, Happy World！",[FULL]えがお・シング・あ・ソング,"Hello, Happy World!",[FULL]えがお・シング・あ・ソング,True,True,frames/0236.jpg
+237,262,うぃーきゃん☆フレフレっ！,"Hello, Happy World！",ういーきゃん☆フレフレっ！,"Hello, Happy World!",ういーきゃん☆フレフレっ!,True,True,frames/0237.jpg
+238,280,えがお、み～っけた！,"Hello, Happy World！",えがお、み〜っけた!,"Hello, Happy World!",えがお、み~っけた!,True,True,frames/0238.jpg
+239,313,にこにこねくと！,"Hello, Happy World！",にこにこねくと!,"Hello, Happy World!",にこにこねくと!,True,True,frames/0239.jpg
+240,341,ないすみちゅっ！,"Hello, Happy World！",ないすみちゅっ!,"Hello, Happy World!",ないすみちゅっ!,True,True,frames/0240.jpg
+241,362,きらっ☆と キミフェス！,"Hello, Happy World！",きらっ☆とキミフェス!,"Hello, Happy World!",きらっ☆とキミフェス!,True,True,frames/0241.jpg
+242,393,現るっ！大怪盗ハロハッピー！,"Hello, Happy World！",現るっ！大怪盗ハロハッピー！,"Hello, Happy World!",現るっ！大怪盗ハ口ハッピー！,True,False,frames/0242.jpg
+243,421,おもいやりハーモニー,"Hello, Happy World！",おもいやりハーモニー,"Hello, Happy World!",おもいやりハーモニー,True,True,frames/0243.jpg
+244,428,Happy! Happier! Happiest!,"Hello, Happy World！",Happy! Happier! Happiest!,"Hello, Happy World!",Happy! Happier! Happiest!,True,True,frames/0244.jpg
+245,443,うちゃパ！で ぱっぴかポーんっ！,"Hello, Happy World！",うちゃパ!でぱっぴかポーんっ!,"Hello, Happy World!",うちゃパ!でぱっぴかポーんっ!,True,True,frames/0245.jpg
+246,460,えがお、あーゆーれでぃ???,"Hello, Happy World！",えがお、あーゆーれでい???,"Hello, Happy World!",えがお、あーゆーれでい???,True,True,frames/0246.jpg
+247,504,キミを れっつ・はぶ・ふぁん♪,"Hello, Happy World！",キミをれっつ・はぶ・ふあん♪,"Hello, Happy World!",キミをれっつ・はぶ・ふあん♪,True,True,frames/0247.jpg
+248,523,ボクらの夏's☆ショーたいむっ！！,"Hello, Happy World！",ボクらの夏's☆ショーたいむっ!！,"Hello, Happy World!",ボクらの夏's☆ショーたいむっ!!,True,True,frames/0248.jpg
+249,524,ふぁいぶスマイル◯オールインっ！,"Hello, Happy World！",ふあいぶスマィル〇オールインっ!,"Hello, Happy World!",ふぁいぶスマイルオールインっ!,False,False,frames/0249.jpg
+250,559,らいふ・いず・みゅーじかるっ♪♪♪,"Hello, Happy World！",らいふ・いず・みゅーじかるっ♪♪♪,"Hello, Happy World!",らいふ・いず・みゅーじかるっ♪♪♪,True,True,frames/0250.jpg
+251,600,むすんでわらって,"Hello, Happy World！",むすんでわらって,"Hello, Happy World!",むすんでわらって,True,True,frames/0251.jpg
+252,607,サンバロハッピ〜！,"Hello, Happy World！",サンバロハッピ～!,"Hello, Happy World!",サンバロハッピ~!,True,True,frames/0252.jpg
+253,619,Listen to Smile!,"Hello, Happy World！",Listen to Smile!,"Hello, Happy World!",Listen to Smile!,True,True,frames/0253.jpg
+254,641,ハイタッチ／＼びりーばーず☆,"Hello, Happy World！",ハイタッチノびりーばーず☆,"Hello, Happy World!",ハイタッチノ\びりーばーず☆,False,False,frames/0254.jpg
+255,664,れっつ・スマイル・すとり〜みんぐっ♪,"Hello, Happy World！",れっつ・スマイル・すとり〜みんぐっ♪,"Hello, Happy World!",れっっ・スマイル・すとり~みんぐっ♪,True,True,frames/0255.jpg
+256,691,やっほー！いっぽ！わんだふぉー！,"Hello, Happy World！",やっほー!いっぼ! わんだふぉー!,"Hello, Happy World!",やっほー!いっぼ!わんだふぉー!,False,False,frames/0256.jpg
+257,720,スタ〜リング ☆じぶん☆,"Hello, Happy World！",スタ〜リング☆じぶん☆,"Hello, Happy World!",スタ~リング☆じぶん☆,True,True,frames/0257.jpg
+258,721,とーくとぅみー・とーくとぅゆー,"Hello, Happy World！",とーくとうみー・とーくとうゆー,"Hello, Happy World!",とーくとうみー・とーくとうゆー,True,True,frames/0258.jpg
+259,748,まぶしいねっ☆ そのえがお！,"Hello, Happy World！",まぶしいねっ☆そのえがお!,"Hello, Happy World!",まぶしいねっ☆そのえがお!,True,True,frames/0259.jpg
+260,750,スマイリーキャロル,"Hello, Happy World！",スマイリーキャロル,"Hello, Happy World!",スマイリーキャロル,True,True,frames/0260.jpg
+261,773,かぽーんっと極楽☆ 湯〜とぴあ！,"Hello, Happy World！",かぼーんっと極楽☆湯~とぴあ！,"Hello, Happy World!",かぼーんっと極楽☆湯~とぴあ!,False,False,frames/0261.jpg
+262,255,Daylight -デイライト-,Morfonica,Daylightーデイライトー,Morfonica,Daylightーデイライトー,False,False,frames/0262.jpg
+263,256,金色へのプレリュード,Morfonica,金色ヘのプレリュード,Morfonica,金色ヘのプレリュード,True,True,frames/0263.jpg
+264,263,ブルームブルーム,Morfonica,ブルームブルーム,Morfonica,ブルームブルーム,True,True,frames/0264.jpg
+265,279,flame of hope,Morfonica,flame of hope,Morfonica,flame of hope,True,True,frames/0265.jpg
+266,300,ハーモニー・デイ,Morfonica,ハーモニー・ディ,Morfonica,ハーモニー・ディ,True,True,frames/0266.jpg
+267,327,Sonorous,Morfonica,Sonorous,Morfonica,Sonorous,True,True,frames/0267.jpg
+268,347,Secret Dawn,Morfonica,Secret Dawn,Morfonica,Secret Dawn,True,True,frames/0268.jpg
+269,365,fly with the night,Morfonica,fly with the night,Morfonica,fly with the night,True,True,frames/0269.jpg
+270,374,Fateful...,Morfonica,Fateful...,Morfonica,Fateful...,True,True,frames/0270.jpg
+271,398,One step at a time,Morfonica,One step at a time,Morfonica,One step at a time,True,True,frames/0271.jpg
+272,435,"寄る辺のSunny, Sunny",Morfonica,"寄る辺のSunny, Sunny",Morfonica,"寄る辺のSunny, Sunny",True,True,frames/0272.jpg
+273,436,カラフルリバティー,Morfonica,カラフルリバティー,Morfonica,カラフルリバティー,True,True,frames/0273.jpg
+274,441,The Circle Of Butterflies,Morfonica,The Circle Of Butterflies,Morfonica,The Circle Of Butterflies,True,True,frames/0274.jpg
+275,471,Sweet Cheers!,Morfonica,Sweet Cheers!,Morfonica,Sweet Cheers!,True,True,frames/0275.jpg
+276,500,Angel's Ladder,Morfonica,Angel's Ladder,Morfonica,Angel's Ladder,True,True,frames/0276.jpg
+277,530,音がえしのセレナーデ,Morfonica,音がえしのセレナーデ,Morfonica,音がえしのセレナーデ,True,True,frames/0277.jpg
+278,520,Ever Sky Blue,Morfonica,Ever Sky Blue,Morfonica,Ever Sky Blue,True,True,frames/0278.jpg
+279,555,Merry Merry Thanks!!,Morfonica,Merry Merry Thanks!!,Morfonica,Merry Merry Thanks!!,True,True,frames/0279.jpg
+280,581,蒼穹へのトレイル,Morfonica,蒼穹へのトレイル,Morfonica,蒼穹ヘのトレイル,True,True,frames/0280.jpg
+281,586,誓いのWingbeat,Morfonica,誓いのWingbeat,Morfonica,誓いのWingbeat,True,True,frames/0281.jpg
+282,601,両翼のBrilliance,Morfonica,両翼のBrilliance,Morfonica,両翼のBrilliance,True,True,frames/0282.jpg
+283,605,メランコリックララバイ,Morfonica,メランコリックララバイ,Morfonica,メランコリックララバイ,True,True,frames/0283.jpg
+284,612,Wreath of Brave,Morfonica,Wreath of Brave,Morfonica,Wreath of Brave,True,True,frames/0284.jpg
+285,636,ティリカモニカリラ,Morfonica,ティリカモニカリラ,Morfonica,ティリカモニカリラ,True,True,frames/0285.jpg
+286,654,Tempest,Morfonica,Tempest,Morfonica,Tempest,True,True,frames/0286.jpg
+287,663,Steer to Utopia,Morfonica,Steer to Utopia,Morfonica,Steer to Utopia,True,True,frames/0287.jpg
+288,692,Portray Empathy,Morfonica,Portray Empathy,Morfonica,Portray Empathy,True,True,frames/0288.jpg
+289,703,Polyphonyscape,Morfonica,Polyphonyscape,Morfonica,Polyphonyscape,True,True,frames/0289.jpg
+290,708,Feathered Dreams,Morfonica,Feathered Dreams,Morfonica,Feathered Dreams,True,True,frames/0290.jpg
+291,718,Color of Us,Morfonica,Color of Us,Morfonica,Color of Us,True,True,frames/0291.jpg
+292,724,Resonant Strings,Morfonica,Resonant Strings,Morfonica,Resonant Strings,True,True,frames/0292.jpg
+293,728,ビューティ・フォー,Morfonica,ビューティ・フォー,Morfonica,ビューティ・フォー,True,True,frames/0293.jpg
+294,764,Shining Leaves,Morfonica,Shining Leaves,Morfonica,Shining Leaves,True,True,frames/0294.jpg
+295,160,R・I・O・T,RAISE A SUILEN,R·I·O·T,RAISE A SUILEN,R·I·O·T,True,True,frames/0295.jpg
+296,194,UNSTOPPABLE,RAISE A SUILEN,UNSTOPPABLE,RAISE A SUILEN,UNSTOPPABLE,True,True,frames/0296.jpg
+297,203,A DECLARATION OF ×××,RAISE A SUILEN,A DECLARATION OF ×××,RAISE A SUILEN,A DECLARATION OF ××x,True,False,frames/0297.jpg
+298,247,EXPOSE ‘Burn out!!!’,RAISE A SUILEN,EXPOSE ‘Burn out!!!,RAISE A SUILEN,EXPOSE Burn out!!!',False,False,frames/0298.jpg
+299,288,Beautiful Birthday,RAISE A SUILEN,Beautiful Birthday,RAISE A SUILEN,Beautiful Birthday,True,True,frames/0299.jpg
+300,289,!NVADE SHOW!,RAISE A SUILEN,!NVADE SHOW!,RAISE A SUILEN,!NVADE SHOW!,True,True,frames/0300.jpg
+301,301,mind of Prominence,RAISE A SUILEN,mind of Prominence,RAISE A SUILEN,mind of Prominence,True,True,frames/0301.jpg
+302,314,OUTSIDER RODEO,RAISE A SUILEN,OUTSIDER RODEO,RAISE A SUILEN,OUTSIDER RODEO,True,True,frames/0302.jpg
+303,325,EXIST,RAISE A SUILEN,EXIST,RAISE A SUILEN,EXIST,True,True,frames/0303.jpg
+304,339,Domination to world,RAISE A SUILEN,Domination to world,RAISE A SUILEN,Domination to world,True,True,frames/0304.jpg
+305,348,灼熱 Bonfire!,RAISE A SUILEN,灼熱 Bonfire!,RAISE A SUILEN,灼熱 Bonfire!,True,True,frames/0305.jpg
+306,360,Sacred world,RAISE A SUILEN,Sacred world,RAISE A SUILEN,Sacred world,True,True,frames/0306.jpg
+307,359,HELL! or HELL?,RAISE A SUILEN,HELL! or HELL?,RAISE A SUILEN,HELL! or HELL?,True,True,frames/0307.jpg
+308,375,Embrace of light,RAISE A SUILEN,Embrace of light,RAISE A SUILEN,Embrace of light,True,True,frames/0308.jpg
+309,383,CORUSCATE -DNA-,RAISE A SUILEN,CORUSCATE -DNA-,RAISE A SUILEN,CORUSCATE-DNA-,True,True,frames/0309.jpg
+310,399,Repaint,RAISE A SUILEN,Repaint,RAISE A SUILEN,Repaint,True,True,frames/0310.jpg
+311,413,DRIVE US CRAZY,RAISE A SUILEN,DRIVE US CRAZY,RAISE A SUILEN,DRIVE US CRAZY,True,True,frames/0311.jpg
+312,417,Light a fire,RAISE A SUILEN,Light a fire,RAISE A SUILEN,Light a fire,True,True,frames/0312.jpg
+313,432,SOUL SOLDIER,RAISE A SUILEN,SOUL SOLDIER,RAISE A SUILEN,SOUL SOLDIER,True,True,frames/0313.jpg
+314,440,THE WAY OF LIFE,RAISE A SUILEN,THE WAY OF LIFE,RAISE A SUILEN,THE WAY OF LIFE,True,True,frames/0314.jpg
+315,448,Invincible Fighter,RAISE A SUILEN,Invincible Fighter,RAISE A SUILEN,Invincible Fighter,True,True,frames/0315.jpg
+316,449,Takin’ my Heart,RAISE A SUILEN,Takin' my Heart,RAISE A SUILEN,Takin' my Heart,False,False,frames/0316.jpg
+317,457,DEAD HEAT BEAT,RAISE A SUILEN,DEAD HEAT BEAT,RAISE A SUILEN,DEAD HEAT BEAT,True,True,frames/0317.jpg
+318,495,DANCING DARING,RAISE A SUILEN,DANCING DARING,RAISE A SUILEN,DANCING DARING,True,True,frames/0318.jpg
+319,549,BATTLE CRY,RAISE A SUILEN,BATTLE CRY,RAISE A SUILEN,BATTLE CRY,True,True,frames/0319.jpg
+320,505,-N-E-M-E-S-I-S-,RAISE A SUILEN,-N-E-M-E-S-I-S-,RAISE A SUILEN,-N-E-M-E-S-I-S-,True,True,frames/0320.jpg
+321,579,Ray of hope,RAISE A SUILEN,Ray of hope,RAISE A SUILEN,Ray of hope,True,True,frames/0321.jpg
+322,602,Life on the Lotus,RAISE A SUILEN,Life on the Lotus,RAISE A SUILEN,Life on the Lotus,True,True,frames/0322.jpg
+323,606,V.I.P MONSTER,RAISE A SUILEN,V.I.P MONSTER,RAISE A SUILEN,V.I.P MONSTER,True,True,frames/0323.jpg
+324,623,Bad Kids All Bet,RAISE A SUILEN,Bad Kids All Bet,RAISE A SUILEN,Bad Kids All Bet,True,True,frames/0324.jpg
+325,662,JUST THE WAY I AM,RAISE A SUILEN,JUST THE WAY I AM,RAISE A SUILEN,JUST THE WAY I AM,True,True,frames/0325.jpg
+326,647,VIVID FIRST TIME,RAISE A SUILEN,VIVID FIRST TIME,RAISE A SUILEN,VIVID FIRST TIME,True,True,frames/0326.jpg
+327,652,WELCOME TO PANDEMONIUM,RAISE A SUILEN,WELCOME TO PANDEMONIUM,RAISE A SUILEN,WELCOME TO PANDEMONIUM,True,True,frames/0327.jpg
+328,672,HOWLING AMBITION,RAISE A SUILEN,HOWLING AMBITION,RAISE A SUILEN,HOWLING AMBITION,True,True,frames/0328.jpg
+329,693,REIGNING,RAISE A SUILEN,REIGNING,RAISE A SUILEN,REIGNING,True,True,frames/0329.jpg
+330,706,FIVE as ONE,RAISE A SUILEN,FIVE as ONE,RAISE A SUILEN,FIVE as ONE,True,True,frames/0330.jpg
+331,725,'FIGHT' ADDICT,RAISE A SUILEN,'FIGHT' ADDICT,RAISE A SUILEN,'FIGHT' ADDICT,True,True,frames/0331.jpg
+332,739,BIBIBABI BRAVER,RAISE A SUILEN,BIBIBABI BRAVER,RAISE A SUILEN,BIBIBABI BRAVER,True,True,frames/0332.jpg
+333,755,Drown Out the Noise and Push Through the Trash,RAISE A SUILEN,Drown Out the Noise and Push Through the Trash,RAISE A SUILEN,Drown Out the Noise and Push Through the Trash,True,True,frames/0333.jpg
+334,766,RUNAWAY STAR,RAISE A SUILEN,RUNAWAY STAR,RAISE A SUILEN,RUNAWAY STAR,True,True,frames/0334.jpg
+335,489,迷星叫,MyGO!!!!!,迷星叫,MyGO!!!!!,迷星叫,True,True,frames/0335.jpg
+336,512,壱雫空,MyGO!!!!!,壱雫空,MyGO!!!!!,壱雫空,True,True,frames/0336.jpg
+337,513,栞,MyGO!!!!!,栞,MyGO!!!!!,栞,True,True,frames/0337.jpg
+338,515,碧天伴走,MyGO!!!!!,碧天伴走,MyGO!!!!!,碧天伴走,True,True,frames/0338.jpg
+339,522,詩超絆,MyGO!!!!!,詩超絆,MyGO!!!!!,詩超絆,True,True,frames/0339.jpg
+340,525,迷路日々,MyGO!!!!!,迷路日々,MyGO!!!!!,迷路日々,True,True,frames/0340.jpg
+341,540,影色舞,MyGO!!!!!,影色舞,MyGO!!!!!,影色舞,True,True,frames/0341.jpg
+342,542,歌いましょう鳴らしましょう,MyGO!!!!!,歌いましょう鳴らしましょう,MyGO!!!!!,歌いましょう鳴らしましょう,True,True,frames/0342.jpg
+343,553,処救生,MyGO!!!!!,処救生,MyGO!!!!!,処救生,True,True,frames/0343.jpg
+344,580,輪符雨,MyGO!!!!!,輪符雨,MyGO!!!!!,輪符雨,True,True,frames/0344.jpg
+345,624,名無声,MyGO!!!!!,名無声,MyGO!!!!!,名無声,True,True,frames/0345.jpg
+346,635,過惰幻,MyGO!!!!!,過惰幻,MyGO!!!!!,過惰幻,True,True,frames/0346.jpg
+347,642,歩拾道,MyGO!!!!!,歩拾道,MyGO!!!!!,歩拾道,True,True,frames/0347.jpg
+348,668,音一会,MyGO!!!!!,音一会,MyGO!!!!!,音一会,True,True,frames/0348.jpg
+349,683,聿日箋秋,MyGO!!!!!,聿日箋秋,MyGO!!!!!,聿日箋秋,True,True,frames/0349.jpg
+350,684,焚音打,MyGO!!!!!,焚音打,MyGO!!!!!,焚音打,True,True,frames/0350.jpg
+351,698,潜在表明,MyGO!!!!!,潜在表明,MyGO!!!!!,潜在表明,True,True,frames/0351.jpg
+352,715,残痕字,MyGO!!!!!,残痕字,MyGO!!!!!,残痕字,True,True,frames/0352.jpg
+353,719,往欄印,MyGO!!!!!,往欄印,MyGO!!!!!,往欄印,True,True,frames/0353.jpg
+354,735,エガクミライ,MyGO!!!!!,エガクミラィ,MyGO!!!!!,エガクミライ,True,True,frames/0354.jpg
+355,754,端程山,MyGO!!!!!,端程山,MyGO!!!!!,端程山,True,True,frames/0355.jpg
+356,531,Ave Mujica,Ave Mujica,Ave Mujica,Ave Mujica,Ave Mujica,True,True,frames/0356.jpg
+357,659,KiLLKiSS,Ave Mujica,KiLLKiSS,Ave Mujica,KiLLKiSS,True,True,frames/0357.jpg
+358,661,"Georgette Me, Georgette You",Ave Mujica,"Georgette Me, Georgette You",Ave Mujica,"Georgette Me, Georgette You",True,True,frames/0358.jpg
+359,670,Imprisoned XII,Ave Mujica,Imprisoned XII,Ave Mujica,Imprisoned XII,True,True,frames/0359.jpg
+360,671,Crucifix X,Ave Mujica,Crucifix X,Ave Mujica,Crucifix X,True,True,frames/0360.jpg
+361,682,八芒星ダンス,Ave Mujica,ハ芒星ダンス,Ave Mujica,ハ芒星ダンス,False,False,frames/0361.jpg
+362,685,顔,Ave Mujica,顔,Ave Mujica,顔,True,True,frames/0362.jpg
+363,686,天球(そら)のMúsica,Ave Mujica,天球(そら)のMúsica,Ave Mujica,天球(そら)のMúsica,True,True,frames/0363.jpg
+364,705,黒のバースデイ,Ave Mujica,黒のバースディ,Ave Mujica,黒のバースディ,True,True,frames/0364.jpg
+365,737,Mas?uerade Rhapsody Re?uest,Ave Mujica,Mas?uerade Rhapsody Re?uest,Ave Mujica,Mas?uerade Rhapsody Re?uest,True,True,frames/0365.jpg
+366,90,クインティプル☆すまいる,GBP! Special Band,クインティプル☆すまいる,GBP! Special Band,クインティプル☆すまいる,True,True,frames/0366.jpg
+367,131,ピコっと！パピっと！！ガルパ☆ピコ！！！,香澄×兰×彩×友希那×心,ピコっと!パピっと!! ガルパ☆ピコ!!!,香澄×兰×彩×友希那×心,ピコっと!パピっと!!ガルバ☆ピコ!!!,True,False,frames/0367.jpg
+368,248,TWiNKLE CiRCLE,GBP! Special Band,TWiNKLE CiRCLE,GBP! Special Band,TWiNKLE CiRCLE,True,True,frames/0368.jpg
+369,147,ひとりじゃないんだから,彩×摩卡×莉莎×花音×鸫,ひとりじゃないんだから,彩×摩卡×莉莎×花音×鸦,ひとりじゃないんだから,True,True,frames/0369.jpg
+370,268,大盛り一丁！ガルパ☆ピコ,香澄×兰×彩×友希那×心,大盛りー丁！ガルパ☆ピコ,香澄×兰×彩×友希那×心,大盛りー丁!ガルパ☆ピコ,False,False,frames/0370.jpg
+371,353,絆色のアンサンブル,Poppin'Party×Pastel＊Palettes×Morfonica,絆色のアンサンブル,Poppin'Party×Pastel * Palettes×Morfonica,絆色のアンサンブル,True,True,frames/0371.jpg
+372,357,ラスハピーポー！,"RAISE A SUILEN×Hello, Happy World！",ラスハピーポー!,"RAISE A SUILEN×Hello, Happy WorId!",ラスハピーポー!,True,True,frames/0372.jpg
+373,355,競宴Red×Violet,Roselia×Afterglow,競宴Red×Violet,Roselia×Afterglow,競宴Red×Violet,True,True,frames/0373.jpg
+374,364,ピコたるもの、ふぃーばー！,香澄×兰×彩×友希那×心×真白×LAYER,ピコたるもの、ふいーばー!,香澄×兰×彩×友希那×心×真白×LAYER,ピコたるもの、ふいーばー!,True,True,frames/0374.jpg
+375,366,ナカナ イナ カナイ,花园多惠×LAYER,ナカナィナカナィ,花园多惠×LAYER,ナカナイナカナイ,True,True,frames/0375.jpg
+376,400,CATASTROPHE BANQUET,LAYER×纱夜×沙绫×米歇尔×瑠唯,CATASTROPHE BANQUET,LAYER×纱夜×沙绫×米歇尔×瑠唯,CATASTROPHE BANQUET,True,True,frames/0376.jpg
+377,402,CiRCLE THANKS MUSiC♪,CiRCLE THANKS PARTY！特别乐队,CiRCLE THANKS MUSiC,CiRCLE THANKS PARTY!特别乐队,CiRCLE THANKS MUSiC,False,False,frames/0377.jpg
+378,412,[FULL]CiRCLE THANKS MUSiC♪,CiRCLE THANKS PARTY！特别乐队,[FULL]CiRCLE THANKS MUSiC,CiRCLE THANKS PARTY!特别乐队,[FULL]CiRCLE THANKS MUSiC,False,False,frames/0378.jpg
+379,475,See you! 〜それぞれの明日へ〜,彩×日菜×千圣×麻弥×友希那×纱夜×莉莎×燐子×薰×花音,See you!～それぞれの明日へ～,彩×日菜×千圣×麻弥×友希那×纱夜×莉莎×燐子×薰×花音,See you!〜それぞれの明日へ~,True,True,frames/0379.jpg
+380,491,花呼ぶ声,kemu feat. 夢ノ結唱 POPY×夢ノ結唱 ROSE,花呼ぶ声,kemu feat.夢ノ結唱POPY×夢ノ結唱ROSE,花呼ぶ声,True,True,frames/0380.jpg
+381,519,私色きらめき日和,ますかっと feat. 夢ノ結唱 POPY,私色きらめき日和,ますかっとfeat.夢ノ結唱POPY,私色きらめき日和,True,True,frames/0381.jpg
+382,539,Be born,メガテラ・ゼロ feat. 夢ノ結唱 POPY,Be born,メガテラ・ゼロfeat.夢ノ結唱POPY,Be born,True,True,frames/0382.jpg
+383,571,グッド・バイ,john feat. 夢ノ結唱 ROSE,グッド・バイ,john feat. 夢ノ結唱 ROSE,グッド・バイ,True,True,frames/0383.jpg
+384,649,迷星叫(平行歌曲),梦寐以求的共演,迷星叫(平行歌曲),梦寐以求的共演,迷星叫(平行歌曲),True,True,frames/0384.jpg
+385,658,マルカリアンチェイン,夢ノ結唱 ROSE,マルカリアンチェイン,夢ノ結唱ROSE,マルカリアンチェイン,True,True,frames/0385.jpg
+386,660,Blessing Chord(平行歌曲),I♡宅家生活,Blessing Chord(平行歌曲),♡宅家生活,Blessing Chord(平行歌曲),True,True,frames/0386.jpg
+387,667,春日影,CRYCHIC,春日影,CRYCHIC,春日影,True,True,frames/0387.jpg
+388,674,ひとりじゃないんだから(平行歌曲),欢迎光临羽泽咖啡店♪,ひとりじゃないんだから(平行歌曲),欢迎光临羽泽咖啡店,ひとりじゃないんだから(平行歌曲),True,True,frames/0388.jpg
+389,681,えがおのオーケストラっ！(平行歌曲),享受优雅的茶会时间♪,えがおのオーケストラっ！(平行歌曲),享受优雅的茶会时间,えがおのオーケストラっ!(平行歌曲),True,True,frames/0389.jpg
+390,710,走り始めたばかりのキミに(平行歌曲),悠悠哉哉GIRLS~,走り始めたばかりのキミに(平行歌曲),悠悠哉哉GIRLS~,走り始めたばかりのキミに(平行歌曲),True,True,frames/0390.jpg
+391,711,flame of hope(平行歌曲),COOL BEAUTIES,flame of hope(平行歌曲),COOL BEAUTIES,flame of hope(平行歌曲),True,True,frames/0391.jpg
+392,740,元祖！バンドリちゃんのテーマ,香澄×兰×彩×友希那×心×真白×LAYER×灯×Doloris×阿拉蕾,元祖！バンドリちゃんのテーマ,香澄×兰×彩×友希那×心×真白×LAYER×灯×Doloris×阿拉蕾,元祖!バンドリちゃんのテーマ,True,True,frames/0392.jpg
+393,752,Singer,夢ノ結唱 PASTEL,Singer,夢ノ結唱PASTEL,Singer,True,True,frames/0393.jpg
+394,753,手を叩け今ここで祈るだけ願うだけ,夢ノ結唱 HALO,手を叩け今ここで祈るだけ願うだけ,夢ノ結唱HALO,手を叩け今ここて祈るだけ願うだけ,True,False,frames/0394.jpg
+395,761,きゅ〜まい＊flower(平行歌曲),坚持所爱♡,きゅ～まい*flower(平行歌曲),坚持所爱♡,きゅ～まい*flower(平行歌曲),True,True,frames/0395.jpg
+396,762,Determination Symphony(平行歌曲),SISTER'S QUARTET,Determination Symphony(平行歌曲),SISTER'S QUARTET,Determination Symphony(平行歌曲),True,True,frames/0396.jpg
+397,763,熱色スターマイン(平行歌曲),向日葵——！,熱色スターマイン(平行歌曲),向日葵一一！,熱色スターマイン(平行歌曲),True,True,frames/0397.jpg
+398,770,Wonder Night Land,星光茶会,Wonder Night Land,星光茶会,Wonder Night Land,True,True,frames/0398.jpg
+399,8,空色デイズ,Poppin'Party,空色ディズ,Poppin'Party,空色デイズ,True,True,frames/0399.jpg
+400,10,Alchemy,Poppin'Party,Alchemy,Poppin'Party,Alchemy,True,True,frames/0400.jpg
+401,42,光るなら,Poppin'Party,光るなら,Poppin'Party,光るなら,True,True,frames/0401.jpg
+402,46,Little Busters!,Poppin'Party,Little Busters!,Poppin'Party,Little Busters!,True,True,frames/0402.jpg
+403,48,正解はひとつ!じゃない!!,Poppin'Party×Glitter*Green,正解はひとつ!じゃない!!,Poppin'Party×Glitter*Green,正解はひとつ!じゃない!!,True,True,frames/0403.jpg
+404,49,天体観測,Afterglow×香澄,天体観測,Afterglow×香澄,天体観測,True,True,frames/0404.jpg
+405,67,only my railgun,Poppin'Party,only my railgun,Poppin'Party,only my railgun,True,True,frames/0405.jpg
+406,81,千本桜,Poppin'Party,千本桜,Poppin'Party,千本桜,True,True,frames/0406.jpg
+407,86,君じゃなきゃダメみたい,Poppin'Party,君じゃなきゃダメみたい,Poppin'Party,君じゃなきゃダメみたい,True,True,frames/0407.jpg
+408,100,メランコリック,Poppin'Party,メランコリック,Poppin'Party,メランコリック,True,True,frames/0408.jpg
+409,110,GLAMOROUS SKY,Poppin'Party,GLAMOROUS SKY,Poppin'Party,GLAMOROUS SKY,True,True,frames/0409.jpg
+410,120,DAYS,Poppin'Party,DAYS,Poppin'Party,DAYS,True,True,frames/0410.jpg
+411,135,Life Will Change,Poppin'Party,Life Will Change,Poppin'Party,Life Will Change,True,True,frames/0411.jpg
+412,136,夏祭り,Poppin'Party,夏祭り,Poppin'Party,夏祭り,True,True,frames/0412.jpg
+413,138,ロミオとシンデレラ,Poppin'Party,ロミオとシンデレラ,Poppin'Party,ロミオとシンデレラ,True,True,frames/0413.jpg
+414,151,君に届け,Poppin'Party,君に届け,Poppin'Party,君に届け,True,True,frames/0414.jpg
+415,164,Wake up!,Poppin'Party,Wake up!,Poppin'Party,Wake up!,True,True,frames/0415.jpg
+416,173,夜行性ハイズ,Poppin'Party,夜行性ハイズ,Poppin'Party,夜行性ハイズ,True,True,frames/0416.jpg
+417,174,オトモダチフィルム,Poppin'Party,オトモダチフィルム,Poppin'Party,オトモダチフィルム,True,True,frames/0417.jpg
+418,179,檄！帝国華撃団,Poppin'Party×彩×心,檄！帝国華擊団,Poppin'Party×彩×心,檄！帝国華擊団,False,False,frames/0418.jpg
+419,190,Daydream café,Poppin'Party,Daydream café,Poppin'Party,Daydream café,True,True,frames/0419.jpg
+420,196,チェリボム,Poppin'Party,チェリボム,Poppin'Party,チェリボム,True,True,frames/0420.jpg
+421,199,ディスカバリー！,Poppin'Party,ディスカバリー!,Poppin'Party,ディスカバリー!,True,True,frames/0421.jpg
+422,209,ミュージック・アワー,Poppin'Party,ミュージック・アワー,Poppin'Party,ミュージック・アワー,True,True,frames/0422.jpg
+423,225,ブルーバード,Poppin'Party,ブルーバード,Poppin'Party,ブルーバード,True,True,frames/0423.jpg
+424,236,創聖のアクエリオン,Poppin'Party×友希那,創聖のアクエリオン,Poppin'Party×友希那,創聖のアクエリオン,True,True,frames/0424.jpg
+425,261,群青日和,Poppin'Party,群青日和,Poppin'Party,群青日和,True,True,frames/0425.jpg
+426,267,UNION,Poppin'Party,UNION,Poppin'Party,UNION,True,True,frames/0426.jpg
+427,275,final phase,Poppin'Party,final phase,Poppin'Party,final phase,True,True,frames/0427.jpg
+428,286,青と夏,Poppin'Party,青と夏,Poppin'Party,青と夏,True,True,frames/0428.jpg
+429,296,セツナトリップ,Poppin'Party,セツナトリップ,Poppin'Party,セツナトリップ,True,True,frames/0429.jpg
+430,318,イエスタデイ,Poppin'Party,イエスタディ,Poppin'Party,イエスタディ,True,True,frames/0430.jpg
+431,335,春〜spring〜,Poppin'Party,春～spring～,Poppin'Party,春~spring~,True,True,frames/0431.jpg
+432,343,大河よ共に泣いてくれ,Poppin'Party,大河よ共に泣いてくれ,Poppin'Party,大河よ共に泣いてくれ,True,True,frames/0432.jpg
+433,382,怪物,Poppin'Party,怪物,Poppin'Party,怪物,True,True,frames/0433.jpg
+434,403,ヴァンパイア,Poppin'Party,ヴァンパイア,Poppin'Party,ヴァンパイア,True,True,frames/0434.jpg
+435,461,スターナイトスノウ,Poppin'Party,スターナィトスノウ,Poppin'Party,スターナイトスノウ,True,True,frames/0435.jpg
+436,480,＊ ～アスタリスク～,Poppin'Party,*〜アスタリスク～,Poppin'Party,*〜アスタリスク~,True,True,frames/0436.jpg
+437,494,ヒロイン育成計画,Poppin'Party,ヒロイン育成計画,Poppin'Party,ヒロイン育成計画,True,True,frames/0437.jpg
+438,496,少女レイ,Poppin'Party×真白,少女レイ,Poppin'Party×真白,少女レイ,True,True,frames/0438.jpg
+439,502,心絵,Poppin'Party,心絵,Poppin'Party,心絵,True,True,frames/0439.jpg
+440,509,オドループ,Poppin'Party,オドループ,Poppin'Party,オドループ,True,True,frames/0440.jpg
+441,518,HOT LIMIT,Poppin'Party,HOT LIMIT,Poppin'Party,HOT LIMIT,True,True,frames/0441.jpg
+442,538,トウキョウ・シャンディ・ランデヴ,Poppin'Party,トウキョウ・シャンディ・ランデヴ,Poppin'Party,トウキョウ・シャンディ・ランデヴ,True,True,frames/0442.jpg
+443,566,私は最強,Poppin'Party,私は最強,Poppin'Party,私は最強,True,True,frames/0443.jpg
+444,594,怪獣の花唄,Poppin'Party,怪獣の花唄,Poppin'Party,怪獣の花唄,True,True,frames/0444.jpg
+445,608,SOUVENIR,Poppin'Party,SOUVENIR,Poppin'Party,SOUVENIR,True,True,frames/0445.jpg
+446,626,ちゅ、多様性。,Poppin'Party,ちゅ、多様性。,Poppin'Party,ちゅ、多様性。,True,True,frames/0446.jpg
+447,656,STEP by STEP UP↑↑↑↑,Poppin'Party,STEP by STEP UP↑ ↑ ↑ ↑,Poppin'Party,STEP by STEP UP ↑↑↑↑,True,True,frames/0447.jpg
+448,678,フィクション,Poppin'Party,フィクション,Poppin'Party,フィクション,True,True,frames/0448.jpg
+449,704,ロケットサイダー,Poppin'Party,ロケットサイダー,Poppin'Party,ロケットサイダー,True,True,frames/0449.jpg
+450,707,つよがるガール feat. もっさ,Poppin'Party,つよがるガールfeat.もっさ,Poppin'Party,つよがるガールfeat.もっさ,True,True,frames/0450.jpg
+451,734,POP IN 2,Poppin'Party,POP IN 2,Poppin'Party,POP IN 2,True,True,frames/0451.jpg
+452,749,恋人がサンタクロース,Poppin'Party,恋人がサンタクロース,Poppin'Party,恋人がサンタクロース,True,True,frames/0452.jpg
+453,756,I wonder,Poppin'Party×兰,I wonder,Poppin'Party×兰,I wonder,True,True,frames/0453.jpg
+454,765,START!! True dreams,Poppin'Party,START!! True dreams,Poppin'Party,START!! True dreams,True,True,frames/0454.jpg
+455,14,カルマ,Afterglow,カルマ,Afterglow,カルマ,True,True,frames/0455.jpg
+456,11,Butter-Fly,Afterglow,Butter-Fly,Afterglow,Butter-Fly,True,True,frames/0456.jpg
+457,15,"Don't say ""lazy""",Afterglow,"Don't say ""lazy'",Afterglow,"Don't say ""Iazy""",False,False,frames/0457.jpg
+458,54,great escape,Afterglow,great escape,Afterglow,great escape,True,True,frames/0458.jpg
+459,66,アスノヨゾラ哨戒班,Afterglow,アスノヨゾラ哨戒班,Afterglow,アスノヨゾラ哨戒班,True,True,frames/0459.jpg
+460,78,READY STEADY GO,Afterglow,READY STEADY GO,Afterglow,READY STEADY GO,True,True,frames/0460.jpg
+461,89,Redo,Afterglow,Redo,Afterglow,Redo,True,True,frames/0461.jpg
+462,83,プライド革命,Afterglow,プラィド革命,Afterglow,プライド革命,True,True,frames/0462.jpg
+463,117,イマジネーション,Afterglow,イマジネーション,Afterglow,イマジネーション,True,True,frames/0463.jpg
+464,134,Reach Out To The Truth,Afterglow,Reach Out To The Truth,Afterglow,Reach Out To The Truth,True,True,frames/0464.jpg
+465,140,ロストワンの号哭,Afterglow,ロストワンの号哭,Afterglow,ロストワンの号哭,True,True,frames/0465.jpg
+466,154,Crow Song,Afterglow,Crow Song,Afterglow,Crow Song,True,True,frames/0466.jpg
+467,163,瞬間センチメンタル,Afterglow,瞬間センチメンタル,Afterglow,瞬間センチメンタル,True,True,frames/0467.jpg
+468,172,らしさ,Afterglow,らしさ,Afterglow,らしさ,True,True,frames/0468.jpg
+469,195,午夜の待ち合わせ,Afterglow,午夜の待ち合わせ,Afterglow,午夜の待ち合わせ,True,True,frames/0469.jpg
+470,205,青い栞,Afterglow,青い栞,Afterglow,青い栞,True,True,frames/0470.jpg
+471,215,アイのシナリオ,Afterglow,アィのシナリオ,Afterglow,アイのシナリオ,True,True,frames/0471.jpg
+472,233,天ノ弱,Afterglow,天ノ弱,Afterglow,天ノ弱,True,True,frames/0472.jpg
+473,237,GO!!!,Afterglow×心,GO!!!,Afterglow×心,GO!!!,True,True,frames/0473.jpg
+474,252,インフェルノ,Afterglow,インフェルノ,Afterglow,インフェルノ,True,True,frames/0474.jpg
+475,253,ロキ,Afterglow,ロキ,Afterglow,□キ,True,False,frames/0475.jpg
+476,277,カサブタ,Afterglow,カサブタ,Afterglow,カサブタ,True,True,frames/0476.jpg
+477,299,Rolling star,Afterglow,Rolling star,Afterglow,Rolling star,True,True,frames/0477.jpg
+478,308,ドラマツルギー,Afterglow×香澄,ドラマツルギー,Afterglow×香澄,ドラマツルギー,True,True,frames/0478.jpg
+479,309,Northern lights,Afterglow,Northern lights,Afterglow,Northern lights,True,True,frames/0479.jpg
+480,319,サムライハート(Some Like It Hot!!),Afterglow,サムライハート(Some Like It Hot!!),Afterglow,サムライハート(Some Like It Hot!!),True,True,frames/0480.jpg
+481,331,ハウトゥー世界征服,Afterglow,ハウトゥー世界征服,Afterglow,ハウトゥー世界征服,True,True,frames/0481.jpg
+482,345,ヒューマノイド,Afterglow,ヒューマノィド,Afterglow,ヒューマノィド,True,True,frames/0482.jpg
+483,376,ベノム,Afterglow,ベノム,Afterglow,ベノム,True,True,frames/0483.jpg
+484,388,グッバイ宣言,Afterglow×香澄,グッバイ宣言,Afterglow×香澄,グッバイ宣言,True,True,frames/0484.jpg
+485,394,Listen!!,Afterglow,Listen!!,Afterglow,Listen!!,True,True,frames/0485.jpg
+486,404,メンタルチェンソー,Afterglow,メンタルチェンソー,Afterglow,メンタルチェンソー,True,True,frames/0486.jpg
+487,423,トーキョーワンダー。,Afterglow,トーキョーワンダー。,Afterglow,トーキョーワンダー。,True,True,frames/0487.jpg
+488,444,abnormalize,Afterglow,abnormalize,Afterglow,abnormalize,True,True,frames/0488.jpg
+489,467,閃光,Afterglow×LAYER,閃光,Afterglow×LAYER,閃光,True,True,frames/0489.jpg
+490,479,命に嫌われている。,Afterglow,命に嫌われている。,Afterglow,命に嫌われている。,True,True,frames/0490.jpg
+491,507,CHAINSAW BLOOD,Afterglow,CHAINSAW BLOOD,Afterglow,CHAINSAW BLOOD,True,True,frames/0491.jpg
+492,529,チルドレンレコード(Re:boot),Afterglow,チルドレンレコード(Re:boot),Afterglow,チルドレンレコード(Re:boot),True,True,frames/0492.jpg
+493,536,サウダージ,Afterglow,サウダージ,Afterglow,サウダージ,True,True,frames/0493.jpg
+494,547,ヴィラン,Afterglow,ヴィラン,Afterglow,ヴィラン,True,True,frames/0494.jpg
+495,552,テレキャスタービーボーイ,Afterglow,テレキャスタービーボーイ,Afterglow,テレキャスタービーボーイ,True,True,frames/0495.jpg
+496,562,粉雪,Afterglow,粉雪,Afterglow,粉雪,True,True,frames/0496.jpg
+497,569,カオスが極まる,Afterglow,カオスが極まる,Afterglow,カオスが極まる,True,True,frames/0497.jpg
+498,588,青のすみか,Afterglow,青のすみか,Afterglow,青のすみか,True,True,frames/0498.jpg
+499,610,逆光,Afterglow,逆光,Afterglow,逆光,True,True,frames/0499.jpg
+500,632,カゲロウデイズ,Afterglow,カゲロウデイズ,Afterglow,カゲロウデイズ,True,True,frames/0500.jpg
+501,676,オレンジ,Afterglow,オレンジ,Afterglow,オレンジ,True,True,frames/0501.jpg
+502,695,Bunny Girl,Afterglow,Bunny Girl,Afterglow,Bunny Girl,True,True,frames/0502.jpg
+503,702,愛唄,Afterglow,愛唄,Afterglow,愛唄,True,True,frames/0503.jpg
+504,727,季節は次々死んでいく,Afterglow,季節は次々死んでいく,Afterglow,季節は次々死んでいく,True,True,frames/0504.jpg
+505,18,secret base～君がくれたもの～,Pastel＊Palettes,secret base～君がくれたもの～,Pastel * Palettes,secret base〜君がくれたもの～,True,True,frames/0505.jpg
+506,19,ドリームパレード,Pastel＊Palettes,ドリームパレード,Pastel * Palettes,ドリームパレード,True,True,frames/0506.jpg
+507,44,そばかす,Pastel＊Palettes,そばかす,Pastel * Palettes,そばかす,True,True,frames/0507.jpg
+508,50,MOON PRIDE,Pastel＊Palettes,MOON PRIDE,Pastel * Palettes,MOON PRIDE,True,True,frames/0508.jpg
+509,59,ふわふわ時間,Pastel＊Palettes,ふわふわ時間,Pastel * Palettes,ふわふわ時間,True,True,frames/0509.jpg
+510,79,世界は恋に落ちている,Pastel＊Palettes,世界は恋に落ちている,Pastel * Palettes,世界は恋に落ちている,True,True,frames/0510.jpg
+511,85,ハッピーシンセサイザ,Pastel＊Palettes,ハッピーシンセサィザ,Pastel * Palettes,ハッピーシンセサイザ,True,True,frames/0511.jpg
+512,101,SAKURAスキップ,Pastel＊Palettes,SAKURAスキップ,Pastel * Palettes,SAKURAスキップ,True,True,frames/0512.jpg
+513,124,みくみくにしてあげる♪【してやんよ】,Pastel＊Palettes,みくみくにしてあげる♪【してやんよ】,Pastel * Palettes,みくみくにしてあげる♪【してやんよ】,True,True,frames/0513.jpg
+514,116,気まぐれロマンティック,Pastel＊Palettes,気まぐれロマンティック,Pastel * Palettes,気まぐれロマンティック,True,True,frames/0514.jpg
+515,129,Fantastic future,Pastel＊Palettes,Fantastic future,Pastel * Palettes,Fantastic future,True,True,frames/0515.jpg
+516,145,DISCOTHEQUE,Pastel＊Palettes,DISCOTHEQUE,Pastel * Palettes,DISCOTHEQUE,True,True,frames/0516.jpg
+517,152,ゆりゆららららゆるゆり大事件,Pastel＊Palettes,ゆりゆららららゆるゆり大事件,Pastel * Palettes,ゆりゆららららゆるゆり大事件,True,True,frames/0517.jpg
+518,162,奏（かなで）,Pastel＊Palettes,奏（かなで),Pastel * Palettes,奏(かなで),True,True,frames/0518.jpg
+519,167,Q＆A　リサイタル！,Pastel＊Palettes,Q&Aリサイタル!,Pastel * Palettes,Q&Aリサイタル!,True,True,frames/0519.jpg
+520,176,Baby Sweet Berry Love,Pastel＊Palettes,Baby Sweet Berry Love,Pastel * Palettes,Baby Sweet Berry Love,True,True,frames/0520.jpg
+521,192,ときめきポポロン♪,Pastel＊Palettes,ときめきポポロン♪,Pastel * Palettes,ときめきポポロン♪,True,True,frames/0521.jpg
+522,198,春擬き,Pastel＊Palettes,春擬き,Pastel * Palettes,春擬き,True,True,frames/0522.jpg
+523,213,からくりピエロ,Pastel＊Palettes,からくりピエロ,Pastel * Palettes,からくりピエロ,True,True,frames/0523.jpg
+524,228,Stay Alive,Pastel＊Palettes,Stay Alive,Pastel * Palettes,Stay Alive,True,True,frames/0524.jpg
+525,238,花ハ踊レヤいろはにほ,Pastel＊Palettes,花八踊しヤいろはにほ,Pastel * Palettes,花ハ踊しヤいろはにほ,False,False,frames/0525.jpg
+526,260,ルカルカ★ナイトフィーバー,Pastel＊Palettes,ルカルカ★ナィトフィーバー,Pastel * Palettes,ルカルカ★ナィトフィーバー,True,True,frames/0526.jpg
+527,274,ノスタルジックレインフォール,Pastel＊Palettes,ノスタルジックレインフォール,Pastel * Palettes,ノスタルジックレインフォール,True,True,frames/0527.jpg
+528,298,DANCE! おジャ魔女,Pastel＊Palettes,DANCE! おジャ魔女,Pastel * Palettes,DANCE!おジャ魔女,True,True,frames/0528.jpg
+529,307,ムーンライト伝説,Pastel＊Palettes×心×真白,ムーンラィト伝説,Pastel*Palettes×心×真白,ムーンライト伝説,True,True,frames/0529.jpg
+530,315,Make it!,Pastel＊Palettes,Make it!,Pastel * Palettes,Make it!,True,True,frames/0530.jpg
+531,317,夜に駆ける,Pastel＊Palettes,夜に駆ける,Pastel * Palettes,夜に駆ける,True,True,frames/0531.jpg
+532,336,ラムのラブソング,Pastel＊Palettes,ラムのラブソング,Pastel * Palettes,ラムのラブソング,True,True,frames/0532.jpg
+533,342,徒花ネクロマンシー,Pastel＊Palettes,徒花ネクロマンシー,Pastel * Palettes,徒花ネクロマンシー,True,True,frames/0533.jpg
+534,405,春を告げる,Pastel＊Palettes,春を告げる,Pastel * Palettes,春を告げる,True,True,frames/0534.jpg
+535,395,Sparkling Daydream,Pastel＊Palettes,Sparkling Daydream,Pastel * Palettes,Sparkling Daydream,True,True,frames/0535.jpg
+536,419,秘密の扉から会いにきて,Pastel＊Palettes,秘密の扉から会いにきて,Pastel * Palettes,秘密の扉から会いにきて,True,True,frames/0536.jpg
+537,478,五等分の気持ち,Pastel＊Palettes×有咲×鸫×真白,五等分の気持ち,Pastel*Palettes×有咲×鸫×真白,五等分の気持ち,True,True,frames/0537.jpg
+538,501,惑星ループ,Pastel＊Palettes×PAREO,惑星ループ,Pastel * Palettes×PAREO,惑星ループ,True,True,frames/0538.jpg
+539,533,可愛くてごめん,Pastel＊Palettes 日菜×千圣×麻弥×伊芙,可愛くてごめん,Pastel*Palettes 日菜×千圣×麻弥×伊芙,可愛くてごめん,True,True,frames/0539.jpg
+540,564,魔法少女とチョコレゐト,Pastel＊Palettes,魔法少女とチョコレト,Pastel * Palettes,魔法少女とチョコレト,False,False,frames/0540.jpg
+541,578,どりーみんチュチュ,Pastel＊Palettes×花音,どりーみんチュチュ,Pastel *Palettes×花音,どりーみんチュチュ,True,True,frames/0541.jpg
+542,587,アイドル,Pastel＊Palettes,アィドル,Pastel * Palettes,アイドル,True,True,frames/0542.jpg
+543,617,ココ☆ナツ,Pastel＊Palettes,ココ☆ナツ,Pastel * Palettes,ココ☆ナツ,True,True,frames/0543.jpg
+544,628,オトナブルー,Pastel＊Palettes,オトナブルー,Pastel * Palettes,オトナブルー,True,True,frames/0544.jpg
+545,637,サインはB,Pastel＊Palettes,サィンはB,Pastel * Palettes,サインはB,True,True,frames/0545.jpg
+546,640,すきっちゅーの！,Pastel＊Palettes,すきっちゅーの!,Pastel * Palettes,すきっちゅーの!,True,True,frames/0546.jpg
+547,651,愛包ダンスホール,Pastel＊Palettes×兰,愛包ダンスホール,Pastel * Palettes×兰,愛包ダンスホール,True,True,frames/0547.jpg
+548,675,最上級にかわいいの！,Pastel＊Palettes,最上級にかわいいの!,Pastel * Palettes,最上級にかわいいの!,True,True,frames/0548.jpg
+549,716,アイワナムチュー,Pastel＊Palettes,アィワナムチュー,Pastel * Palettes,アイワナムチュー,True,True,frames/0549.jpg
+550,731,恋愛サーキュレーション,Pastel＊Palettes,恋愛サーキュレーション,Pastel * Palettes,恋愛サーキュレーション,True,True,frames/0550.jpg
+551,759,デビルじゃないもん,Pastel＊Palettes×友希那,デビルじゃないもん,Pastel*Palettes×友希那,デビルじゃないもん,True,True,frames/0551.jpg
+552,17,魂のルフラン,Roselia,魂のルフラン,Roselia,魂のルフラン,True,True,frames/0552.jpg
+553,16,Hacking to the Gate,Roselia,Hacking to the Gate,Roselia,Hacking to the Gate,True,True,frames/0553.jpg
+554,9,ETERNAL BLAZE,Roselia,ETERNAL BLAZE,Roselia,ETERNAL BLAZE,True,True,frames/0554.jpg
+555,55,紅蓮の弓矢,Roselia,紅蓮の弓矢,Roselia,紅蓮の弓矢,True,True,frames/0555.jpg
+556,63,The Everlasting Guilty Crown,Roselia,The Everlasting Guilty Crown,Roselia,The Everlasting Guilty Crown,True,True,frames/0556.jpg
+557,71,Red fraction,Roselia,Red fraction,Roselia,Red fraction,True,True,frames/0557.jpg
+558,87,残酷な天使のテーゼ,Roselia,残酷な天使のテーゼ,Roselia,残酷な天使のテーゼ,True,True,frames/0558.jpg
+559,105,Shangri-La,Roselia,Shangri-La,Roselia,Shangri-La,True,True,frames/0559.jpg
+560,109,This game,Roselia,This game,Roselia,This game,True,True,frames/0560.jpg
+561,126,Believe in my existence,Roselia,Believe in my existence,Roselia,Believe in my existence,True,True,frames/0561.jpg
+562,128,六兆年と一夜物語,Roselia,六兆年と一夜物語,Roselia,六兆年と一夜物語,True,True,frames/0562.jpg
+563,133,キミの記憶,Roselia,キミの記憶,Roselia,キミの記憶,True,True,frames/0563.jpg
+564,137,シャルル,Roselia,シャルル,Roselia,シャルル,True,True,frames/0564.jpg
+565,161,ツキアカリのミチシルベ,Roselia,ツキアカリのミチシルベ,Roselia,ツキアカリのミチシルベ,True,True,frames/0565.jpg
+566,165,名前のない怪物,Roselia,名前のない怪物,Roselia,名前のない怪物,True,True,frames/0566.jpg
+567,178,革命デュアリズム,Roselia×兰,革命デュアリズム,Roselia×兰,革命デュアリズム,True,True,frames/0567.jpg
+568,188,緋色の空,Roselia,緋色の空,Roselia,緋色の空,True,True,frames/0568.jpg
+569,204,海色,Roselia,海色,Roselia,海色,True,True,frames/0569.jpg
+570,218,ファティマ,Roselia,ファティマ,Roselia,ファティマ,True,True,frames/0570.jpg
+571,227,Paradisus-Paradoxum,Roselia,Paradisus-Paradoxum,Roselia,Paradisus-Paradoxum,True,True,frames/0571.jpg
+572,241,甲賀忍法帖,Roselia,甲賀忍法帖,Roselia,甲賀忍法帖,True,True,frames/0572.jpg
+573,258,Bad Apple!! feat. nomico,Roselia,Bad Apple!! feat. nomico,Roselia,Bad Apple!! feat. nomico,True,True,frames/0573.jpg
+574,281,右肩の蝶,Roselia,右肩の蝶,Roselia,右肩の蝶,True,True,frames/0574.jpg
+575,302,sister's noise,Roselia,sister's noise,Roselia,sister's noise,True,True,frames/0575.jpg
+576,323,Synchrogazer,Roselia,Synchrogazer,Roselia,Synchrogazer,True,True,frames/0576.jpg
+577,332,鳥の詩,Roselia,鳥の詩,Roselia,鳥の詩,True,True,frames/0577.jpg
+578,338,My Dearest,Roselia,My Dearest,Roselia,My Dearest,True,True,frames/0578.jpg
+579,361,KING,Roselia,KING,Roselia,KING,True,True,frames/0579.jpg
+580,380,SPARK-AGAIN,Roselia,SPARK-AGAIN,Roselia,SPARK-AGAIN,True,True,frames/0580.jpg
+581,387,曇天,Roselia×LAYER,曇天,Roselia×LAYER,曇天,True,True,frames/0581.jpg
+582,411,廻廻奇譚,Roselia,廻廻奇譚,Roselia,廻廻奇譚,True,True,frames/0582.jpg
+583,406,Realize,Roselia,Realize,Roselia,Realize,True,True,frames/0583.jpg
+584,430,Preserved Roses,Roselia×兰,Preserved Roses,Roselia×兰,Preserved Roses,True,True,frames/0584.jpg
+585,439,STYX HELIX,Roselia,STYX HELIX,Roselia,STYX HELIX,True,True,frames/0585.jpg
+586,477,新時代,Roselia,新時代,Roselia,新時代,True,True,frames/0586.jpg
+587,503,酔いどれ知らず,Roselia,酔いどれ知らず,Roselia,酔いどれ知らず,True,True,frames/0587.jpg
+588,508,ファイトソング,Roselia,ファイトソング,Roselia,ファイトソング,True,True,frames/0588.jpg
+589,537,ヒバナ-Reloaded-,Roselia,ヒバナ-Reloaded-,Roselia,ヒバナ-Reloaded-,True,True,frames/0589.jpg
+590,556,東京テディベア,Roselia,東京テディベア,Roselia,東京テディベア,True,True,frames/0590.jpg
+591,565,slash,Roselia,slash,Roselia,slash,True,True,frames/0591.jpg
+592,589,乙女解剖,Roselia,乙女解剖,Roselia,乙女解剖,True,True,frames/0592.jpg
+593,620,Surges,Roselia×兰,Surges,Roselia×兰,Surges,True,True,frames/0593.jpg
+594,629,人マニア,Roselia,人マニア,Roselia,人マニア,True,True,frames/0594.jpg
+595,639,ファタール,Roselia,ファタール,Roselia,ファタール,True,True,frames/0595.jpg
+596,657,悪魔の子,Roselia×LAYER,悪魔の子,Roselia×LAYER,悪魔の子,True,True,frames/0596.jpg
+597,677,Reweave,Roselia,Reweave,Roselia,Reweave,True,True,frames/0597.jpg
+598,732,Fallen,Roselia,Fallen,Roselia,Fallen,True,True,frames/0598.jpg
+599,743,Sincerely,Roselia,Sincerely,Roselia,Sincerely,True,True,frames/0599.jpg
+600,20,シュガーソングとビターステップ,"Hello, Happy World！",シュガーソングとビターステップ,"Hello, Happy World!",シュガーソングとビターステップ,True,True,frames/0600.jpg
+601,21,いーあるふぁんくらぶ,"Hello, Happy World！",いーあるふあんくらぶ,"Hello, Happy World!",いーあるふあんくらぶ,True,True,frames/0601.jpg
+602,22,シルエット,"Hello, Happy World！",シルエット,"Hello, Happy World!",シルエット,True,True,frames/0602.jpg
+603,52,ハッピーサマーウェディング,"Hello, Happy World！",ハッピーサマーウェディング,"Hello, Happy World!",ハッピーサマーウェディング,True,True,frames/0603.jpg
+604,62,ひまわりの約束,"Hello, Happy World！",ひまわりの約束,"Hello, Happy World!",ひまわりの約束,True,True,frames/0604.jpg
+605,77,ロメオ,"Hello, Happy World！",ロメオ,"Hello, Happy World!",ロメオ,True,True,frames/0605.jpg
+606,82,恋は渾沌の隷也,"Hello, Happy World！",恋は渾沌の隷也,"Hello, Happy World!",恋は渾沌の隷也,True,True,frames/0606.jpg
+607,88,Dragon Night,"Hello, Happy World！",Dragon Night,"Hello, Happy World!",Dragon Night,True,True,frames/0607.jpg
+608,107,fantastic dreamer,"Hello, Happy World！",fantastic dreamer,"Hello, Happy World!",fantastic dreamer,True,True,frames/0608.jpg
+609,127,太陽曰く燃えよカオス,"Hello, Happy World！",太陽曰く燃えよカオス,"Hello, Happy World!",太陽曰く燃えよカオス,True,True,frames/0609.jpg
+610,141,GO! GO! MANIAC,"Hello, Happy World！",GO! GO! MANIAC,"Hello, Happy World!",GO! GO! MANIAC,True,True,frames/0610.jpg
+611,139,エイリアンエイリアン,"Hello, Happy World！",エイリアンエイリアン,"Hello, Happy World!",エイリアソエイリアン,True,False,frames/0611.jpg
+612,146,新宝島,"Hello, Happy World！",新宝島,"Hello, Happy World!",新宝島,True,True,frames/0612.jpg
+613,157,エクストラ・マジック・アワー,"Hello, Happy World！",エクストラ・マジック・アワー,"Hello, Happy World!",エクストラ・マジック・アワー,True,True,frames/0613.jpg
+614,166,回レ！雪月花,"Hello, Happy World！",回レ！雪月花,"Hello, Happy World!",回し！雪月花,True,False,frames/0614.jpg
+615,183,StaRt,"Hello, Happy World！",StaRt,"Hello, Happy World!",StaRt,True,True,frames/0615.jpg
+616,191,ノーポイッ！,"Hello, Happy World！",ノーポイッ!,"Hello, Happy World!",ノーポイッ!,True,True,frames/0616.jpg
+617,201,恋愛裁判,"Hello, Happy World！",恋愛裁判,"Hello, Happy World!",恋愛裁判,True,True,frames/0617.jpg
+618,208,上海ハニー,"Hello, Happy World！",上海八二一,"Hello, Happy World!",上海八二一,False,False,frames/0618.jpg
+619,221,コレカラ,"Hello, Happy World！",コレカラ,"Hello, Happy World!",コレカラ,True,True,frames/0619.jpg
+620,231,全力少年,"Hello, Happy World！",全力少年,"Hello, Happy World!",全力少年,True,True,frames/0620.jpg
+621,246,ドレミファロンド,"Hello, Happy World！",ドレミファロンド,"Hello, Happy World!",ドレミファロンド,True,True,frames/0621.jpg
+622,254,POP TEAM EPIC,"Hello, Happy World！",POP TEAM EPIC,"Hello, Happy World!",POP TEAM EPIC,True,True,frames/0622.jpg
+623,285,ウィーアー！,"Hello, Happy World！",ウィーアー!,"Hello, Happy World!",ウィーアー!,True,True,frames/0623.jpg
+624,297,おジャ魔女カーニバル!!,"Hello, Happy World！",おジャ魔女カーニバル!!,"Hello, Happy World!",おジャ魔女カーニバル!!,True,True,frames/0624.jpg
+625,305,好き！雪！本気マジック,"Hello, Happy World！",好き！雪！本気マジック,"Hello, Happy World!",好き!雪!本気マジック,True,True,frames/0625.jpg
+626,316,オレンジ,"Hello, Happy World！",オレンジ,"Hello, Happy World!",オレンジ,True,True,frames/0626.jpg
+627,320,SHINY DAYS,"Hello, Happy World！",SHINY DAYS,"Hello, Happy World!",SHINY DAYS,True,True,frames/0627.jpg
+628,334,Happy Girl,"Hello, Happy World！",Happy Girl,"Hello, Happy World!",Happy Girl,True,True,frames/0628.jpg
+629,358,ン・パカマーチ,"Hello, Happy World！",ソ・パカマーチ,"Hello, Happy World!",ン・パカマーチ,False,True,frames/0629.jpg
+630,389,シル・ヴ・プレジデント,Hello Happy×彩×真白,シル・ヴ・プレジデント,Hello Happy×彩×真白,シル・ヴ・プレジデント,True,True,frames/0630.jpg
+631,392,ハッピー☆マテリアル,"Hello, Happy World！",ハッピー☆マテリアル,"Hello, Happy World!",ハッピー☆マテリアル,True,True,frames/0631.jpg
+632,407,くちづけDiamond,"Hello, Happy World！",くちづけDiamond,"Hello, Happy World!",くちづけDiamond,True,True,frames/0632.jpg
+633,429,ヒャダインのじょーじょーゆーじょー,"Hello, Happy World！",ヒャダインのじょーじょーゆーじょー,"Hello, Happy World!",ヒャダインのじょーじょーゆーじょー,True,True,frames/0633.jpg
+634,456,Storyteller,"Hello, Happy World！",Storyteller,"Hello, Happy World!",Storyteller,True,True,frames/0634.jpg
+635,458,ミックスナッツ,"Hello, Happy World！",ミックスナッツ,"Hello, Happy World!",ミックスナッツ,True,True,frames/0635.jpg
+636,463,もってけ！セーラーふく,"Hello, Happy world!×香澄×有咲×伊芙",もってけ! セーラーふく,"Hello,Happy world!×香澄×有咲×伊芙",もってけ!セーラーふく,True,True,frames/0636.jpg
+637,472,ようこそジャパリパークへ,"Hello, Happy World！",ようこそジャパリパークへ,"Hello, Happy World!",ようこそジャパリパークへ,True,True,frames/0637.jpg
+638,482,ダーリンダンス,"Hello, Happy World！",ダーリンダンス,"Hello, Happy World!",ダーリンダンス,True,True,frames/0638.jpg
+639,497,チューリングラブ,"Hello, Happy World！×兰",チューリングラブ,"Hello, Happy World! ×兰",チューリングラブ,True,True,frames/0639.jpg
+640,499,アイウエ,"Hello, Happy World！",アィウエ,"Hello, Happy World!",アイウエ,True,True,frames/0640.jpg
+641,506,ダンスホール,"Hello, Happy World！",ダンスホール,"Hello, Happy World!",ダンスホール,True,True,frames/0641.jpg
+642,517,愛のしるし,"Hello, Happy World！",愛のしるし,"Hello, Happy World!",愛のしるし,True,True,frames/0642.jpg
+643,534,エゴロック,"Hello, Happy World！",エゴロック,"Hello, Happy World!",エゴロック,True,True,frames/0643.jpg
+644,567,強風オールバック,"Hello, Happy World！",強風オールバック,"Hello, Happy World!",強風オールバック,True,True,frames/0644.jpg
+645,591,きゅうくらりん,"Hello, Happy World！",きゅうくらりん,"Hello, Happy World!",きゅうくらりん,True,True,frames/0645.jpg
+646,613,ギミー！レボリューション,"Hello, Happy World！",ギミー!レボリューション,"Hello, Happy World!",ギミー!レボリューション,True,True,frames/0646.jpg
+647,630,クラクラ,"Hello, Happy World！",クラクラ,"Hello, Happy World!",クラクラ,True,True,frames/0647.jpg
+648,655,シカ色デイズ,"Hello, Happy World！×真白",シカ色ディズ,"Hello, Happy World! ×真白",シカ色デイズ,True,True,frames/0648.jpg
+649,673,はいよろこんで,"Hello, Happy World！",はいよろこんで,"Hello, Happy World!",はいよろこんで,True,True,frames/0649.jpg
+650,697,最高到達点,"Hello, Happy World！",最高到達点,"Hello, Happy World!",最高到達点,True,True,frames/0650.jpg
+651,733,怪獣,"Hello, Happy World！",怪獣,"Hello, Happy World!",怪獣,True,True,frames/0651.jpg
+652,751,ミラクルペイント,"Hello, Happy World！",ミラクルペイント,"Hello, Happy World!",ミラクルペイント,True,True,frames/0652.jpg
+653,757,マツケンサンバII,"Hello, Happy World！",マツケンサンバII,"Hello, Happy World!",マッケンサンバII,True,True,frames/0653.jpg
+654,760,イケナイ太陽,"Hello, Happy World！×LAYER",イケナイ太陽,"Hello, Happy World! ×LAYER",イケナイ太陽,True,True,frames/0654.jpg
+655,257,メリッサ,Morfonica,メリッサ,Morfonica,メリッサ,True,True,frames/0655.jpg
+656,259,chAngE,Morfonica,chAngE,Morfonica,chAngE,True,True,frames/0656.jpg
+657,269,秒針を噛む,Morfonica,秒針を噛む,Morfonica,秒針を噛む,True,True,frames/0657.jpg
+658,276,LEVEL5 -judgelight-,Morfonica,LEVEL5 -judgelight-,Morfonica,LEVEL5 -judgelight-,True,True,frames/0658.jpg
+659,282,深海少女,Morfonica,深海少女,Morfonica,深海少女,True,True,frames/0659.jpg
+660,295,Nevereverland,Morfonica,Nevereverland,Morfonica,Nevereverland,True,True,frames/0660.jpg
+661,311,CQCQ,Morfonica,CQCQ,Morfonica,CQCQ,True,True,frames/0661.jpg
+662,321,アゲハ蝶,Morfonica,アゲハ蝶,Morfonica,アゲハ蝶,True,True,frames/0662.jpg
+663,329,V.I.P,Morfonica,V.I.P,Morfonica,V.I.P,True,True,frames/0663.jpg
+664,352,COLORFUL BOX,Morfonica,COLORFUL BOX,Morfonica,COLORFUL BOX,True,True,frames/0664.jpg
+665,401,月光花,Morfonica,月光花,Morfonica,月光花,True,True,frames/0665.jpg
+666,408,unravel,Morfonica,unravel,Morfonica,unravel,True,True,frames/0666.jpg
+667,427,ボクノート,Morfonica,ボクノート,Morfonica,ボクノート,True,True,frames/0667.jpg
+668,438,Memento,Morfonica,Memento,Morfonica,Memento,True,True,frames/0668.jpg
+669,445,divine intervention,Morfonica,divine intervention,Morfonica,divine intervention,True,True,frames/0669.jpg
+670,455,Nameless Story,Morfonica,Nameless Story,Morfonica,Nameless Story,True,True,frames/0670.jpg
+671,465,群青,Morfonica×友希那,群青,Morfonica×友希那,群青,True,True,frames/0671.jpg
+672,481,ALIVE,Morfonica,ALIVE,Morfonica,ALIVE,True,True,frames/0672.jpg
+673,514,QUEEN,Morfonica,QUEEN,Morfonica,QUEEN,True,True,frames/0673.jpg
+674,532,祝福,Morfonica,祝福,Morfonica,祝福,True,True,frames/0674.jpg
+675,563,Overdose,Morfonica,Overdose,Morfonica,Overdose,True,True,frames/0675.jpg
+676,592,かくれんぼ,Morfonica,かくれんぼ,Morfonica,かくれんぼ,True,True,frames/0676.jpg
+677,627,勇者,Morfonica,勇者,Morfonica,勇者,True,True,frames/0677.jpg
+678,634,輪舞-revolution,Morfonica,輪舞-revolution,Morfonica,輪舞-revolution,True,True,frames/0678.jpg
+679,688,again,Morfonica,again,Morfonica,again,True,True,frames/0679.jpg
+680,729,オン・ザ・フロントライン,Morfonica,オン・ザ・フロントライン,Morfonica,オン・ザ・フロントライン,True,True,frames/0680.jpg
+681,747,白い雪のプリンセスは,Morfonica,白い雪のプリンセスは,Morfonica,白い雪のプリンセスは,True,True,frames/0681.jpg
+682,758,Same Blue,Morfonica×灯,Same Blue,Morfonica×灯,Same Blue,True,True,frames/0682.jpg
+683,206,1/3の純情な感情,RAISE A SUILEN,1/3の純情な感情,RAISE A SUILEN,1/3の純情な感情,True,True,frames/0683.jpg
+684,224,激動,RAISE A SUILEN,激動,RAISE A SUILEN,激動,True,True,frames/0684.jpg
+685,272,ヒトリノ夜,RAISE A SUILEN,ヒトリノ夜,RAISE A SUILEN,ヒトリノ夜,True,True,frames/0685.jpg
+686,283,劣等上等,RAISE A SUILEN,劣等上等,RAISE A SUILEN,劣等上等,True,True,frames/0686.jpg
+687,287,恋しさとせつなさと心強さと,RAISE A SUILEN,恋しさとせつなさと心強さと,RAISE A SUILEN,恋しさとせつなさと心強さと,True,True,frames/0687.jpg
+688,292,ブリキノダンス,RAISE A SUILEN,ブリキノダンス,RAISE A SUILEN,ブリキノダンス,True,True,frames/0688.jpg
+689,306,SAVIOR OF SONG,RAISE A SUILEN×友希那,SAVIOR OF SONG,RAISE A SUILEN×友希那,SAVIOR OF SONG,True,True,frames/0689.jpg
+690,322,DAYBREAK FRONTLINE,RAISE A SUILEN,DAYBREAK FRONTLINE,RAISE A SUILEN,DAYBREAK FRONTLINE,True,True,frames/0690.jpg
+691,333,CORE PRIDE,RAISE A SUILEN,CORE PRIDE,RAISE A SUILEN,CORE PRIDE,True,True,frames/0691.jpg
+692,379,Keep the Heat and Fire Yourself Up,RAISE A SUILEN,Keep the Heat and Fire Yourself Up,RAISE A SUILEN,Keep the Heat and Fire Yourself Up,True,True,frames/0692.jpg
+693,386,DEPARTURES,RAISE A SUILEN,DEPARTURES,RAISE A SUILEN,DEPARTURES,True,True,frames/0693.jpg
+694,397,Just Awake,RAISE A SUILEN,Just Awake,RAISE A SUILEN,Just Awake,True,True,frames/0694.jpg
+695,409,脳漿炸裂ガール,RAISE A SUILEN,脳漿炸裂ガール,RAISE A SUILEN,脳漿炸裂ガール,True,True,frames/0695.jpg
+696,422,Cry Baby,RAISE A SUILEN,Cry Baby,RAISE A SUILEN,Cry Baby,True,True,frames/0696.jpg
+697,426,メギツネ,RAISE A SUILEN,メギツネ,RAISE A SUILEN,メギツネ,True,True,frames/0697.jpg
+698,446,狂乱 Hey Kids!!,RAISE A SUILEN,狂乱 Hey Kids!!,RAISE A SUILEN,狂乱 Hey Kids!!,True,True,frames/0698.jpg
+699,483,神っぽいな,RAISE A SUILEN,神っぽいな,RAISE A SUILEN,神っぽいな,True,True,frames/0699.jpg
+700,498,踊,RAISE A SUILEN×友希那,踊,RAISE A SUILEN×友希那,踊,True,True,frames/0700.jpg
+701,516,Get Wild,RAISE A SUILEN,Get Wild,RAISE A SUILEN,Get Wild,True,True,frames/0701.jpg
+702,535,D-tecnoLife,RAISE A SUILEN,D-tecnoLife,RAISE A SUILEN,D-tecnoLife,True,True,frames/0702.jpg
+703,550,裸の勇者,RAISE A SUILEN,裸の勇者,RAISE A SUILEN,裸の勇者,True,True,frames/0703.jpg
+704,570,第ゼロ感,RAISE A SUILEN,第ゼ口感,RAISE A SUILEN,第ゼ口感,False,False,frames/0704.jpg
+705,593,ボッカデラベリタ,RAISE A SUILEN,ボッカデラベリタ,RAISE A SUILEN,ボッカデラベリタ,True,True,frames/0705.jpg
+706,615,SOULSOUP,RAISE A SUILEN,SOULSOUP,RAISE A SUILEN,SOULSOUP,True,True,frames/0706.jpg
+707,631,Bling-Bang-Bang-Born,RAISE A SUILEN,Bling-Bang-Bang-Born,RAISE A SUILEN,Bling-Bang-Bang-Born,True,True,frames/0707.jpg
+708,679,第六感,RAISE A SUILEN,第六感,RAISE A SUILEN,第六感,True,True,frames/0708.jpg
+709,722,百花繚乱,RAISE A SUILEN,百花繚乱,RAISE A SUILEN,百花繚乱,True,True,frames/0709.jpg
+710,730,BROKEN GAMES,RAISE A SUILEN,BROKEN GAMES,RAISE A SUILEN,BROKEN GAMES,True,True,frames/0710.jpg
+711,545,猛独が襲う,MyGO!!!!!,猛独が襲う,MyGO!!!!!,猛独が襲う,True,True,frames/0711.jpg
+712,546,swim,MyGO!!!!!,swim,MyGO!!!!!,swim,True,True,frames/0712.jpg
+713,568,ホワイトノイズ,MyGO!!!!!,ホワィトノィズ,MyGO!!!!!,ホワィトノイズ,True,True,frames/0713.jpg
+714,590,ノンブレス・オブリージュ,MyGO!!!!!,ノンブレス・オブリージュ,MyGO!!!!!,ノンブレス・オブリージュ,True,True,frames/0714.jpg
+715,595,「僕は...」,MyGO!!!!!,「僕は...」,MyGO!!!!!,「僕は...」,True,True,frames/0715.jpg
+716,633,雑踏、僕らの街,MyGO!!!!!,雑踏、僕らの街,MyGO!!!!!,雑踏、僕らの街,True,True,frames/0716.jpg
+717,644,遥か彼方,MyGO!!!!!,遥か彼方,MyGO!!!!!,遥か彼方,True,True,frames/0717.jpg
+718,648,Subtitle,MyGO!!!!!,Subtitle,MyGO!!!!!,Subtitle,True,True,frames/0718.jpg
+719,680,だれかの心臓になれたなら,MyGO!!!!!,だれかの心臓になれたなら,MyGO!!!!!,だれかの心臓になれたなら,True,True,frames/0719.jpg
+720,736,Velonica,MyGO!!!!!,Velonica,MyGO!!!!!,Velonica,True,True,frames/0720.jpg
+721,474,YELL,彩×日菜×千圣×麻弥×友希那×纱夜×莉莎×燐子×薰×花音,YELL,彩×日菜×千圣×麻弥×友希那×纱夜×莉莎×燐子×薰×花音,YELL,True,True,frames/0721.jpg
+722,351,DAYS of DASH,Poppin'Party×鈴木このみ,DAYS of DASH,Poppin'Party×鈴木このみ,DAYS of DASH,True,True,frames/0722.jpg
+723,464,乙女はサイコパス,Poppin'Party×P丸様。,乙女はサィコパス,Poppin'Party×P丸様。,乙女はサイコパス,True,True,frames/0723.jpg
+724,744,じょいふる,Poppin'Party×Hello Kitty,じょいふる,Poppin'Party×Hello Kitty,じょいふる,True,True,frames/0724.jpg
+725,378,COLORS,Afterglow×FLOW,COLORS,Afterglow×FLOW,COLORS,True,True,frames/0725.jpg
+726,466,フォニイ,Afterglow×96猫,フォニイ,Afterglow×96猫,フォニイ,True,True,frames/0726.jpg
+727,745,♡桃色片想い♡,Pastel＊Palettes×美乐蒂,♡桃色片想い♡,Pastel*Palettes×美乐蒂,♡桃色片想い♡,True,True,frames/0727.jpg
+728,450,スカイクラッドの観測者,Roselia×いとうかなこ,スカイクラッドの観測者,Roselia×いとうかなこ,スカイクラッドの観測者,True,True,frames/0728.jpg
+729,384,ヒトリゴト,Pastel＊Palettes×ClariS,ヒトリゴト,Pastel * Palettes×ClariS,ヒトリゴト,True,True,frames/0729.jpg
+730,468,転生林檎,Roselia×＋α／あるふぁきゅん。,転生林檎,Roselia×+α/あるふあきゅん。,転生林檎,True,True,frames/0730.jpg
+731,363,TOMORROW,"Hello, Happy World！×Machico",TOMORROW,"Hello, Happy World! ×Machico",TOMORROW,True,True,frames/0731.jpg
+732,462,シル・ヴ・プレジデント,"Hello, Happy world!×P丸様。",シル・ヴ・プレジデント,"Hello, Happy world!×P丸様。",シル・ヴ・プレジデント,True,True,frames/0732.jpg
+733,418,青空のラプソディ,Morfonica×fhána,青空のラプソディ,Morfonica×fhána,青空のラプソディ,True,True,frames/0733.jpg
+734,459,VORACITY,RAISE A SUILEN×MYTH & ROID,VORACITY,RAISE A SUILEN×MYTH & ROID,VORACITY,True,True,frames/0734.jpg
+735,10002,雪华翩跹，笑看无常,思念和哀伤无法诉说！,雪华翩跹，笑看无常,思念和袁伤无法诉说！,雪华翩跹，笑看无常,True,True,frames/0735.jpg
+736,10004,蝴蝶飞翔的星月夜,Morfonica,蝴蝶飞翔的星月夜,Morfonica,蝴蝶飞翔的星月夜,True,True,frames/0736.jpg
