@@ -36,6 +36,44 @@ class DailyPolicyTests(unittest.TestCase):
 
 
 class DailyFlowTests(unittest.TestCase):
+    def test_missions_visit_unknown_tabs_and_scroll_without_reclaiming(self):
+        f=self.flow(); f.click=Mock(); f.claim_mission_category=Mock()
+        first=[('新活动页',(150,210)),('任意新增页',(150,305))]
+        second=[('任意新增页',(150,210)),('最后一页',(150,305))]
+        f.mission_tabs=Mock(side_effect=[first,first,first,second,second])
+        f.scroll_mission_tabs=Mock(side_effect=[False,True,False])
+        f.ocr=Mock(side_effect=[[SimpleNamespace(text=name,box=[100,200,100,25])]
+                               for name in ['新活动页','任意新增页','最后一页']])
+        f.missions()
+        self.assertEqual(f.report['mission_tabs'],['新活动页','任意新增页','最后一页'])
+        self.assertEqual([c.args[0] for c in f.claim_mission_category.call_args_list],
+                         f.report['mission_tabs'])
+        self.assertEqual(f.report['status'],'finished')
+
+    def test_missions_require_selected_tab_before_claiming(self):
+        f=self.flow(); f.click=Mock(); f.claim_mission_category=Mock()
+        f.scroll_mission_tabs=Mock(return_value=False)
+        f.mission_tabs=Mock(return_value=[('新任务',(150,210))])
+        f.ocr=Mock(return_value=[SimpleNamespace(text='其他任务',box=[100,200,100,25])])
+        with self.assertRaisesRegex(FlowError,'未确认任务标签'):
+            f.missions()
+        f.claim_mission_category.assert_not_called()
+
+    def test_mission_tab_geometry_groups_multiline_names_and_ignores_clipped_cards(self):
+        f=self.flow(); f.image=np.zeros((720,1280,3),dtype=np.uint8)
+        for top,bottom in ((80,151),(178,260),(270,353),(640,725)):
+            f.image[top:bottom,35:276]=255
+        f.ocr=Mock(return_value=[
+            SimpleNamespace(text='任意',box=[110,195,80,24]),
+            SimpleNamespace(text='新分类',box=[110,218,80,24]),
+            SimpleNamespace(text='另一个页面',box=[100,294,120,26]),
+            SimpleNamespace(text='不完整',box=[110,115,80,24]),
+            SimpleNamespace(text='底部',box=[110,663,80,24])])
+        self.assertEqual(f.mission_tabs(),[('任意新分类',(150,219)),('另一个页面',(150,311))])
+        f.ocr.return_value=[]
+        with self.assertRaisesRegex(FlowError,'不跳过此页'):
+            f.mission_tabs()
+
     def test_empty_invitation_and_locked_missions_are_skipped_without_clicks(self):
         import re
         for category,text,reason in [('邀请邦友','输入邀请码','invitation_not_linked'),
@@ -281,12 +319,66 @@ class DailyFlowTests(unittest.TestCase):
 
     def test_gifts_claim_until_empty_then_return_home(self):
         f=self.flow(); f.click=Mock(); f.tap_hit=Mock()
+        f.finish_claim=Mock()
         f.reco=Mock(side_effect=[False,False,True])
         f.gifts()
         self.assertEqual(f.report['claims'],['gifts','gifts'])
         self.assertEqual(f.tap_hit.call_count,2)
         self.assertEqual(f.home.call_count,2)
         self.assertEqual(f.report['status'],'finished')
+        self.assertEqual([c.args for c in f.finish_claim.call_args_list],
+                         [('DY_GiftHeader',),('DY_GiftHeader',)])
+
+    @patch('notifications.time.sleep')
+    def test_claim_accepts_costume_notice_without_generic_receipt(self,_):
+        from PIL import Image
+        source=Path(__file__).parent/'fixtures/notifications/gift_costume.png'
+        for header in ('DY_GiftHeader','DY_MissionHeader'):
+            with self.subTest(header=header):
+                f=self.flow()
+                frame=np.array(Image.open(source).convert('RGB'))[:,:,::-1].copy()
+                empty=np.zeros_like(frame)
+                frames=iter([frame,empty,empty])
+                f.snap=Mock(side_effect=lambda:setattr(f,'image',next(frames)))
+                # The list header remains visible behind the notification.
+                f.reco=Mock(side_effect=lambda node:node==header)
+                button=SimpleNamespace(text='确定',box=[607,529,65,30])
+                f.ocr=Mock(return_value=[SimpleNamespace(text='获得服装',box=[399,139,116,29]),button])
+                f.tap_hit=Mock()
+                f.finish_claim(header)
+                f.tap_hit.assert_called_once_with(button)
+                f.tap.assert_not_called()
+                self.assertEqual(f.snap.call_count,3)
+
+    @patch('daily_tasks.time.sleep')
+    def test_claim_handles_receipt_before_costume_notice(self,_):
+        f=self.flow(); stages=iter(['receipt','costume','list'])
+        f.snap=Mock(side_effect=lambda:setattr(f,'stage',next(stages)))
+        f.dismiss_notifications=Mock(side_effect=lambda:f.stage=='costume')
+        f.reco=Mock(side_effect=lambda node:node=={'receipt':'DY_ClaimedHeader','list':'DY_GiftHeader'}.get(f.stage))
+        f.finish_claim('DY_GiftHeader')
+        f.tap.assert_called_once_with(640,601)
+
+    def test_claim_unknown_overlay_never_clicks_background(self):
+        from test_notifications import panel
+        f=self.flow(); f.image=panel(); f.snap=Mock()
+        f.reco=Mock(return_value=False); f.ocr=Mock(return_value=[])
+        with self.assertRaisesRegex(FlowError,'未识别的弹窗'):
+            f.finish_claim('DY_GiftHeader')
+        f.tap.assert_not_called()
+
+    def test_claim_requires_result_even_if_list_is_visible(self):
+        f=self.flow(); f.snap=Mock(); f.reco=Mock(side_effect=lambda node:node=='DY_GiftHeader')
+        with patch('daily_tasks.time.monotonic',side_effect=[0,1,31]), patch('daily_tasks.time.sleep'):
+            with self.assertRaisesRegex(FlowError,'不重复领取'):
+                f.finish_claim('DY_GiftHeader')
+        f.tap.assert_not_called()
+
+    def test_claim_stuck_receipt_has_bounded_retries(self):
+        f=self.flow(); f.snap=Mock(); f.reco=Mock(return_value=True)
+        with self.assertRaisesRegex(FlowError,'未消失'):
+            f.finish_claim('DY_GiftHeader')
+        self.assertEqual(f.tap.call_count,3)
 
     def test_exchange_unconfirmed_submission_is_not_retried(self):
         f=self.flow(); f.tap_hit=Mock(); f.reco=Mock(return_value=True)

@@ -8,7 +8,7 @@ from maa.custom_action import CustomAction
 
 from costume_unlock import CostumeFlow, FlowError, normalized
 from notifications import NotificationMixin
-from daily_policy import (EXCHANGE_CATEGORIES, MISSION_CATEGORIES, integer,
+from daily_policy import (EXCHANGE_CATEGORIES, integer,
                           remaining_draws, verify_exchange, verify_free_confirmation,
                           selected_exchange_categories)
 
@@ -60,6 +60,30 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.click("DY_MenuHome")
         self.wait("CU_HomeBand", 25)
 
+    def finish_claim(self, list_header, timeout=30):
+        """Observe the claim result, drain notices, then verify the list is clear."""
+        deadline = time.monotonic() + timeout
+        confirmed = False
+        legacy_attempts = 0
+        while time.monotonic() < deadline:
+            self.snap()
+            # Item-specific notices can replace or precede the generic receipt.
+            if self.dismiss_notifications():
+                confirmed = True
+                continue
+            if self.reco("DY_ClaimedHeader"):
+                if legacy_attempts >= 3:
+                    raise FlowError("一键领取结果点击后未消失")
+                self.tap(640, 601)
+                legacy_attempts += 1
+                confirmed = True
+                continue
+            self.require_clear_notification_overlay()
+            if confirmed and self.reco(list_header):
+                return
+            time.sleep(.25)
+        raise FlowError("领取结果未确认或未返回列表，不重复领取")
+
     def gifts(self):
         self.home()
         self.click("DY_GiftEntry")
@@ -73,32 +97,37 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             if not button:
                 raise FlowError("礼物列表中找不到一键领取")
             self.tap_hit(button)
-            self.wait("DY_ClaimedHeader")
-            if not self.dismiss_notifications():
-                self.tap(640, 601)
+            self.finish_claim("DY_GiftHeader")
             self.report["claims"].append("gifts")
         raise FlowError("礼物领取未收敛，请检查容量限制")
 
-    def select_mission_category(self, category):
-        print(f"[任务奖励] 检查：{category}",flush=True)
-        for direction in ((560,320), (310,570)):
-            previous = None
-            for _ in range(12):
-                self.wait("DY_MissionHeader")
-                label = self.hit_text([25,102,254,600], category)
-                if label:
-                    self.tap_hit(label)
-                    self.wait("DY_MissionHeader")
-                    selected = normalized(self.text([45,178,215,72]))
-                    if normalized(category) not in selected:
-                        raise FlowError(f"未确认任务分类：{category} / {selected}")
-                    return
-                area = self.image[100:710,25:281].copy()
-                if previous is not None and np.mean(np.abs(area.astype(float)-previous)) < 1:
-                    break
-                previous = area.astype(float)
-                self.swipe(150,*direction)
-        raise FlowError(f"找不到任务分类：{category}")
+    def mission_tabs(self):
+        """Read complete visible tabs in screen order, without a name whitelist."""
+        self.require_clear_notification_overlay()
+        # The blank left edge of each card separates even two-line labels.
+        white = (self.image[90:710,60:72].min(axis=2) > 235).mean(axis=1) > .8
+        edges = np.flatnonzero(np.diff(np.r_[False,white,False]))
+        hits = self.ocr([80,100,160,610])
+        tabs = []
+        for top,bottom in zip(edges[::2]+90,edges[1::2]+90):
+            if not (100 < top and bottom < 710 and 65 <= bottom-top <= 100):
+                continue  # A clipped card must be scrolled fully into view first.
+            lines = sorted((hit for hit in hits if top <= hit.box[1]
+                            and hit.box[1]+hit.box[3] <= bottom),
+                           key=lambda hit:(hit.box[1],hit.box[0]))
+            name = normalized(''.join(hit.text for hit in lines))
+            if not name:
+                raise FlowError('任务标签文字无法识别，不跳过此页')
+            tabs.append((name,(150,int((top+bottom)//2))))
+        if not tabs:
+            raise FlowError('未识别到完整任务标签')
+        return tabs
+
+    def scroll_mission_tabs(self, direction):
+        before = self.image[100:710,35:235].astype(float)
+        self.swipe(150,*direction)
+        self.wait("DY_MissionHeader")
+        return np.mean(np.abs(self.image[100:710,35:235].astype(float)-before)) >= 1
 
     def claim_mission_category(self, category):
         # The all-claim button covers the category, including its offscreen rows/pages.
@@ -106,7 +135,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.wait("DY_MissionHeader")
             button = self.hit_text([1020,100,252,96], "全部领取|一键领取")
             if not button:
-                if category == "邀请邦友" and self.hit_text([950,580,282,76], "^创建邀请码$|^输入邀请码$"):
+                if self.hit_text([950,580,282,76], "^创建邀请码$|^输入邀请码$"):
                     self.report.setdefault('skipped_missions',[]).append({'category':category,'reason':'invitation_not_linked'})
                     return  # No existing invitation relationship, hence no rewards to claim.
                 if self.hit_text([600,365,350,65], '^此任务已被锁定$'):
@@ -119,20 +148,40 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             if not enabled:
                 return
             self.tap_hit(button)
-            self.wait("DY_ClaimedHeader")
-            if not self.dismiss_notifications():
-                self.tap(640,601)
+            self.finish_claim("DY_MissionHeader")
             self.report["claims"].append(category)
         raise FlowError(f"任务奖励领取未收敛：{category}")
 
     def missions(self):
         self.home()
         self.click("DY_MissionEntry")
-        for category in MISSION_CATEGORIES:
-            self.select_mission_category(category)
-            self.claim_mission_category(category)
-        self.report["status"] = "finished"
-        self.home()
+        self.wait("DY_MissionHeader")
+        for _ in range(12):
+            if not self.scroll_mission_tabs((310,570)):
+                break
+        else:
+            raise FlowError('任务标签未滚动到顶部')
+        visited = self.report['mission_tabs'] = []
+        for _ in range(100):
+            self.wait("DY_MissionHeader")
+            tabs = self.mission_tabs()
+            pending = next(((name,point) for name,point in tabs if name not in visited),None)
+            if pending:
+                name,point = pending
+                print(f"[任务奖励] 检查：{name}",flush=True)
+                self.tap(*point)
+                self.wait("DY_MissionHeader")
+                selected = normalized(''.join(hit.text for hit in sorted(
+                    self.ocr([80,178,160,72]),key=lambda hit:(hit.box[1],hit.box[0]))))
+                if selected != name:
+                    raise FlowError(f"未确认任务标签：{name} / {selected}")
+                self.claim_mission_category(name)
+                visited.append(name)
+            elif not self.scroll_mission_tabs((560,320)):
+                self.report["status"] = "finished"
+                self.home()
+                return
+        raise FlowError('任务标签遍历未收敛')
 
     def open_exchange(self):
         self.home()
