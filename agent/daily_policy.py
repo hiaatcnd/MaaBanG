@@ -21,9 +21,6 @@ def selected_exchange_categories(context):
     return selected
 
 
-MISSION_CATEGORIES = ("期间限定", "限时招募券", "通常任务", "每月", "邀请邦友", "EX任务")
-
-
 def integer(text):
     text = unicodedata.normalize("NFKC", text).strip()
     if not re.fullmatch(r"\d+", text):
