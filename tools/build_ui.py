@@ -24,11 +24,11 @@ def build_ui():
     with zipfile.ZipFile(archive) as source:
         source.extractall(cache / 'ui-source')
     source_dir = cache / 'ui-source' / f'MFAAvalonia-{REVISION}'
-    patch = ROOT / 'tools/patches/mfaa-background-startup-connection.patch'
-    # Normalize patch bytes even when a Windows editor has used CRLF.
-    patch_bytes = patch.read_text(encoding='utf-8').encode('utf-8')
-    subprocess.run(['git', 'apply', '--check', '-'], input=patch_bytes, cwd=source_dir, check=True)
-    subprocess.run(['git', 'apply', '-'], input=patch_bytes, cwd=source_dir, check=True)
+    for patch in sorted((ROOT / 'tools/patches').glob('mfaa-*.patch')):
+        # Normalize patch bytes even when a Windows editor has used CRLF.
+        patch_bytes = patch.read_text(encoding='utf-8').encode('utf-8')
+        subprocess.run(['git', 'apply', '--check', '-'], input=patch_bytes, cwd=source_dir, check=True)
+        subprocess.run(['git', 'apply', '-'], input=patch_bytes, cwd=source_dir, check=True)
     output = cache / 'ui-build'
     dotnet = os.environ.get('MAABANG_DOTNET', 'dotnet')
     subprocess.run([dotnet, 'build', str(source_dir / 'MFAAvalonia/MFAAvalonia.csproj'),

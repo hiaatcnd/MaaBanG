@@ -110,14 +110,87 @@ def member_cards(image):
         strip = image[185:665,x-46:x+47].astype(float)
         color = (np.ptp(strip,axis=2)>35)&(strip.max(2)>90)
         ys = np.flatnonzero((color.mean(1)>.23)|((strip.min(2)<235).mean(1)>.65))
-        for group in np.split(ys,np.where(np.diff(ys)>4)[0]+1):
+        groups=list(np.split(ys,np.where(np.diff(ys)>4)[0]+1))
+        merged=[]
+        for group in groups:
+            # White fur can split a portrait into two substantial pieces. Join
+            # those, but never attach a short bonus badge to a clipped card.
+            if (len(group) and merged and len(merged[-1]) and
+                    group[0]-merged[-1][-1]<=6 and
+                    group[-1]-group[0]>=30 and merged[-1][-1]-merged[-1][0]>=30 and
+                    group[-1]-merged[-1][0]<135):
+                merged[-1]=np.concatenate((merged[-1],group))
+            else:
+                merged.append(group)
+        for group in merged:
             if not len(group):
                 continue
             top,bottom = int(group[0]),int(group[-1])
-            if top==0 or bottom==479 or not 95<=bottom-top+1<=112:
+            if bottom==479 or not 95<=bottom-top+1<=135 or (top==0 and bottom<105):
                 continue
+            # Animated rarity borders can connect the short bonus badge to the
+            # portrait. Anchor the card on its stable footer, excluding the badge.
+            top=max(top,bottom-105)
             cards.append((x,185+(top+bottom)//2))
-    return sorted(cards,key=lambda card:(round(card[1]/12),card[0]))
+    rows=[]
+    for card in sorted(cards,key=lambda card:card[1]):
+        if not rows or card[1]-rows[-1][0][1]>20:
+            rows.append([])
+        rows[-1].append(card)
+    return [card for row in rows for card in sorted(row,key=lambda card:card[0])]
+
+
+
+def member_signature(image, point):
+    x,y=point
+    return image[y-32:y+32,x-40:x+40].astype(np.float32).copy()
+
+
+def same_member_portrait(current, previous):
+    """Compare interior artwork allowing the grid's animated border to shift its center."""
+    reference=previous[12:52,14:66]
+    for dy in range(-6,7):
+        for dx in range(-3,4):
+            diff=np.abs(reference-current[12+dy:52+dy,14+dx:66+dx])
+            if diff.mean()<4 and np.percentile(diff,95)<16:
+                return True
+    return False
+
+
+def member_portrait_scores(list_image, cards, detail_image):
+    """Match each visible card's artwork against the enlarged detail illustration."""
+    from PIL import Image
+    grid=np.array(Image.fromarray(list_image[:,:,::-1]).convert('L'))
+    detail=np.array(Image.fromarray(detail_image[:,:,::-1]).convert('L').crop(
+        (126,254,577,551)).resize((226,149)),dtype=np.float32)
+    # Correlate at every pixel: a two-pixel stride can miss the true peak on
+    # small portraits. FFT correlation and integral sums keep the finer search
+    # inexpensive without allocating a huge sliding-window tensor.
+    shape=tuple(2**int(np.ceil(np.log2(size*2))) for size in detail.shape)
+    spectrum=np.fft.rfft2(detail,s=shape)
+    def integral(array):
+        return np.pad(array.cumsum(0).cumsum(1),((1,0),(1,0)))
+    sums=integral(detail.astype(float))
+    squares=integral(detail.astype(float)**2)
+    def rect(array,h,w):
+        return array[h:,w:]-array[:-h,w:]-array[h:,:-w]+array[:-h,:-w]
+    result=[]
+    for x,y in cards:
+        patch=Image.fromarray(grid[y-18:y+25,x-28:x+28])
+        best=-1.
+        for scale in np.arange(.3,2.001,.025):
+            template=np.array(patch.resize((round(56*scale),round(43*scale))),dtype=np.float32)
+            template-=template.mean()
+            norm=float(np.sqrt(np.sum(template*template)))
+            if norm<1: continue
+            h,w=template.shape
+            correlation=np.fft.irfft2(spectrum*np.fft.rfft2(template[::-1,::-1],s=shape),s=shape)[
+                h-1:detail.shape[0],w-1:detail.shape[1]]
+            std=np.sqrt(np.maximum(rect(squares,h,w)-rect(sums,h,w)**2/template.size,1))
+            scores=correlation/(std*norm)
+            best=max(best,float(scores.max()))
+        result.append(best)
+    return result
 
 
 def gold_member_stars(image):

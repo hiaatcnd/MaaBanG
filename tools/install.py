@@ -68,7 +68,8 @@ def build(version):
     source_bundle = release / 'docs/upstream-ui'
     source_bundle.mkdir()
     shutil.copy2(cache / 'mfaa-source.zip', source_bundle)
-    shutil.copy2(ROOT / 'tools/patches/mfaa-background-startup-connection.patch', source_bundle)
+    for patch in (ROOT / 'tools/patches').glob('mfaa-*.patch'):
+        shutil.copy2(patch, source_bundle)
     shutil.copy2(ROOT / 'tools/build_ui.py', source_bundle)
     (package / "tools").mkdir()
     shutil.copy2(ROOT / "tools/package_smoke.py", package / "tools/package_smoke.py")

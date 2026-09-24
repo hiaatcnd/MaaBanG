@@ -7,7 +7,10 @@ from pathlib import Path
 
 from daily_tasks import DailyFlow
 from costume_unlock import FlowError, normalized
-from mining_policy import parse_level, can_practice, material_rois, member_cards, gold_member_stars
+from notifications import dialog_box
+from mining_policy import (parse_level, can_practice, material_rois, member_cards,
+                           gold_member_stars, member_portrait_scores,
+                           member_signature, same_member_portrait)
 
 
 class StoryMiningFlow(DailyFlow):
@@ -165,6 +168,8 @@ class StoryMiningFlow(DailyFlow):
                     self.click('MN_PracticeConfirmOK')
             elif self.reco('MN_PracticeSuccess'):
                 self.click('MN_PracticeClose')
+            elif self.dismiss_notifications():
+                continue
             elif self.reco('MN_PracticePage'):
                 # Some practice results return to the ticket page. Read the
                 # current level (left side), not the proposed level on the right.
@@ -193,6 +198,25 @@ class StoryMiningFlow(DailyFlow):
             time.sleep(.4)
         raise FlowError('练习结果未确认，不重复提交')
 
+    def cancel_story_unlock(self):
+        # The detail header remains visible behind the modal. Waiting for that
+        # header alone can return before Cancel has actually taken effect.
+        attempts=0
+        last_tap=0.
+        deadline=time.monotonic()+8
+        while time.monotonic()<deadline:
+            self.snap()
+            if self.reco('MN_StoryUnlock'):
+                cancel=self.hit_text([380,500,265,85],'^取消$')
+                if cancel and attempts<3 and time.monotonic()-last_tap>=1:
+                    self.tap_hit(cancel)
+                    attempts+=1
+                    last_tap=time.monotonic()
+            elif dialog_box(self.image) is None and self.reco('MN_MemberDetail'):
+                return
+            time.sleep(.2)
+        raise FlowError('故事解锁弹窗未确认取消，不点击底层返回')
+
     def read_story(self, memory, row):
         current,maximum = parse_level(self.text([654,348,150,35]))
         self.tap(480 if memory else 225,620)
@@ -204,8 +228,7 @@ class StoryMiningFlow(DailyFlow):
                 raise FlowError('无法确认故事解锁等级')
             required = int(match[1])
             if current < required:
-                self.tap(510,543)
-                self.wait('MN_MemberDetail')
+                self.cancel_story_unlock()
                 if not memory or not self.mining.unlock or not self.practice(row,required):
                     row.setdefault('status','level_locked')
                     return
@@ -213,7 +236,7 @@ class StoryMiningFlow(DailyFlow):
                 self.wait('MN_StoryUnlock')
             if not self.mining.unlock:
                 row['status'] = 'material_unlock_disabled'
-                self.tap(510,543)
+                self.cancel_story_unlock()
                 return
             materials = []
             slots = material_rois(self.image)
@@ -223,7 +246,7 @@ class StoryMiningFlow(DailyFlow):
                     materials.append(tuple(map(int,match.groups())))
             if len(slots) not in (1,2,3) or len(materials)!=len(slots) or any(need <= 0 or have < need for have,need in materials):
                 row['status'] = 'insufficient_or_unreadable_materials'
-                self.tap(510,543)
+                self.cancel_story_unlock()
                 return
             row['materials'] = materials
             self.save_frame(f'unlock_{len(self.report["members"])}.png')
@@ -245,6 +268,9 @@ class StoryMiningFlow(DailyFlow):
                 row['reward_dialogs'] = row.get('reward_dialogs',0)+1
                 self.save_frame(f'story_reward_{len(self.report["members"])}_{row["reward_dialogs"]}.png')
                 self.click('MN_StoryRewardOK')
+            elif self.dismiss_notifications():
+                detail_since = None
+                continue
             elif self.reco('LV_TalkSkipConfirm'):
                 self.click('MN_StorySkipOK')
             elif self.reco('LV_TalkSkip'):
@@ -276,8 +302,31 @@ class StoryMiningFlow(DailyFlow):
             time.sleep(.4)
         raise FlowError('故事阅读/奖励确认超时')
 
+    def open_member_verified(self, target, cards):
+        before=self.image.copy()
+        number=len(self.report.setdefault('selections',[]))+1
+        self.save_frame(f'selection_{number}_list.png')
+        self.tap(*target)
+        self.wait('MN_MemberDetail')
+        scores=member_portrait_scores(before,cards,self.image)
+        chosen=cards.index(target)
+        other=max((score for i,score in enumerate(scores) if i!=chosen),default=-1.)
+        audit={'position':list(target),'score':scores[chosen],'other_score':other}
+        self.report['selections'].append(audit)
+        self.save_frame(f'selection_{number}_detail.png')
+        if scores[chosen]<.75 or scores[chosen]-other<.06:
+            audit['status']='identity_mismatch'
+            raise FlowError('所选成员图像未与详情唯一匹配，不读取故事或消耗材料')
+        identity=normalized(self.text([292,156,296,72]))
+        self.snap()
+        if not identity or normalized(self.text([292,156,296,72]))!=identity:
+            audit['status']='unstable_name'
+            raise FlowError('成员详情名称尚未稳定，不标记已访问')
+        audit.update(member=identity,status='verified')
+        print(f'[成员选择] {target} -> {identity}，图像匹配 {scores[chosen]:.3f}',flush=True)
+        return identity
+
     def run(self):
-        from PIL import Image
         self.member_list()
         for memory,enabled in ((False,self.mining.stories),(True,self.mining.memories)):
             if not enabled:
@@ -290,11 +339,9 @@ class StoryMiningFlow(DailyFlow):
                 target = None
                 cards = member_cards(self.image)
                 for x,y in cards:
-                    portrait = self.image[y-18:y+25,x-28:x+28]
-                    signature = np.asarray(Image.fromarray(portrait).resize((24,20))).astype(float)
-                    if any(np.mean(np.abs(signature-old))<10 for old in seen):
+                    signature = member_signature(self.image,(x,y))
+                    if any(same_member_portrait(signature,old) for old in seen):
                         continue
-                    seen.append(signature)
                     target = (x,y)
                     break
                 if not cards:
@@ -302,11 +349,8 @@ class StoryMiningFlow(DailyFlow):
                         break
                     raise FlowError('未识别到完整成员卡片，无法确认列表为空')
                 if target:
-                    self.tap(*target)
-                    self.wait('MN_MemberDetail')
-                    identity = normalized(self.text([292,156,296,72]))
-                    if not identity:
-                        raise FlowError('未识别成员名称')
+                    identity = self.open_member_verified(target,cards)
+                    seen.append(signature)
                     if identity not in identities:
                         identities.add(identity)
                         row = {'member':identity,'memory':memory}

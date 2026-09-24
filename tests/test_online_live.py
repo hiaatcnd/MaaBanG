@@ -1,9 +1,11 @@
 import sys
+import json
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
+from threading import Event
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'agent'))
 from chart_policy import ChartOptions, ChartSelection
@@ -15,6 +17,40 @@ from chart_store import ChartStore
 
 
 class OnlinePolicyTests(unittest.TestCase):
+    def test_missing_chart_downloads_once_then_uses_disk_cache(self):
+        chart=[{'type':'BPM','beat':0,'bpm':120},{'type':'Single','beat':1,'lane':1}]
+        selection=SimpleNamespace(song_id='test',difficulty='expert',
+                                  song={'difficulties':{'expert':{'notes':1}}})
+        response=Mock()
+        response.__enter__=Mock(return_value=response)
+        response.__exit__=Mock(return_value=False)
+        response.read.return_value=json.dumps(chart).encode()
+        with tempfile.TemporaryDirectory() as folder,patch('chart_store.urlopen',return_value=response) as fetch:
+            store=ChartStore(folder)
+            first,downloaded=store.get(selection)
+            second,cached=store.get(selection)
+            self.assertEqual(first,second)
+            self.assertFalse(downloaded['cache_hit'])
+            self.assertTrue(cached['cache_hit'])
+            self.assertEqual(downloaded['sha256'],cached['sha256'])
+            fetch.assert_called_once()
+            self.assertTrue(fetch.call_args.args[0].full_url.endswith('/test/expert.json'))
+            self.assertEqual([p.name for p in Path(folder).iterdir()],['test_expert.json'])
+
+    def test_cancelled_chart_is_not_written_to_cache(self):
+        chart=[{'type':'BPM','beat':0,'bpm':120},{'type':'Single','beat':1,'lane':1}]
+        selection=SimpleNamespace(song_id='test',difficulty='expert',
+                                  song={'difficulties':{'expert':{'notes':1}}})
+        response=Mock()
+        response.__enter__=Mock(return_value=response)
+        response.__exit__=Mock(return_value=False)
+        response.read.return_value=json.dumps(chart).encode()
+        check=Mock(side_effect=[None,None,None,RuntimeError('cancelled after validation')])
+        with tempfile.TemporaryDirectory() as folder,patch('chart_store.urlopen',return_value=response):
+            with self.assertRaisesRegex(RuntimeError,'cancelled after validation'):
+                ChartStore(folder).get(selection,check)
+            self.assertEqual(list(Path(folder).iterdir()),[])
+
     def test_team_interface_has_difficulty_but_no_room_or_song_picker(self):
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
         from update_chart_interface import update
@@ -141,7 +177,8 @@ class OnlineFlowTests(unittest.TestCase):
         flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
                             ChartOptions.parse({'mode':'team','fire':0}),folder)
         selection=ChartSelection.parse('306','expert')
-        flow.store.prepare_online=Mock(return_value={('306','expert'):{'duration':1}})
+        flow.store.prepare_online=Mock(side_effect=AssertionError('must not prefetch the song pool'))
+        flow.prepare_final_chart=Mock(return_value={'duration':1,'cache_hit':True})
         for name in ('prepare_settings','await_final','save_frame','settle_online','home','recover_room','pause'):
             setattr(flow,name,Mock())
         flow.read_final_selection=Mock(return_value=selection)
@@ -228,12 +265,104 @@ class OnlineFlowTests(unittest.TestCase):
             flow.recover_room.assert_not_called()
             self.assertEqual(flow.report['completed_rounds'],0)
 
-    def test_cache_failure_prevents_room_entry(self):
+    def test_chart_is_requested_only_after_final_selection(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
-            flow.store.prepare_online.side_effect=ValueError('invalid chart')
+            calls=Mock()
+            for name in ('join_room','await_final','read_final_selection','prepare_final_chart','play_chart'):
+                calls.attach_mock(getattr(flow,name),name)
+            flow.run()
+            self.assertEqual([c[0] for c in calls.mock_calls],
+                ['join_room','await_final','read_final_selection','prepare_final_chart','play_chart'])
+            flow.prepare_final_chart.assert_called_once_with(flow.read_final_selection.return_value)
+            flow.store.prepare_online.assert_not_called()
+
+    def test_chart_failure_leaves_room_without_starting_playback(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.reco=Mock(return_value=None)
+            flow.prepare_final_chart.side_effect=ValueError('invalid chart')
             with self.assertRaises(ValueError): flow.run()
-            flow.join_room.assert_not_called()
+            flow.join_room.assert_called_once()
+            flow.recover_room.assert_called_once()
+            flow.play_chart.assert_not_called()
+            self.assertEqual(flow.report['rounds'][0]['status'],'failed')
+            self.assertEqual(flow.report['completed_rounds'],0)
+
+    def test_on_demand_gets_exact_selected_chart_and_rechecks_page(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.snap=Mock()
+            flow.reco=Mock(return_value=True)
+            flow.store.get=Mock(return_value=([],{'path':'selected.json','cache_hit':True}))
+            selection=flow.read_final_selection.return_value
+            metadata=OnlineLiveFlow.prepare_final_chart(flow,selection)
+            self.assertEqual(metadata['path'],'selected.json')
+            self.assertEqual(flow.store.get.call_count,1)
+            self.assertEqual(flow.store.get.call_args.args[0],selection)
+            self.assertGreaterEqual(flow.snap.call_count,2)
+            self.assertEqual(set(flow.charts),{(selection.song_id,selection.difficulty)})
+            flow.store.prepare_online.assert_not_called()
+
+    def test_on_demand_wraps_network_and_validation_errors(self):
+        for error in (TimeoutError('read timed out'),ValueError('bad notes'),OSError('disk full')):
+            with self.subTest(error=error),tempfile.TemporaryDirectory() as folder:
+                flow=self.make_flow(folder)
+                flow.snap=Mock()
+                flow.reco=Mock(return_value=True)
+                flow.store.get=Mock(side_effect=error)
+                with self.assertRaisesRegex(RuntimeError,'最终歌曲谱面准备失败'):
+                    OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+                self.assertFalse(flow.charts)
+
+    def test_on_demand_does_not_accept_chart_after_page_changes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.snap=Mock()
+            flow.reco=Mock(side_effect=[True,False])
+            flow.store.get=Mock(return_value=([],{'path':'selected.json'}))
+            with self.assertRaisesRegex(RuntimeError,'页面已离开'):
+                OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            self.assertFalse(flow.charts)
+
+    def test_slow_download_does_not_block_room_exit_or_user_stop(self):
+        for error in (RoomInterrupted('disconnected'),RuntimeError('user stopped')):
+            with self.subTest(error=error),tempfile.TemporaryDirectory() as folder:
+                flow=self.make_flow(folder)
+                flow.reco=Mock(return_value=True)
+                entered,release,finished=Event(),Event(),Event()
+                def get(selection,check,timeout):
+                    entered.set()
+                    try:
+                        release.wait(3)
+                        check()
+                        raise AssertionError('cancelled download was accepted')
+                    finally:
+                        finished.set()
+                flow.store.get=Mock(side_effect=get)
+                def snap():
+                    if flow.snap.call_count>1:
+                        self.assertTrue(entered.wait(1))
+                        raise error
+                flow.snap=Mock(side_effect=snap)
+                try:
+                    with self.assertRaisesRegex(type(error),str(error)):
+                        OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+                    self.assertFalse(finished.is_set())
+                    self.assertFalse(flow.charts)
+                finally:
+                    release.set()
+                    self.assertTrue(finished.wait(1))
+
+    def test_download_deadline_does_not_wait_for_network_thread(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.snap=Mock()
+            flow.reco=Mock(return_value=True)
+            with patch('online_live.Thread'),patch('online_live.time.monotonic',side_effect=[0,0,13]):
+                with self.assertRaisesRegex(RuntimeError,'超过12秒'):
+                    OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            self.assertFalse(flow.charts)
 
     def test_unrecognized_song_leaves_room_before_stopping(self):
         with tempfile.TemporaryDirectory() as folder:

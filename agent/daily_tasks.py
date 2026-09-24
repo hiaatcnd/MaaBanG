@@ -7,12 +7,13 @@ import numpy as np
 from maa.custom_action import CustomAction
 
 from costume_unlock import CostumeFlow, FlowError, normalized
+from notifications import NotificationMixin
 from daily_policy import (EXCHANGE_CATEGORIES, MISSION_CATEGORIES, integer,
                           remaining_draws, verify_exchange, verify_free_confirmation,
                           selected_exchange_categories)
 
 
-class DailyFlow(CostumeFlow):
+class DailyFlow(NotificationMixin, CostumeFlow):
     def __init__(self, context):
         super().__init__(context, 0)
         self.report = {"status": "running", "claims": [], "exchanges": [], "draws": 0}
@@ -38,6 +39,8 @@ class DailyFlow(CostumeFlow):
     def home(self):
         for _ in range(6):
             self.snap()
+            if self.dismiss_notifications():
+                continue
             if self.reco("DY_ObtainedHeader") or self.reco("DY_ClaimedHeader"):
                 self.tap(640,601)
             elif self.reco("DY_ExchangeSuccess"):
@@ -47,6 +50,7 @@ class DailyFlow(CostumeFlow):
             elif self.reco("DY_FreeConfirm"):
                 self.tap(509,476)
             else:
+                self.require_clear_notification_overlay()
                 break
         if self.reco("CU_HomeBand"):
             return
@@ -70,7 +74,8 @@ class DailyFlow(CostumeFlow):
                 raise FlowError("礼物列表中找不到一键领取")
             self.tap_hit(button)
             self.wait("DY_ClaimedHeader")
-            self.tap(640, 601)
+            if not self.dismiss_notifications():
+                self.tap(640, 601)
             self.report["claims"].append("gifts")
         raise FlowError("礼物领取未收敛，请检查容量限制")
 
@@ -101,8 +106,12 @@ class DailyFlow(CostumeFlow):
             self.wait("DY_MissionHeader")
             button = self.hit_text([1020,100,252,96], "全部领取|一键领取")
             if not button:
-                if category == "邀请邦友" and self.hit_text([950,580,282,76], "创建邀请码"):
+                if category == "邀请邦友" and self.hit_text([950,580,282,76], "^创建邀请码$|^输入邀请码$"):
+                    self.report.setdefault('skipped_missions',[]).append({'category':category,'reason':'invitation_not_linked'})
                     return  # No existing invitation relationship, hence no rewards to claim.
+                if self.hit_text([600,365,350,65], '^此任务已被锁定$'):
+                    self.report.setdefault('skipped_missions',[]).append({'category':category,'reason':'locked'})
+                    return
                 raise FlowError(f"任务分类没有已支持的领取按钮：{category}")
             x,y,w,h = button.box
             # Sample the button fill beside its text: disabled buttons are grey.
@@ -111,7 +120,8 @@ class DailyFlow(CostumeFlow):
                 return
             self.tap_hit(button)
             self.wait("DY_ClaimedHeader")
-            self.tap(640,601)
+            if not self.dismiss_notifications():
+                self.tap(640,601)
             self.report["claims"].append(category)
         raise FlowError(f"任务奖励领取未收敛：{category}")
 
@@ -242,6 +252,8 @@ class DailyFlow(CostumeFlow):
         result_seen = False
         while time.monotonic() < deadline:
             self.snap()
+            if self.dismiss_notifications():
+                continue
             if self.reco("DY_ObtainedHeader"):
                 stage, target = "obtained", (640,602)
             elif self.reco("DY_RecruitResult") and np.median(self.image[145:170,110:130]) > 220:

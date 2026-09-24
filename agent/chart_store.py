@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 
 from chart_timing import compile_chart, first_anchor
 from live_policy import DIFFICULTIES
+from user_data import data_root
 
 
 def note_count(chart):
@@ -20,14 +21,15 @@ def note_count(chart):
 
 
 class ChartStore:
-    def __init__(self, directory='cache/charts'):
-        self.directory = Path(directory)
+    def __init__(self, directory=None):
+        self.directory = Path(directory) if directory is not None else data_root() / 'cache/charts'
 
     def get(self, selection, check_stop=lambda: None, timeout=30):
         check_stop()
         key = f'{selection.song_id}_{selection.difficulty}'
         path = self.directory / (key+'.json')
-        if path.exists():
+        cache_hit = path.exists()
+        if cache_hit:
             raw = path.read_bytes()
         else:
             url = f'https://bestdori.com/api/charts/{selection.song_id}/{selection.difficulty}.json'
@@ -59,6 +61,7 @@ class ChartStore:
         first_anchor(chart)
         if not all(0 <= 197+147.7*e.lane+e.dx < 1280 and 0 <= e.y < 720 for e in events):
             raise ValueError('谱面手势越出当前演出画面')
+        check_stop()
         if not path.exists():
             self.directory.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(dir=self.directory,suffix='.tmp',delete=False) as file:
@@ -66,7 +69,7 @@ class ChartStore:
                 temporary=Path(file.name)
             temporary.replace(path)
         return chart, {'path':str(path.resolve()), 'sha256':hashlib.sha256(raw).hexdigest(),
-                       'notes':count, 'duration':events[-1].time}
+                       'notes':count, 'duration':events[-1].time, 'cache_hit':cache_hit}
 
     def prepare_online(self, difficulty, check_stop, progress=lambda done,total: None):
         """Validate the complete random-song pool before joining any online room."""

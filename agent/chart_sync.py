@@ -33,7 +33,11 @@ def locate_note_y(image, lane, color='cyan'):
     elif color == 'green':
         mask = (green > 220) & (blue < 200) & (red < 200)
     elif color == 'pink':
-        mask = (red > 200) & (blue > 130) & (green < 180)
+        # Flick heads brighten as they approach the line. Their green channel
+        # can exceed 180, but magenta chroma still separates them from white.
+        mask = ((red > 200) & (blue > 130) &
+                (red.astype(np.int16)-green > 30) &
+                (blue.astype(np.int16)-green > 15))
     else:
         raise ValueError('Unsupported first-note color')
     counts = (mask & corridor).sum(axis=1)

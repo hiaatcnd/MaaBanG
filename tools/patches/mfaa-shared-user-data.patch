@@ -1,0 +1,65 @@
+--- a/MFAAvalonia/Helper/AppPaths.cs
++++ b/MFAAvalonia/Helper/AppPaths.cs
+@@ -13,8 +13,13 @@
+ 
+     public static string InstallRoot => AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+     public static string DataRoot { get; private set; } = InstallRoot;
++    // User settings survive package replacement; resources stay with their version.
++    public static string UserDataRoot => Path.GetFullPath(
++        Environment.GetEnvironmentVariable("MAABANG_DATA_DIR") is { Length: > 0 } custom
++            ? custom
++            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".maabang"));
+     public static string ConfigDirectory => string.IsNullOrWhiteSpace(_configDirectory)
+-        ? Path.Combine(InstallRoot, "config")
++        ? Path.Combine(UserDataRoot, "config")
+         : _configDirectory;
+     public static string InstancesDirectory => Path.Combine(ConfigDirectory, "instances");
+     public static string ResourceDirectory => Path.Combine(DataRoot, "resource");
+@@ -64,11 +69,7 @@
+ 
+     private static string ResolveConfigDirectory()
+     {
+-        var installConfig = Path.Combine(InstallRoot, "config");
+-        if (CanUseDirectory(installConfig))
+-            return installConfig;
+-
+-        return installConfig;
++        return Path.Combine(UserDataRoot, "config");
+     }
+ 
+     private static string ResolveLogsDirectory()
+--- a/MFAAvalonia/AppRuntime.cs
++++ b/MFAAvalonia/AppRuntime.cs
+@@ -136,16 +136,15 @@
+ 
+     public static string CreateInstanceKey(string executablePath)
+     {
+-        var normalizedPath = Path.GetFullPath(executablePath)
++        // All packages using the same settings share the existing IPC/mutex.
++        // Opening another version focuses the active window instead of allowing
++        // two processes to overwrite the same configuration.
++        var normalizedPath = AppPaths.UserDataRoot
+             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+         if (OperatingSystem.IsWindows())
+             normalizedPath = normalizedPath.ToUpperInvariant();
+-
+-        var executableHash = TryHashFile(executablePath);
+-        var coreAssemblyHash = TryHashFile(typeof(AppRuntime).Assembly.Location);
+-
+         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+-            $"{normalizedPath}\n{executableHash}\n{coreAssemblyHash}")));
++            $"MaaBanG\n{normalizedPath}")));
+     }
+ 
+     private static string TryHashFile(string path)
+--- a/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
++++ b/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
+@@ -57,7 +57,7 @@
+     // Android processes start with "/" as Environment.CurrentDirectory. Passing the
+     // application data root explicitly prevents MaaToolkit from probing /config/maa_option.json,
+     // which throws an uncaught native std::filesystem exception and aborts the process.
+-    public static MaaToolkit Toolkit { get; } = new(true, AppPaths.DataRoot);
++    public static MaaToolkit Toolkit { get; } = new(true, AppPaths.UserDataRoot);
+     public static MaaGlobal Global { get; } = new();
+     public string InstanceId { get; }
+     public InstanceConfiguration InstanceConfiguration { get; }

@@ -19,6 +19,12 @@ internal static class MaaBanGLauncher
             // libzmq 4.3.5 can bind but fail to connect AF_UNIX sockets under
             // AppData/Temp on Windows (zeromq/libzmq#4734). Use a writable,
             // per-user directory outside AppData for this process tree only.
+            string configuredData = Environment.GetEnvironmentVariable("MAABANG_DATA_DIR");
+            string data = check ? Path.Combine(app, "debug", "smoke-user-data") :
+                string.IsNullOrWhiteSpace(configuredData) ?
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".maabang") :
+                Path.GetFullPath(configuredData);
+            // IPC keeps its short, proven path even for a custom data directory.
             string temp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".maabang", "temp");
             Directory.CreateDirectory(temp);
             var start = new ProcessStartInfo
@@ -32,6 +38,31 @@ internal static class MaaBanGLauncher
             start.EnvironmentVariables["TEMP"] = temp;
             start.EnvironmentVariables["TMP"] = temp;
             start.EnvironmentVariables["PYTHONUTF8"] = "1";
+            start.EnvironmentVariables["MAABANG_DATA_DIR"] = data;
+            if (!check)
+            {
+                var migration = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(app, "python\\python.exe"),
+                    Arguments = "-X utf8 \"" + Path.Combine(app, "agent\\user_data.py") + "\" --migrate \"" + app.TrimEnd('\\') + "\"",
+                    WorkingDirectory = app,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                migration.EnvironmentVariables["MAABANG_DATA_DIR"] = data;
+                using (var child = Process.Start(migration))
+                {
+                    if (!child.WaitForExit(120000))
+                    {
+                        child.Kill();
+                        throw new IOException("用户数据迁移超时，原配置仍保留在旧目录。");
+                    }
+                    if (child.ExitCode != 0)
+                        throw new IOException("用户数据迁移失败：" + child.StandardError.ReadToEnd());
+                }
+            }
             using (var child = Process.Start(start))
             {
                 if (check)

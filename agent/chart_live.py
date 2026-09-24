@@ -343,19 +343,7 @@ class ChartLiveFlow(LiveFlow):
         pass
 
     def result_modals(self):
-        if self.dismiss_daily_reward():
-            return True
-        for header,roi,pattern,button_roi in [
-            ('^解锁(?:活动|主线)故事$',[370,85,350,65],'^确定$',[510,540,260,85]),
-            ('获得(?:奖励|报酬)',[380,75,280,115],'^确定$|^确认$|^OK$',[510,505,260,145]),
-            ('达成(?:奖励|报酬)',[350,70,320,110],'^OK$|^确定$',[510,500,260,145]),
-            ('达成(?:奖励|报酬)一?览',[175,48,700,54],'^关闭$',[510,580,260,80])]:
-            if self.hit_text(roi,header):
-                button=self.hit_text(button_roi,pattern)
-                if button:
-                    self.tap_hit(button)
-                    return True
-        return False
+        return self.dismiss_daily_reward()
 
     def await_chart_result(self, index, row):
         deadline=time.monotonic()+90
@@ -391,7 +379,12 @@ class ChartLiveFlow(LiveFlow):
             elif self.reco('LV_Rewards') or self.hit_text([100,420,145,43],'演出报酬'):
                 button=self.hit_text([940,602,274,100],'^下一步$')
                 if button:
-                    self.tap_hit(button)
+                    # A reward modal can cover the judgment page before it is
+                    # observed. Rewards still prove this submitted live ended.
+                    row['status']='result_confirmed'
+                    row['result_evidence']='rewards_page'
+                    self.save_frame(f'rewards_{self.report["completed_rounds"]+1}_{index}.png')
+                    return
         raise FlowError('未确认演出结果，不重新开演')
 
     def settle_results(self):
@@ -411,12 +404,15 @@ class ChartLiveFlow(LiveFlow):
                 self.click('LV_TalkSkip');continue
             if self.reco('LV_TalkMenu'):
                 self.click('LV_TalkMenu');continue
+            self.require_clear_notification_overlay()
             if any(self.reco(n) for n in ('CU_HomeBand','LV_Menu','LV_TourHome','LV_TourSetup','LV_SongPage')):
                 return
             manual=bool(self.hit_text([680,314,170,160],'GREAT|GOOD|BAD|MISS'))
             known=manual or any(self.reco(n) for n in ('LV_ScoreAuto','LV_TourSummary','LV_Rewards',
                                                        'LV_Experience','LV_LoginReward'))
             known=known or bool(self.hit_text([110,270,175,148],'获得活动|获得徽章'))
+            known=known or bool(self.reco('LV_EventResult'))
+            known=known or self.login_reward_page()
             if known:
                 button=self.hit_text([940,602,274,100],'^下一步$|^确定$|^确认$')
                 if button:

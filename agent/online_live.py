@@ -1,5 +1,7 @@
 """Team live state machine. A room attempt is distinct from a completed song."""
 from dataclasses import asdict
+from concurrent.futures import Future, TimeoutError as FutureTimeout, CancelledError
+from threading import Event, Thread
 import re
 import subprocess
 import time
@@ -207,8 +209,6 @@ class OnlineLiveFlow(ChartLiveFlow):
         selection=final_selection(song,self.settings.difficulties[0],special)
         if selection.difficulty not in centers:
             raise FlowError('未找到目标难度按钮：'+selection.difficulty)
-        if (selection.song_id,selection.difficulty) not in self.charts:
-            raise FlowError('最终歌曲不在已校验谱面缓存中')
         self.quick_tap(centers[selection.difficulty],574)
         self.snap()
         if not self.reco('OL_FinalConfirm'):
@@ -225,6 +225,55 @@ class OnlineLiveFlow(ChartLiveFlow):
             raise FlowError('联网3D Cut in未关闭')
         self.selection=selection
         return selection
+
+    def prepare_final_chart(self,selection):
+        """Fetch only the confirmed chart without blocking room/stop monitoring."""
+        self.state('读取最终歌曲谱面（缺失时下载）')
+        deadline=time.monotonic()+12
+        cancelled=Event()
+        future=Future()
+        def check_download():
+            if cancelled.is_set():
+                raise CancelledError('谱面准备已取消')
+            if time.monotonic()>=deadline:
+                raise TimeoutError('最终歌曲谱面准备超过12秒')
+        def download():
+            try:
+                future.set_result(self.store.get(selection,check_download,timeout=3))
+            except Exception as exc:
+                future.set_exception(exc)
+        # A stalled network read must never hold the game UI or room recovery.
+        # The worker has no controller access and checks cancellation before saving.
+        worker=Thread(target=download,name='final-song-chart',daemon=True)
+        try:
+            started=False
+            while True:
+                self.check_stop()
+                if time.monotonic()>=deadline:
+                    raise FlowError('最终歌曲谱面准备超过12秒，退出房间')
+                self.snap()
+                if not self.reco('OL_FinalConfirm'):
+                    raise FlowError('谱面准备期间最终确认页面已离开，停止开演')
+                if not started:
+                    worker.start()
+                    started=True
+                # Recheck the page even when a cache hit completes immediately.
+                elif future.done():
+                    try:
+                        _,metadata=future.result()
+                    except Exception as exc:
+                        raise FlowError(f'最终歌曲谱面准备失败：{exc}') from exc
+                    self.charts[(selection.song_id,selection.difficulty)]=metadata
+                    self.report['cached_charts']=len(self.charts)
+                    return metadata
+                try:
+                    future.result(timeout=.2)
+                except FutureTimeout:
+                    pass
+                except Exception:
+                    pass  # Report errors after the next room/stop check.
+        finally:
+            cancelled.set()
 
     def verify_chart_start(self,index,selection,amount):
         self.snap()
@@ -374,10 +423,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         raise FlowError('无法确认退出房间的安全入口，保留现场')
 
     def run(self):
-        self.charts=self.store.prepare_online(self.settings.difficulties[0],self.check_stop,
-            lambda done,total: print(f'[团队演出] 谱面准备 {done}/{total}',flush=True)
-            if done%20==0 or done==total else None)
-        self.report['cached_charts']=len(self.charts)
+        self.report['cached_charts']=0
         self.prepare_settings()
         failures=0
         while self.settings.max_rounds is None or self.report['completed_rounds']<self.settings.max_rounds:
@@ -391,7 +437,10 @@ class OnlineLiveFlow(ChartLiveFlow):
                       'fire':self.settings.fire}
                 self.current_attempt['songs'].append(song)
                 self.save_frame(f'final_attempt{self.report["attempts"]}.png')
-                self.play_chart(1,selection,self.charts[(selection.song_id,selection.difficulty)],self.settings.fire,song)
+                started=time.monotonic()
+                metadata=self.prepare_final_chart(selection)
+                song['chart']={**metadata,'prepare_seconds':time.monotonic()-started}
+                self.play_chart(1,selection,metadata,self.settings.fire,song)
                 self.settle_online(song)
                 self.current_attempt['status']='finished'
                 self.count_result(song)
@@ -409,7 +458,8 @@ class OnlineLiveFlow(ChartLiveFlow):
                 self.report['retries'].append({'attempt':self.report['attempts'],'reason':str(exc),'delay':delay})
                 self.recover_room()
                 self.pause(delay)
-            except (FlowError,ValueError):
+            except (FlowError,ValueError) as exc:
+                self.current_attempt.update(status='failed',reason=str(exc))
                 # A failed final confirmation must not leave a timed room to auto-start.
                 self.save_frame(f'failed_attempt{self.report["attempts"]}.png')
                 if self.room_active and not self.ctx.tasker.stopping and not self.reco('OL_Fatal'):
