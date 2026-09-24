@@ -240,6 +240,9 @@ class ChallengeMiningFlow(MiningLiveFlow):
             return
         self._last_start_check = now
         self.snap()
+        if self.hit_text([340,270,610,120],r'编成的成员与条件不符合'):
+            self.save_frame('invalid_challenge_members.png')
+            raise FlowError('舞台挑战编组不符合成员条件，未进入演出；请检查推荐编组结果')
         if self.area_modals():
             self._area_during_start = True
         elif getattr(self,'_area_during_start',False) and self.ready():
@@ -302,13 +305,31 @@ class ChallengeMiningFlow(MiningLiveFlow):
     def recommend(self):
         self.click('MN_Recommend')
         self.wait('MN_Recommended')
-        self.tap(640,526)
+        missing=bool(self.hit_text([400,265,485,80],r'符合乐队编成条件的成员不足'))
+        if not missing and not self.hit_text([400,300,490,95],r'已按照.*推荐(?:编|组)成了乐队'):
+            raise FlowError('未确认推荐编组成功或成员不足，不开始演出')
+        close=self.hit_text([505,482,275,85],'^关闭$')
+        if not close:
+            raise FlowError('推荐编组结果未找到关闭按钮')
+        if missing:
+            self.save_frame(f'challenge_members_missing_{len(self.report["skipped"])+1}.png')
+        self.tap_hit(close)
+        closes=1
         for _ in range(10):
             self.snap()
+            if self.reco('MN_Recommended'):
+                expected=r'符合乐队编成条件的成员不足' if missing else r'已按照.*推荐(?:编|组)成了乐队'
+                close=self.hit_text([505,482,275,85],'^关闭$')
+                if closes>=3 or not close or not self.hit_text([400,265,490,140],expected):
+                    raise FlowError('推荐编组结果弹窗未确认关闭，不操作背景页面')
+                self.tap_hit(close)
+                closes+=1
+                continue
             if self.area_modals():
                 continue
+            self.require_clear_notification_overlay()
             self.wait_ready()
-            return
+            return not missing
         raise FlowError('区域道具确认未结束')
 
     def result_modals(self):
@@ -346,7 +367,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 self.tap(640,526)
             elif self.reco('LV_RewardModal') or self.reco('LV_RankReward'):
                 self.tap(640,602)
-            elif any(self.reco(n) for n in ('LV_Rewards','LV_Experience')) or self.hit_text(
+            elif self.login_reward_page() or any(self.reco(n) for n in ('LV_Rewards','LV_Experience','LV_EventResult')) or self.hit_text(
                     [680,314,170,160],'GREAT|GOOD|BAD|MISS') or self.hit_text([110,270,175,180],'获得活动|获得徽章|演出报酬'):
                 hit = self.hit_text([940,600,280,105],'^下一步$|^确定$')
                 if hit:
@@ -402,7 +423,14 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 self.store.get(selection)
                 self.tap(1070,648)
                 self.wait_ready()
-                self.recommend()
+                if not self.recommend():
+                    self.report['skipped'].append({**asdict(selection), 'stage_level':level,
+                                                  'stage_kind':self.mining.stage,
+                                                  'reason':'insufficient_eligible_members'})
+                    print(f'[挖矿挑战] {selection.song["title"]}：符合条件的成员不足，跳过该挑战',flush=True)
+                    self.back()
+                    self.wait('MN_StageSelect')
+                    break
                 self.report['next_unlocked'] = False
                 row = self.perform(selection)
                 if row is None:

@@ -36,6 +36,23 @@ class DailyPolicyTests(unittest.TestCase):
 
 
 class DailyFlowTests(unittest.TestCase):
+    def test_empty_invitation_and_locked_missions_are_skipped_without_clicks(self):
+        import re
+        for category,text,reason in [('邀请邦友','输入邀请码','invitation_not_linked'),
+                                     ('邀请邦友','创建邀请码','invitation_not_linked'),
+                                     ('EX任务','此任务已被锁定','locked')]:
+            f=self.flow();f.tap_hit=Mock()
+            f.hit_text=Mock(side_effect=lambda roi,pattern:bool(re.search(pattern,text)))
+            f.claim_mission_category(category)
+            self.assertEqual(f.report['skipped_missions'],[{'category':category,'reason':reason}])
+            f.tap_hit.assert_not_called()
+
+    def test_unknown_missing_mission_button_still_fails(self):
+        f=self.flow();f.hit_text=Mock(return_value=None);f.tap_hit=Mock()
+        with self.assertRaisesRegex(FlowError,'没有已支持的领取按钮'):
+            f.claim_mission_category('EX任务')
+        f.tap_hit.assert_not_called()
+
     def flow(self):
         f=DailyFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False),
                                    get_node_data=lambda node: {'attach': {'enabled': True}}))
@@ -183,6 +200,26 @@ class DailyFlowTests(unittest.TestCase):
         f.click.assert_not_called()
         self.assertEqual([c.args for c in f.tap.call_args_list],[(1201,58),(985,570),(640,602),(1067,647)])
         f.wait.assert_not_called()
+
+    def test_costume_notice_is_closed_before_recruit_result_without_resubmission(self):
+        from PIL import Image
+        f=self.flow(); state={'scene':'costume'}
+        costume=np.array(Image.open(Path(__file__).parent/'fixtures/notifications/costume.png').convert('RGB'))[:,:,::-1].copy()
+        def snap():
+            f.image=costume.copy() if state['scene']=='costume' else np.full((720,1280,3),255,dtype=np.uint8)
+        f.snap=Mock(side_effect=snap)
+        f.ocr=Mock(return_value=[SimpleNamespace(text='获得服装',box=[400,140,130,35]),
+                                SimpleNamespace(text='确定',box=[600,530,80,35])])
+        f.reco=Mock(side_effect=lambda node:node=={'costume':'DY_RecruitResult',
+                  'result':'DY_RecruitResult','banner':'DY_FreeBanner'}[state['scene']])
+        def tap(x,y):
+            state['scene']='result' if state['scene']=='costume' else 'banner'
+        f.tap=Mock(side_effect=tap)
+        with patch('daily_tasks.time.sleep'):
+            f.finish_draw()
+        self.assertEqual([c.args for c in f.tap.call_args_list],[(640,547),(1067,647)])
+        f.free_remaining=Mock()
+        self.assertNotIn((770,476),[c.args for c in f.tap.call_args_list])
 
     def recruit_scenes(self, scenes):
         f=self.flow()

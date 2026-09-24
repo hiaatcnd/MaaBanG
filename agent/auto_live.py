@@ -205,6 +205,8 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
         return remaining,balance
 
     def dismiss_daily_reward(self):
+        if self.dismiss_notifications():
+            return True
         # This modal also appears BETWEEN tour songs. Its background remains
         # recognizable, but counters and controls are obscured until dismissed.
         if not self.reco('LV_DailyReward'):
@@ -234,6 +236,14 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
             self.snap()
             if self.dismiss_daily_reward():
                 continue
+            if self.reco('LV_EventPointReward'):
+                # Event milestone rewards use a shorter modal than rank rewards.
+                # Locate its own confirmation before considering the page behind it.
+                button=self.hit_text([520,505,240,75], '^确定$')
+                if button:
+                    self.tap_hit(button)
+                self.pause(2)
+                continue
             if self.reco('LV_RankUp'):
                 self.tap(640,526)
                 self.pause(2)
@@ -252,11 +262,13 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
             if self.reco('LV_TalkMenu'):
                 self.click('LV_TalkMenu')
                 continue
+            self.require_clear_notification_overlay()
             if (self.reco('CU_HomeBand') or self.reco('LV_Menu') or self.reco('LV_TourHome') or
                     self.reco('LV_TourSetup') or self.reco('LV_SongPage')):
                 return
             if (self.reco('LV_ScoreAuto') or self.reco('LV_TourSummary') or
-                    self.reco('LV_Rewards') or self.reco('LV_Experience') or self.reco('LV_LoginReward')):
+                    self.reco('LV_Rewards') or self.reco('LV_Experience') or self.reco('LV_LoginReward') or
+                    self.reco('LV_EventResult') or self.login_reward_page()):
                 button=self.hit_text([940,602,274,100], '^下一步$|^确定$|^确认$')
                 if button:
                     self.tap_hit(button)
@@ -264,6 +276,10 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
                     continue
             self.pause(2)
         raise FlowError('未识别演出结算页面，保留现场')
+
+    def login_reward_page(self):
+        return bool(self.reco('LV_LoginCampaign') and
+                    self.hit_text([310,410,670,110], '获得了.+'))
 
     def run(self):
         while True:

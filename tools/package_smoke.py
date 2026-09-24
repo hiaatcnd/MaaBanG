@@ -15,7 +15,10 @@ assert Path("MFAAvalonia.exe").is_file()
 assert {p.name for p in package.parent.glob('*.exe')} == {'MaaBanG.exe'}
 assert package.name == 'app'
 assert Path(interface['icon']).is_file()
+from user_data import data_root
 assert Path(os.environ["TEMP"]).resolve() == Path.home() / ".maabang" / "temp"
+from chart_store import ChartStore
+assert ChartStore().directory == data_root() / 'cache/charts'
 assert Path("resource/model/ocr/rec.onnx").is_file()
 for library in ("MaaFramework.dll", "MaaAgentClient.dll", "MaaAgentServer.dll"):
     native = package / "runtimes/win-x64/native" / library

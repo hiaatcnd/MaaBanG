@@ -56,7 +56,7 @@
     },
     "DY_MissionEntry": {
         "recognition": "TemplateMatch",
-        "template": "daily/MissionEntry.png",
+        "template": ["daily/MissionEntry.png", "daily/MissionEntryClipboard.png"],
         "roi": [
             1190,
             315,

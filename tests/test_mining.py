@@ -10,7 +10,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 sys.path.insert(0,str(ROOT/'tools'))
-from mining_policy import MiningOptions, star_state, can_practice, parse_level, pending_difficulties, material_rois, member_cards, gold_member_stars, DIFFICULTY_NODES
+from mining_policy import MiningOptions, star_state, can_practice, parse_level, pending_difficulties, material_rois, member_cards, member_portrait_scores, member_signature, same_member_portrait, gold_member_stars, DIFFICULTY_NODES
 from mining_live import MiningLiveFlow, ChallengeMiningFlow
 from mining_stories import StoryMiningFlow
 from chart_policy import ChartSelection
@@ -18,6 +18,142 @@ from update_mining_interface import update
 
 
 class MiningTests(unittest.TestCase):
+    def test_story_cancel_waits_for_overlay_to_leave_despite_visible_detail_header(self):
+        from costume_unlock import FlowError
+        for clears in (True,False):
+            f=StoryMiningFlow.__new__(StoryMiningFlow)
+            state={'time':0.,'snaps':0}
+            f.image=np.zeros((720,1280,3))
+            f.snap=lambda:state.update(snaps=state['snaps']+1)
+            visible=lambda:not clears or state['snaps']<3
+            f.reco=lambda node:visible() if node=='MN_StoryUnlock' else True
+            f.hit_text=Mock(return_value=True);f.tap_hit=Mock()
+            with patch('mining_stories.time.monotonic',side_effect=lambda:100+state['time']), patch(
+                    'mining_stories.time.sleep',side_effect=lambda seconds:state.update(time=state['time']+1.1)), patch(
+                    'mining_stories.dialog_box',side_effect=lambda image:(1,2,3,4) if visible() else None):
+                if clears:
+                    f.cancel_story_unlock()
+                    self.assertEqual(f.tap_hit.call_count,2)
+                    self.assertEqual(state['snaps'],3)
+                else:
+                    with self.assertRaisesRegex(FlowError,'未确认取消'):f.cancel_story_unlock()
+                    self.assertEqual(f.tap_hit.call_count,3)
+
+    def test_jittered_grid_keeps_each_card_identity_and_row_order(self):
+        grids=[np.array(Image.open(ROOT/f'tests/fixtures/mining/selection_jitter_{name}.png'))[:,:,::-1]
+               for name in ('before','after')]
+        cards=[member_cards(grid) for grid in grids]
+        self.assertNotEqual(cards[0][0][1],cards[1][0][1])
+        signatures=[[member_signature(grid,point) for point in points] for grid,points in zip(grids,cards)]
+        self.assertEqual(len(signatures[0]),13)
+        for i,current in enumerate(signatures[1]):
+            matches=[j for j,old in enumerate(signatures[0]) if same_member_portrait(current,old)]
+            self.assertEqual(matches,[i])
+        seen=[]
+        for i in range(13):
+            current=signatures[i%2]
+            selected=next(j for j,sig in enumerate(current) if not any(same_member_portrait(sig,old) for old in seen))
+            self.assertEqual(selected,i)
+            seen.append(current[selected])
+
+    def test_small_portrait_matches_without_skipping_correlation_peak(self):
+        grid=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_sayo_grid.png'))[:,:,::-1].copy()
+        detail=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_sayo_detail.png'))[:,:,::-1].copy()
+        cards=member_cards(grid);scores=member_portrait_scores(grid,cards,detail)
+        selected=next(i for i,p in enumerate(cards) if p[0]==959 and p[1]<300)
+        self.assertGreater(scores[selected],.90)
+        self.assertGreater(scores[selected]-max(s for i,s in enumerate(scores) if i!=selected),.15)
+
+    def test_recommendation_requires_explicit_success_or_shortage(self):
+        from costume_unlock import FlowError
+        for state in ('missing','success','unknown'):
+            f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
+            f.report={'skipped':[]};f.click=Mock();f.wait=Mock();f.save_frame=Mock()
+            f.tap_hit=Mock();f.wait_ready=Mock();f.snap=Mock();f.area_modals=Mock(return_value=False)
+            f.reco=Mock(return_value=False)
+            f.require_clear_notification_overlay=Mock()
+            def hit(roi,pattern):
+                return (state=='missing' if '成员不足' in pattern else
+                        state=='success' if '已按照' in pattern else True)
+            f.hit_text=hit
+            if state=='unknown':
+                with self.assertRaisesRegex(FlowError,'未确认推荐编组'):f.recommend()
+                f.tap_hit.assert_not_called();f.wait_ready.assert_not_called()
+            else:
+                self.assertEqual(f.recommend(),state=='success')
+                f.tap_hit.assert_called_once();f.wait_ready.assert_called_once()
+
+    def test_ineligible_challenge_is_skipped_before_playing_next_challenge(self):
+        f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
+        f.mining=MiningOptions.parse({});f.report={'skipped':[]};f.image=np.zeros((720,1280,3))
+        for name in ('navigate_menu','click','select_stage_kind','swipe','wait','tap','choose_difficulty_exact','wait_ready','back'):
+            setattr(f,name,Mock())
+        f.limited=Mock(return_value=False)
+        f.challenge_cards=Mock(side_effect=[[(200,np.zeros((12,30)),0,90)],[(300,np.full((12,30),30),0,90)]])
+        f.selected_level=Mock(return_value=1);f.text=Mock(return_value='BLACK SHOUT')
+        f.store=Mock();f.recommend=Mock(side_effect=[False,True]);f.perform=Mock(return_value=None)
+        f.run()
+        self.assertEqual(f.recommend.call_count,2)
+        f.perform.assert_called_once()
+        self.assertEqual(f.report['skipped'][0]['reason'],'insufficient_eligible_members')
+        self.assertEqual(f.back.call_count,2)
+
+    def test_recommendation_cannot_return_through_a_stuck_modal(self):
+        from costume_unlock import FlowError
+        f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
+        f.report={'skipped':[]};f.click=Mock();f.wait=Mock();f.save_frame=Mock()
+        f.tap_hit=Mock();f.wait_ready=Mock();f.snap=Mock()
+        f.hit_text=Mock(return_value=True);f.reco=Mock(return_value=True)
+        with self.assertRaisesRegex(FlowError,'未确认关闭'):f.recommend()
+        self.assertEqual(f.tap_hit.call_count,3)
+        f.wait_ready.assert_not_called()
+
+    def test_invalid_member_popup_stops_worker_before_first_note_timeout(self):
+        from costume_unlock import FlowError
+        f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
+        f.snap=Mock();f.hit_text=Mock(return_value=True);f.save_frame=Mock();f.tap=Mock();f.area_modals=Mock()
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(FlowError,'不符合成员条件'):
+                f.monitor_chart_worker(Path(directory))
+        f.tap.assert_not_called();f.area_modals.assert_not_called()
+
+    def test_animated_bonus_badge_does_not_hide_a_member(self):
+        image=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_badge.png'))[:,:,::-1].copy()
+        cards=member_cards(image)
+        self.assertEqual([x for x,y in cards if y<300],[344,467,590,713,836,959,1082])
+
+    def test_white_michelle_portrait_with_badge_touching_viewport_is_not_skipped(self):
+        image=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_michelle_badge.png'))[:,:,::-1].copy()
+        cards=member_cards(image)
+        self.assertEqual(len(cards),15)
+        self.assertEqual([x for x,y in cards if y<300],[344,467,590,713,836,959,1082])
+
+    def test_trained_portrait_uses_larger_matching_scale(self):
+        grid=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_trained_grid.png'))[:,:,::-1].copy()
+        detail=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_trained_detail.png'))[:,:,::-1].copy()
+        cards=member_cards(grid);scores=member_portrait_scores(grid,cards,detail)
+        selected=next(i for i,p in enumerate(cards) if p[0]==590 and p[1]<300)
+        self.assertGreater(scores[selected],.75)
+        self.assertGreater(scores[selected]-max(s for i,s in enumerate(scores) if i!=selected),.06)
+
+    def test_member_selection_matches_detail_and_rejects_another_card(self):
+        from costume_unlock import FlowError
+        grid=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_grid.png').convert('RGB'))[:,:,::-1].copy()
+        detail=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_detail.png').convert('RGB'))[:,:,::-1].copy()
+        cards=member_cards(grid)
+        for index in (0,1):
+            f=StoryMiningFlow.__new__(StoryMiningFlow)
+            f.image=grid.copy(); f.report={};f.save_frame=Mock();f.tap=Mock()
+            f.wait=Mock(side_effect=lambda node:setattr(f,'image',detail.copy()))
+            f.text=Mock(return_value='北泽育美 熊熊燃烧！');f.snap=Mock()
+            if index==0:
+                self.assertEqual(f.open_member_verified(cards[index],cards),'北泽育美熊熊燃烧!')
+                self.assertEqual(f.report['selections'][0]['status'],'verified')
+            else:
+                with self.assertRaisesRegex(FlowError,'未与详情唯一匹配'):
+                    f.open_member_verified(cards[index],cards)
+                f.text.assert_not_called()
+
     def test_practice_enables_auto_training_before_checking_level_cap(self):
         flow=StoryMiningFlow.__new__(StoryMiningFlow)
         flow.mining=MiningOptions.parse({'practice':True,'stars':'3'})
@@ -161,6 +297,16 @@ class MiningTests(unittest.TestCase):
         shifted[185:598,285:1140]=image[252:665,285:1140]
         self.assertEqual(len(member_cards(shifted)),14)
         self.assertEqual(member_cards(np.full_like(image,255)),[])
+
+    def test_member_row_order_survives_small_portrait_height_differences(self):
+        image=self.member_fixture('member_grid')
+        # The old round(y/12) buckets split row two at y=378.
+        shifted=image.copy()
+        shifted[321:436,298:391]=255
+        shifted[317:432,298:391]=image[321:436,298:391]
+        cards=member_cards(shifted)
+        self.assertEqual([x for x,y in cards if 360<y<400],
+                         [344,467,590,713,836,959,1082])
 
     def test_real_selected_stars(self):
         for filename,expected in [('song_fc',['unplayed','unplayed','full_combo','full_combo','clear']),

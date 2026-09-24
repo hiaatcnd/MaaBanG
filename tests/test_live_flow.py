@@ -132,6 +132,48 @@ class LiveFlowTests(unittest.TestCase):
             f.settle_results()
             f.tap.assert_called_once_with(640,y)
 
+    def test_event_point_reward_blocks_background_until_confirmed(self):
+        for button in (None, SimpleNamespace(box=[590,525,100,35])):
+            f=self.flow()
+            f.settle_results=LiveFlow.settle_results.__get__(f)
+            scenes=iter(['reward','home']); state={}
+            f.snap=Mock(side_effect=lambda:state.update(scene=next(scenes)))
+            f.pause=Mock()
+            f.reco=Mock(side_effect=lambda node:node in {
+                'reward':{'LV_EventPointReward','LV_Rewards','LV_Experience'},
+                'home':{'CU_HomeBand'},
+            }[state['scene']])
+            f.hit_text=Mock(return_value=button); f.tap_hit=Mock()
+            f.settle_results()
+            f.hit_text.assert_called_once_with([520,505,240,75], '^确定$')
+            if button:
+                f.tap_hit.assert_called_once_with(button)
+            else:
+                f.tap_hit.assert_not_called()
+            f.tap.assert_not_called()
+
+    def test_event_result_uses_confirmation_instead_of_replay(self):
+        f=self.flow()
+        f.settle_results=LiveFlow.settle_results.__get__(f)
+        state={'scene':'result'}
+        f.reco=Mock(side_effect=lambda node:node=={
+            'result':'LV_EventResult','home':'CU_HomeBand'}[state['scene']])
+        button=SimpleNamespace(box=[1040,620,70,40])
+        f.hit_text=Mock(return_value=button)
+        f.tap_hit=Mock(side_effect=lambda hit:state.update(scene='home'))
+        f.pause=Mock()
+        f.settle_results()
+        f.hit_text.assert_called_once_with([940,602,274,100], '^下一步$|^确定$|^确认$')
+        f.tap_hit.assert_called_once_with(button)
+        f.tap.assert_not_called()
+
+    def test_login_reward_requires_campaign_and_obtained_message(self):
+        for header,body in ((False,True),(True,False),(True,True)):
+            f=self.flow()
+            f.reco=Mock(return_value=header)
+            f.hit_text=Mock(return_value=body)
+            self.assertEqual(f.login_reward_page(),header and body)
+
     def test_wait_song_polls_without_clicking_and_requires_next_tour_index(self):
         f=self.flow(mode='tour')
         f.wait_song=LiveFlow.wait_song.__get__(f)

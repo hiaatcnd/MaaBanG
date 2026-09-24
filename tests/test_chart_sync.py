@@ -1,4 +1,5 @@
 import sys
+import json
 import unittest
 from pathlib import Path
 import numpy as np
@@ -8,6 +9,30 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_real_bright_flick_heads_remain_visible_near_line(self):
+        from PIL import Image
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        for name,expected in (('flick_411.png',411),('flick_440.png',440)):
+            frame=np.array(Image.open(root/name))[:,:,::-1].copy()
+            self.assertAlmostEqual(locate_note_y(frame,6,'pink'),expected,delta=2)
+
+    def test_real_flick_sequence_locks_with_original_timing_tolerance(self):
+        from PIL import Image
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        trace=json.loads((root/'first_flick_sparse.json').read_text())
+        lock=FirstNoteLock(travel_scale=.245)
+        fitted=None
+        for row in trace:
+            y=row['y']
+            if 'image' in row:
+                frame=np.array(Image.open(root/row['image']))[:,:,::-1].copy()
+                y=locate_note_y(frame,6,'pink')
+            fitted=lock.observe(row['t'],y)
+            if fitted:break
+        self.assertIsNotNone(fitted)
+        self.assertLessEqual(fitted['residual_ms'],9)
+        self.assertGreater(fitted['crossing']-row['t'],.04)
+
     def test_white_loading_page_is_not_a_stage(self):
         self.assertIsNone(stage_state(np.full((720,1280,3),255,dtype=np.uint8)))
 

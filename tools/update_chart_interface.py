@@ -50,9 +50,9 @@ def update(interface):
         choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)]),
         choice('团队演出','mode','team',['谱面联网难度'])]}
     options['谱面联网难度']={'type':'select','label':'演出难度','default_case':'EXPERT',
-        'description':'SPECIAL 不可用时降为 EXPERT；其他难度不替换。首次进入匹配前缓存所选难度的全部谱面。',
+        'description':'SPECIAL 不可用时降为 EXPERT；其他难度不替换。识别最终歌曲后优先读取共享缓存，缺失时只下载对应谱面。',
         'cases':[choice(name.upper(),'difficulty1',name) for name in DIFFICULTIES]}
-    interface['task'][0]['description'] += ' 支持团队联网演出；掉房重进，房间3分钟未开演重进，仅成功结算计次。首次联网演出需预缓存全部可能谱面。协力演出暂未开放。'
+    interface['task'][0]['description'] += ' 支持团队联网演出；掉房重进，房间3分钟未开演重进，仅成功结算计次。识别最终歌曲后按需获取谱面，已有共享缓存直接复用。协力演出暂未开放。'
     names=['极小偏差（优先准确）','小偏差','中等偏差','中大偏差','大偏差','很大偏差（可能频繁MISS）']
     options['谱面随机偏差']={'type':'select','label':'随机偏差','default_case':'小偏差',
         'description':'时间和位置均采用以0为中心的截断正态分布：小偏差常见，大偏差少见，标准差为上限的1/3。各档均非零，不提供关闭；不保证ALL PERFECT，大偏差可能导致演出失败。',

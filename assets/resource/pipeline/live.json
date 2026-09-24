@@ -208,6 +208,16 @@
         ],
         "threshold": 0.85
     },
+    "LV_EventResult": {
+        "recognition": "OCR",
+        "expected": "累计活动点数",
+        "roi": [750, 425, 200, 55]
+    },
+    "LV_EventPointReward": {
+        "recognition": "OCR",
+        "expected": "累计达[成到].*点数.*(报酬|奖励)",
+        "roi": [400, 400, 500, 55]
+    },
     "LV_RewardModal": {
         "recognition": "TemplateMatch",
         "template": "live/RewardModal.png",
@@ -273,6 +283,11 @@
             60
         ],
         "threshold": 0.85
+    },
+    "LV_LoginCampaign": {
+        "recognition": "OCR",
+        "expected": "登录奖励活动",
+        "roi": [280, 40, 730, 205]
     },
     "LV_LoginReward": {
         "recognition": "TemplateMatch",

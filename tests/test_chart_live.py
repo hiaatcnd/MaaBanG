@@ -4,7 +4,7 @@ import sys
 from types import SimpleNamespace
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
@@ -16,21 +16,36 @@ from song_catalog import BY_ID, available_difficulties
 
 
 class ChartLiveTests(unittest.TestCase):
+    def test_rewards_page_confirms_result_before_settlement_navigation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            f=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+                            ChartOptions.parse({}),folder)
+            f.snap=Mock();f.pause=Mock();f.result_modals=Mock(return_value=False)
+            f.reco=Mock(side_effect=lambda node:node=='LV_Rewards')
+            f.hit_text=Mock(side_effect=lambda roi,pattern:object() if pattern=='^下一步$' else None)
+            f.save_frame=Mock();f.tap_hit=Mock();row={}
+            f.await_chart_result(1,row)
+            self.assertEqual(row['status'],'result_confirmed')
+            self.assertEqual(row['result_evidence'],'rewards_page')
+            f.tap_hit.assert_not_called()
+
     def test_story_unlock_modal_requires_known_header_and_own_confirm(self):
-        import re
+        import numpy as np
         for header in ('解锁活动故事','解锁主线故事','无关弹窗'):
             with self.subTest(header=header),tempfile.TemporaryDirectory() as folder:
                 flow=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
                                    ChartOptions.parse({}),folder)
                 button=SimpleNamespace(box=[521,550,236,64])
-                flow.dismiss_daily_reward=Mock(return_value=False)
-                def hit(roi,pattern):
-                    if roi==[370,85,350,65]:
-                        return bool(re.search(pattern,header))
-                    return button if roi==[510,540,260,85] else None
-                flow.hit_text=Mock(side_effect=hit)
+                flow.image=np.full((720,1280,3),90,dtype=np.uint8)
+                flow.image[100:640,333:947]=255
+                flow.image[175:178,365:915]=[140,50,255]
+                button=SimpleNamespace(text='确定',box=[600,550,80,35])
+                flow.ocr=Mock(return_value=[SimpleNamespace(text=header,box=[390,135,230,35]),button])
+                flow.reco=Mock(return_value=False)
+                flow.snap=Mock(side_effect=lambda:flow.image.fill(0))
                 flow.tap_hit=Mock()
-                self.assertEqual(flow.result_modals(),header!='无关弹窗')
+                with patch('notifications.time.sleep'):
+                    self.assertEqual(flow.result_modals(),header!='无关弹窗')
                 self.assertEqual(flow.tap_hit.call_count,int(header!='无关弹窗'))
 
     def test_nonzero_profiles_and_invalid_options(self):
