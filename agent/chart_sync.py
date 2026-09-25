@@ -34,19 +34,30 @@ def locate_note_y(image, lane, color='cyan'):
         mask = (green > 220) & (blue < 200) & (red < 200)
     elif color == 'pink':
         # Flick heads brighten as they approach the line. Their green channel
-        # can exceed 180, but magenta chroma still separates them from white.
+        # can exceed 230, but magenta chroma still separates them from white.
+        # DEPARTURES' simultaneous flicks have a pale center: both red and
+        # blue exceed green by about 20, even before reaching the lock region.
         mask = ((red > 200) & (blue > 130) &
                 (red.astype(np.int16)-green > 30) &
                 (blue.astype(np.int16)-green > 15))
     else:
         raise ValueError('Unsupported first-note color')
-    counts = (mask & corridor).sum(axis=1)
-    ids = np.where(counts > np.maximum(8, np.arange(60, 555)*.08))[0]
-    if not len(ids):
-        return None
-    groups = np.split(ids, np.where(np.diff(ids) > 1)[0]+1)
-    candidates = [float(g[np.argmax(counts[g])]+60)
-                  for g in groups if 1 <= len(g) <= 18]
+    def candidates_for(colors):
+        counts = (colors & corridor).sum(axis=1)
+        ids = np.where(counts > np.maximum(8, np.arange(60, 555)*.08))[0]
+        groups = np.split(ids, np.where(np.diff(ids) > 1)[0]+1)
+        return [float(g[np.argmax(counts[g])]+60)
+                for g in groups if 1 <= len(g) <= 18]
+
+    candidates = candidates_for(mask)
+    if color == 'pink':
+        pale = ((red > 230) & (blue > 230) &
+                (red.astype(np.int16)-green > 15) &
+                (blue.astype(np.int16)-green > 15))
+        # Preserve the existing head coordinate when its saturated pixels are
+        # visible. Use the pale center only for otherwise missing note heads.
+        candidates += [y for y in candidates_for(pale)
+                       if not any(abs(y-original) <= 18 for original in candidates)]
     return max(candidates) if candidates else None
 
 

@@ -9,6 +9,35 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_departures_pale_flick_keeps_first_note_identity(self):
+        from PIL import Image
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        trace=json.loads((root/'departures_first_flick.json').read_text())
+        lock=FirstNoteLock(travel_scale=.245)
+        fitted=None
+        for row in trace:
+            y=row['y']
+            if 'image' in row:
+                frame=np.array(Image.open(root/row['image']))[:,:,::-1].copy()
+                y=locate_note_y(frame,0,'pink')
+                # The old detector switched to the later flick at y=129.
+                self.assertAlmostEqual(y,row['y'],delta=2)
+                self.assertAlmostEqual(locate_note_y(frame,6,'pink'),y,delta=10)
+            fitted=lock.observe(row['t'],y)
+            if fitted:break
+        self.assertIsNotNone(fitted)
+        self.assertLessEqual(fitted['residual_ms'],9)
+        self.assertGreater(fitted['crossing']-row['t'],.04)
+
+    def test_pale_flick_fallback_excludes_white_and_other_note_colors(self):
+        frame=np.zeros((720,1280,3),dtype=np.uint8)
+        for color in ([255,255,255],[240,240,240],[255,250,255],
+                      [255,255,100],[80,255,100]):
+            frame[390:395,600:680]=color
+            self.assertIsNone(locate_note_y(frame,3,'pink'))
+        frame[390:395,600:680]=[253,230,254]
+        self.assertEqual(locate_note_y(frame,3,'pink'),390)
+
     def test_real_bright_flick_heads_remain_visible_near_line(self):
         from PIL import Image
         root=Path(__file__).parent/'fixtures/chart_sync'
