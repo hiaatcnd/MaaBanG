@@ -14,7 +14,7 @@ class LiveFlowTests(unittest.TestCase):
     def flow(self, **options):
         f=LiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
                    LiveOptions.parse(options))
-        for name in ('snap','home','navigate_menu','wait_ready','configure_fire','tap','settle_results','wait_song'):
+        for name in ('snap','home','navigate_menu','wait_ready','configure_fire','tap','settle_results','wait_song','disable_mv'):
             setattr(f,name,Mock())
         f.prepare_round=Mock(return_value='expert')
         f.remaining=Mock(return_value=10)
@@ -51,6 +51,7 @@ class LiveFlowTests(unittest.TestCase):
         f.verify_start=Mock(side_effect=[(3,9),(2,8),(1,7)])
         f.run()
         self.assertEqual(f.tap.call_count,3)
+        self.assertEqual(f.disable_mv.call_count,3)
         self.assertEqual([c.args[3] for c in f.verify_start.call_args_list],[3,2,1])
         self.assertEqual(f.report['completed_rounds'],1)
         self.assertEqual(len(f.report['rounds'][0]['songs']),3)
@@ -225,13 +226,26 @@ class LiveFlowTests(unittest.TestCase):
             f=self.flow()
             f.image=np.full((720,1280,3),255,dtype=np.uint8)
             f.image[551:563,arrow:arrow+7]=[123,60,255]
-            f.text=Mock(side_effect=[before,after])
+            f.ocr=Mock(side_effect=[[SimpleNamespace(text=before,score=.99)],
+                                    [SimpleNamespace(text=after,score=.99)]])
             self.assertEqual(f.fire_preview(),(int(before),int(after)))
-            left,right=[call.args[0] for call in f.text.call_args_list]
+            left,right=[call.args[0] for call in f.ocr.call_args_list]
+            self.assertTrue(all(call.kwargs['only_rec'] for call in f.ocr.call_args_list))
             self.assertLess(left[0]+left[2],arrow)
             self.assertGreater(right[0],arrow+6)
         f.image[:]=255
         with self.assertRaises(FlowError): f.fire_preview()
+
+    def test_fire_preview_rejects_uncertain_or_non_numeric_readings(self):
+        import numpy as np
+        f=self.flow()
+        f.image=np.full((720,1280,3),255,dtype=np.uint8)
+        f.image[551:563,1069:1076]=[123,60,255]
+        for hits in ([],[SimpleNamespace(text='9',score=.596882)],
+                     [SimpleNamespace(text='6?',score=.99)],
+                     [SimpleNamespace(text='6',score=.99)]*2):
+            f.ocr=Mock(return_value=hits)
+            with self.assertRaises(FlowError):f.fire_preview()
 
     def test_ui_options_merge_independently_and_allow_blank_limit(self):
         import itertools

@@ -3,7 +3,7 @@ import json
 import time
 from pathlib import Path
 from maa.custom_action import CustomAction
-from mining_policy import DEFAULTS, NODES, DIFFICULTY_NODES, MiningOptions
+from mining_policy import DEFAULTS, NODES, DIFFICULTY_NODES, STAR_NODES, MiningOptions
 from mining_live import MiningLiveFlow, ChallengeMiningFlow
 from mining_stories import StoryMiningFlow
 
@@ -19,6 +19,16 @@ class MiningAction(CustomAction):
         try:
             values = {key:(context.get_node_data(node) or {}).get('attach',{}).get('value',DEFAULTS[key])
                       for key,node in NODES.items()}
+            star_settings=(context.get_node_data(NODES['stars']) or {}).get('attach',{})
+            if star_settings.get('checkbox',False):
+                selected=[]
+                for stars,node in STAR_NODES.items():
+                    enabled=(context.get_node_data(node) or {}).get('attach',{}).get('enabled',False)
+                    if not isinstance(enabled,bool):
+                        raise ValueError('成员星级配置无效：'+str(stars))
+                    if enabled:
+                        selected.append(str(stars))
+                values['stars']=','.join(selected)
             values['difficulties'] = []
             for difficulty,node in DIFFICULTY_NODES.items():
                 enabled = (context.get_node_data(node) or {}).get('attach',{}).get('enabled',False)

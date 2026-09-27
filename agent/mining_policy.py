@@ -4,10 +4,11 @@ import re
 import numpy as np
 
 DIFFICULTIES = ('easy', 'normal', 'hard', 'expert', 'special')
-DEFAULTS = dict(max_rounds='10', stories=True, memories=True, practice=False,
-                unlock=False, stars='1,2,3', stage='main', fire=0, shortage='stop')
+DEFAULTS = dict(max_rounds='', stories=True, memories=True, practice=False,
+                unlock=False, stars='1,2,3', stage='main', challenge_target='uncleared', fire=0, shortage='stop')
 NODES = {key: 'MN_' + key for key in DEFAULTS}
 DIFFICULTY_NODES = {difficulty:'MN_difficulty_'+difficulty for difficulty in DIFFICULTIES}
+STAR_NODES = {stars:f'MN_star_{stars}' for stars in range(1,6)}
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class MiningOptions:
     difficulties: tuple[str, ...]
     fire: int
     shortage: str
+    challenge_target: str
 
     @classmethod
     def parse(cls, data):
@@ -37,11 +39,13 @@ class MiningOptions:
             if not isinstance(values[key], bool):
                 raise ValueError(f'{key} 必须为布尔值')
         raw_stars = values['stars']
-        if not isinstance(raw_stars, str) or not re.fullmatch(r'[1-5](?:,[1-5])*', raw_stars):
-            raise ValueError('练习星级请用英文逗号分隔，例如 1,2,3')
-        stars = frozenset(map(int, raw_stars.split(',')))
+        if not isinstance(raw_stars, str) or (raw_stars and not re.fullmatch(r'[1-5](?:,[1-5])*', raw_stars)):
+            raise ValueError('成员星级请用英文逗号分隔，例如 1,2,3')
+        stars = frozenset(map(int, raw_stars.split(','))) if raw_stars else frozenset()
         if values['stage'] not in ('main', 'special'):
             raise ValueError('请选择主舞台或特别舞台')
+        if values['challenge_target'] not in ('uncleared','not_full_stars'):
+            raise ValueError('请选择未完成或未满星')
         difficulties = values.get('difficulties',DIFFICULTIES)
         if not isinstance(difficulties,(list,tuple)) or any(d not in DIFFICULTIES for d in difficulties):
             raise ValueError('请选择有效的挖矿难度')
@@ -52,7 +56,60 @@ class MiningOptions:
         if shortage not in ('stop','items'):
             raise ValueError('火不足时请选择停止或使用回复道具')
         return cls(limit, *(values[k] for k in ('stories', 'memories', 'practice', 'unlock')),
-                   stars, values['stage'],tuple(d for d in DIFFICULTIES if d in difficulties),int(fire),shortage)
+                   stars, values['stage'],tuple(d for d in DIFFICULTIES if d in difficulties),int(fire),shortage,values['challenge_target'])
+
+
+def challenge_star_count(image):
+    """Read the three large score stars on a confirmed stage detail screen."""
+    count = 0
+    for x in (373,435,498):
+        patch = image[464:479,x-7:x+8].astype(float)
+        if patch.shape != (15,15,3):
+            return None
+        b,g,r = patch[:,:,0],patch[:,:,1],patch[:,:,2]
+        if np.mean((r>180)&(g>120)&(b<140)&(r-b>60))>.6:
+            count += 1
+        elif np.mean((np.ptp(patch,axis=2)<20)&(g>130)&(g<220))>.8:
+            pass
+        else:
+            return None
+    return count
+
+
+def challenge_pending(stars, target):
+    return stars is not None and (stars == 0 if target == 'uncleared' else stars < 3)
+
+
+def challenge_row_stars(image, box):
+    """Count all three list stars; partial/covered rows require detail fallback."""
+    bottom = box[1]+box[3]
+    if bottom+27>560:
+        return None
+    area=image[bottom+3:bottom+27,50:147].astype(float)
+    if area.shape!=(24,97,3):
+        return None
+    b,g,r=area[:,:,0],area[:,:,1],area[:,:,2]
+    gold=(r>180)&(g>120)&(b<140)&(r-b>60)
+    gray=(np.ptp(area,axis=2)<20)&(g>130)&(g<220)
+    cols=np.flatnonzero((gold|gray).sum(0)>=5)
+    # A star's white highlight/outline may split off a one-pixel gray edge.
+    # Join gaps within a star, but keep the much wider inter-star gap.
+    groups=[v for v in np.split(cols,np.where(np.diff(cols)>3)[0]+1) if len(v)]
+    if len(groups)!=3 or any(not 9<=len(v)<=26 for v in groups):
+        return None
+    centers=[float(np.mean(v)) for v in groups]
+    if any(not 27<=b-a<=36 for a,b in zip(centers,centers[1:])):
+        return None
+    count=0
+    for group in groups:
+        colored=int(gold[:,group].sum()); neutral=int(gray[:,group].sum())
+        if colored>3*neutral and colored>=35:
+            count+=1
+        elif neutral>3*colored and neutral>=35:
+            pass
+        else:
+            return None
+    return count
 
 
 def star_state(area):

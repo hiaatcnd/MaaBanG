@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import Mock, patch
+from types import SimpleNamespace
 import tempfile
 import numpy as np
 from PIL import Image
@@ -91,6 +92,7 @@ class MiningTests(unittest.TestCase):
         f.limited=Mock(return_value=False)
         f.challenge_cards=Mock(side_effect=[[(200,np.zeros((12,30)),0,90)],[(300,np.full((12,30),30),0,90)]])
         f.selected_level=Mock(return_value=1);f.text=Mock(return_value='BLACK SHOUT')
+        f.select_pending_stage=Mock(return_value=1)
         f.store=Mock();f.recommend=Mock(side_effect=[False,True]);f.perform=Mock(return_value=None)
         f.run()
         self.assertEqual(f.recommend.call_count,2)
@@ -136,8 +138,7 @@ class MiningTests(unittest.TestCase):
         self.assertGreater(scores[selected],.75)
         self.assertGreater(scores[selected]-max(s for i,s in enumerate(scores) if i!=selected),.06)
 
-    def test_member_selection_matches_detail_and_rejects_another_card(self):
-        from costume_unlock import FlowError
+    def test_member_selection_records_actual_detail_for_deduplication(self):
         grid=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_grid.png').convert('RGB'))[:,:,::-1].copy()
         detail=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_detail.png').convert('RGB'))[:,:,::-1].copy()
         cards=member_cards(grid)
@@ -145,14 +146,102 @@ class MiningTests(unittest.TestCase):
             f=StoryMiningFlow.__new__(StoryMiningFlow)
             f.image=grid.copy(); f.report={};f.save_frame=Mock();f.tap=Mock()
             f.wait=Mock(side_effect=lambda node:setattr(f,'image',detail.copy()))
-            f.text=Mock(return_value='北泽育美 熊熊燃烧！');f.snap=Mock()
-            if index==0:
-                self.assertEqual(f.open_member_verified(cards[index],cards),'北泽育美熊熊燃烧!')
-                self.assertEqual(f.report['selections'][0]['status'],'verified')
-            else:
-                with self.assertRaisesRegex(FlowError,'未与详情唯一匹配'):
-                    f.open_member_verified(cards[index],cards)
-                f.text.assert_not_called()
+            f.ocr=Mock(return_value=[SimpleNamespace(text='北泽育美 熊熊燃烧！',box=[292,167,200,40])]);f.snap=Mock()
+            self.assertEqual(f.open_member_detail(cards[index]),'北泽育美熊熊燃烧!')
+            self.assertEqual(f.report['selections'][0]['status'],'detail_ready')
+
+    def test_ambiguous_anon_portrait_does_not_block_story_eligibility(self):
+        grid=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_anon_grid.png'))[:,:,::-1].copy()
+        detail=np.array(Image.open(ROOT/'tests/fixtures/mining/selection_anon_detail.png'))[:,:,::-1].copy()
+        cards=member_cards(grid)
+        scores=member_portrait_scores(grid,cards,detail)
+        chosen=cards.index((1082,381))
+        other=max((i for i in range(len(cards)) if i!=chosen),key=lambda i:scores[i])
+        self.assertLess(scores[chosen]-scores[other],.06)  # Recorded production failure.
+        f=StoryMiningFlow.__new__(StoryMiningFlow)
+        f.image=grid.copy();f.report={};f.save_frame=Mock();f.tap=Mock();f.snap=Mock()
+        f.wait=Mock(side_effect=lambda node:setattr(f,'image',detail.copy()))
+        f.ocr=Mock(return_value=[SimpleNamespace(text='黄昏时分的密会 千早 爱音',box=[292,167,200,40])])
+        self.assertEqual(f.open_member_detail(cards[chosen]),'黄昏时分的密会千早爱音')
+        f.tap.assert_called_once_with(*cards[chosen])
+        self.assertEqual(f.report['selections'][0]['status'],'detail_ready')
+
+    def test_member_label_sorts_ocr_lines_and_empty_name_does_not_stop(self):
+        # Actual failed screenshots: the title's x is 293; name jittered 292/293.
+        title=SimpleNamespace(text='花开般的笑容',box=[293,167,120,23])
+        name=SimpleNamespace(text='北泽育美',box=[292,192,103,27])
+        for hits,expected in (([name,title],'花开般的笑容北泽育美'),
+                              ([title,name],'花开般的笑容北泽育美'),([], '成员1')):
+            f=StoryMiningFlow.__new__(StoryMiningFlow)
+            f.image=np.zeros((720,1280,3));f.report={}
+            f.save_frame=Mock();f.tap=Mock();f.wait=Mock();f.ocr=Mock(return_value=hits)
+            self.assertEqual(f.open_member_detail((344,258)),expected)
+            f.wait.assert_called_once_with('MN_MemberDetail')
+            f.ocr.assert_called_once();f.tap.assert_called_once()
+            self.assertEqual(f.report['selections'][0]['status'],'detail_ready')
+
+    def test_same_ocr_label_does_not_skip_a_different_unread_card(self):
+        f=StoryMiningFlow.__new__(StoryMiningFlow)
+        f.image=np.zeros((720,1280,3));f.report={'members':[]};f.mining=MiningOptions.parse({'memories':False})
+        for name in ('member_list','filter_unread','wait','home','back'):
+            setattr(f,name,Mock())
+        f.open_member_detail=Mock(return_value='相同的识别文字');f.read_story=Mock();f.hit_text=Mock(return_value=True)
+        with patch('mining_stories.member_cards',side_effect=[[(344,258)],[(467,258)],[]]), patch(
+                'mining_stories.same_member_portrait',return_value=False):
+            f.run()
+        self.assertEqual(f.read_story.call_count,2)
+
+    def test_game_rarity_filter_applies_even_when_practice_and_unlock_are_disabled(self):
+        for practice,unlock in ((False,False),(True,True)):
+            for memory in (False,True):
+                for wanted in ('1,2,3,5','4','1,2,3,4,5'):
+                    f=StoryMiningFlow.__new__(StoryMiningFlow)
+                    f.mining=MiningOptions.parse({'stars':wanted,'practice':practice,'unlock':unlock})
+                    f.report={};f.snap=Mock();f.swipe=Mock();f.save_frame=Mock()
+                    f.hit_text=Mock(return_value=SimpleNamespace(box=[240,300,120,24]))
+                    selected={261,419,578,736,895}
+                    f.checkbox=lambda x,y:x in selected
+                    def tap(x,y):
+                        self.assertEqual(y,366)
+                        selected.symmetric_difference_update({x})
+                    f.tap=Mock(side_effect=tap)
+                    f.filter_member_stars(memory)
+                    self.assertEqual(selected,{x for star,x in ((5,261),(4,419),(3,578),(2,736),(1,895))
+                                                if star in f.mining.stars})
+                    self.assertEqual(f.report['filters'],[{'memory':memory,'stars':sorted(f.mining.stars)}])
+
+    def test_failed_rarity_toggle_stops_before_applying_filter(self):
+        from costume_unlock import FlowError
+        f=StoryMiningFlow.__new__(StoryMiningFlow)
+        f.mining=MiningOptions.parse({'stars':'1,2,3,5'});f.report={}
+        f.snap=Mock();f.save_frame=Mock();f.tap=Mock();f.swipe=Mock();f.checkbox=Mock(return_value=True)
+        f.hit_text=Mock(return_value=SimpleNamespace(box=[240,300,120,24]))
+        with self.assertRaisesRegex(FlowError,'成员星级筛选未与配置一致'):
+            f.filter_member_stars(True)
+        f.tap.assert_called_once_with(419,366);f.save_frame.assert_not_called()
+
+    def test_unlocked_story_reads_even_if_level_ocr_is_empty(self):
+        f=StoryMiningFlow.__new__(StoryMiningFlow)
+        f.tap=Mock();f.snap=Mock();f.reco=Mock(return_value=False)
+        f.text=Mock(return_value='')
+        f.practice=Mock();f.finish_story=Mock()
+        row={};f.read_story(False,row)
+        f.tap.assert_called_once_with(225,620)
+        f.finish_story.assert_called_once_with(False,row)
+        f.practice.assert_not_called()
+        f.text.assert_called_once_with([654,348,150,35])
+
+    def test_locked_memory_still_respects_disabled_practice_and_unlock_options(self):
+        for unlock in (True,False):
+            f=StoryMiningFlow.__new__(StoryMiningFlow)
+            f.mining=MiningOptions.parse({'unlock':unlock,'practice':False})
+            f.tap=Mock();f.snap=Mock();f.reco=Mock(return_value=True)
+            f.text=Mock(side_effect=['1 / 60','解锁等级60级以上','1 / 60'])
+            f.rarity=Mock(return_value=5);f.cancel_story_unlock=Mock();f.finish_story=Mock()
+            row={};f.read_story(True,row)
+            f.tap.assert_called_once_with(480,620)
+            f.cancel_story_unlock.assert_called_once();f.finish_story.assert_not_called()
+            self.assertIn(row['status'],('level_locked','practice_disabled_or_ineligible'))
 
     def test_practice_enables_auto_training_before_checking_level_cap(self):
         flow=StoryMiningFlow.__new__(StoryMiningFlow)
@@ -348,6 +437,10 @@ class MiningTests(unittest.TestCase):
         flow.find_song = Mock()
         flow.select_song = Mock()
         flow.wait_ready = Mock()
+        flow.ensure_song_page = Mock()
+        flow.selected_song_matches = Mock(return_value=True)
+        flow.choose_difficulty_exact = Mock()
+        flow.tap = Mock()
         return flow
 
     def test_maximum_counts_non_fc_attempts(self):
@@ -376,6 +469,65 @@ class MiningTests(unittest.TestCase):
         flow.run()
         self.assertEqual(flow.perform.call_count,1)
         self.assertEqual(len(flow.report['full_combos']),1)
+        flow.find_song.assert_not_called()
+        flow.navigate_menu.assert_not_called()
+        flow.select_song.assert_not_called()
+
+    def test_existing_song_page_keeps_cursor_without_reentry(self):
+        flow=MiningLiveFlow.__new__(MiningLiveFlow)
+        flow.snap=Mock();flow.reco=Mock(side_effect=lambda n:n=='LV_SongPage')
+        flow.text=Mock(return_value='选择乐曲')
+        flow.navigate_menu=Mock();flow.open_page=Mock();flow.back=Mock()
+        flow.ensure_song_page()
+        flow.navigate_menu.assert_not_called();flow.open_page.assert_not_called()
+        flow.back.assert_not_called()
+
+    def test_ready_page_goes_back_once_even_when_both_templates_match(self):
+        flow=MiningLiveFlow.__new__(MiningLiveFlow)
+        flow.snap=Mock();flow.reco=Mock(return_value=True)
+        flow.text=Mock(return_value='选择乐队')
+        flow.back=Mock();flow.wait=Mock();flow.navigate_menu=Mock()
+        flow.ensure_song_page()
+        flow.back.assert_called_once();flow.navigate_menu.assert_not_called()
+
+    def test_pending_filter_advances_only_after_current_difficulty_is_exhausted(self):
+        flow=self.flow()
+        flow.mining=MiningOptions.parse({'difficulties':['easy','normal']})
+        flow.scan_difficulty_index=0;flow.scan_initialized=True
+        selection=ChartSelection.parse('306','normal')
+        flow.scan_pending_song=Mock(side_effect=[[],[selection],[]])
+        self.assertEqual(flow.next_song(set()),[selection])
+        self.assertEqual(flow.scan_difficulty_index,1)
+        self.assertFalse(flow.scan_initialized)
+        self.assertEqual(flow.next_song(set()),[])
+        self.assertEqual(flow.scan_difficulty_index,2)
+
+    def test_confirmed_fc_does_not_search_for_song_removed_by_filter(self):
+        flow=self.flow(1)
+        selection=ChartSelection.parse('306','easy')
+        flow.next_song=Mock(return_value=[selection])
+        flow.song_stars=Mock(return_value={'easy':'unplayed'})
+        def perform(_):
+            flow.report['attempted']+=1
+            return {'full_combo_confirmed':True}
+        flow.perform=Mock(side_effect=perform)
+        flow.run()
+        flow.song_stars.assert_called_once()
+        flow.find_song.assert_not_called()
+        self.assertEqual(flow.report['full_combos'],[{'song_id':'306','difficulty':'easy'}])
+
+    def test_same_song_can_be_mined_again_in_another_selected_difficulty(self):
+        from types import SimpleNamespace
+        flow=self.flow()
+        flow.mining=MiningOptions.parse({'difficulties':['easy','normal']})
+        flow.scan_difficulty_index=1;flow.scan_initialized=True
+        flow.wait=Mock();flow.pause=Mock();flow.snap=Mock();flow.tap_hit=Mock()
+        flow.ocr=Mock(return_value=[SimpleNamespace(text='target')])
+        flow.title_matches=lambda text,song:song['id']=='306'
+        flow.song_stars=Mock(return_value={'easy':'full_combo','normal':'unplayed'})
+        flow.report.update(scanned=[],skipped=[])
+        pending=flow.scan_pending_song({('306','easy')})
+        self.assertEqual(pending,[ChartSelection.parse('306','normal')])
 
     def test_interface_generation_is_idempotent(self):
         interface = json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
@@ -449,6 +601,26 @@ class MiningTests(unittest.TestCase):
         for values in ({'fire':4},{'fire':-1},{'fire':True},{'shortage':'stars'}):
             with self.assertRaises(ValueError):
                 MiningOptions.parse(values)
+
+    def test_mining_labels_are_short_and_practice_toggle_controls_both_permissions(self):
+        interface=update(json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8')))
+        tasks=[task for task in interface['task'] if task['entry'].startswith('Mine')]
+        for task in tasks:
+            for key in task['option']:
+                option=interface['option'][key]
+                self.assertFalse(option['label'].startswith('挖矿'))
+                for field in option.get('inputs',[]):
+                    self.assertFalse(field['label'].startswith('挖矿'))
+        story=next(task for task in tasks if task['entry']=='MineStories')
+        self.assertNotIn('挖矿材料解锁',story['option'])
+        self.assertNotIn('挖矿材料解锁',interface['option'])
+        option=interface['option']['挖矿练习满级']
+        self.assertEqual(option['label'],'练习至满级')
+        self.assertEqual(option['default_case'],'关闭')
+        for case in option['cases']:
+            self.assertEqual(case['pipeline_override'],{f'MN_{key}':{'attach':{'value':case['name']=='启用'}}
+                                                      for key in ('practice','unlock')})
+        self.assertEqual(interface['option']['挖矿练习星级']['label'],'成员星级')
 
     def test_insufficient_fire_does_not_count_or_start_an_attempt(self):
         from types import SimpleNamespace

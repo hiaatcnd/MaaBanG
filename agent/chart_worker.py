@@ -8,8 +8,12 @@ import threading
 import time
 from dataclasses import asdict
 
+# Embedded Python can pin sys.path to a different installed app via its _pth
+# file. A worker must load the modules beside the script it was asked to run.
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+
 from chart_policy import JITTER_PROFILES
-from chart_timing import compile_chart, first_anchor
+from chart_timing import compile_chart, first_anchor, GestureRecovery
 
 
 def start_authorized_stage(controller, mode):
@@ -53,6 +57,7 @@ def play(config_path):
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
     from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTracker, SlewedClock
+    import chart_sync
     import numpy as np
 
     config_path = Path(config_path)
@@ -61,6 +66,10 @@ def play(config_path):
     output = config_path.parent
     Toolkit.init_option(str(output))
     report = {'status':'preparing','events':[], 'phase_updates':[]}
+    report['implementation']={name:{'path':str(path),
+        'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+        for name,path in (('worker',Path(__file__).resolve()),
+                          ('chart_sync',Path(chart_sync.__file__).resolve()))}
     active = set()
     observer_stop = threading.Event()
     observer_failed = threading.Event()
@@ -188,7 +197,8 @@ def play(config_path):
             fitted = lock.observe((before+after)/2-start,y)
             if fitted is not None:
                 report['lock'] = fitted
-                origin = start+fitted['crossing']-anchor_time-.025
+                origin = tracker.origin_from_anchor(start+fitted['crossing'],anchor_time)
+                report['initial_touch_lead_ms']=tracker.phase_reference*1000
                 break
         if origin is None:
             raise RuntimeError('未锁定首键')
@@ -217,7 +227,9 @@ def play(config_path):
                             estimate = tracker.observe((before+after)/2-origin,
                                                        frame,clock.value)
                             if estimate and clock.update(estimate['correction']):
-                                report['phase_updates'].append(estimate)
+                                report['phase_updates'].append({**estimate,
+                                    'observed_at':(before+after)/2-origin,
+                                    'clock_ms':clock.value*1000})
                     observer_stop.wait(.12)
             except Exception as exc:
                 report['observer_error'] = str(exc)
@@ -225,7 +237,13 @@ def play(config_path):
 
         thread = threading.Thread(target=observe,daemon=True)
         thread.start()
+        recovery = GestureRecovery()
+        report['recoveries'] = []
+        recovery_times = []
         for event in events:
+            if recovery.skip(event):
+                report['recoveries'][-1]['skipped_events'] += 1
+                continue
             while True:
                 stopped()
                 now = time.perf_counter()
@@ -236,7 +254,28 @@ def play(config_path):
                 time.sleep(min(target-now,.005))
             sent = time.perf_counter()
             if sent-target>.15:
-                raise RuntimeError('演奏调度延迟过大，已停止发送过期音符')
+                missed={'event':asdict(event),'late_ms':(sent-target)*1000,
+                        'skipped_events':0,'released_contacts':sorted(active)}
+                report['recoveries'].append(missed)
+                recovery_times = [t for t in recovery_times if sent-t < 10]
+                if sent-target>2 or len(recovery_times)>=3:
+                    report['deadline_miss']=missed
+                    raise RuntimeError('持续或过长的调度阻塞，无法安全恢复演奏')
+                recovery_times.append(sent)
+                # The game keeps advancing during a host/API stall. Release
+                # held gestures and seek future heads, never replay the backlog
+                # or move the song origin by the duration of the stall.
+                for contact in sorted(active):
+                    stopped()
+                    if not controller.post_touch_up(contact).wait().succeeded:
+                        raise RuntimeError('恢复时释放触点失败')
+                now = time.perf_counter()
+                correction = clock.advance(now)
+                recovery.begin(now-origin-correction,active)
+                active.clear()
+                if recovery.skip(event):
+                    missed['skipped_events'] += 1
+                    continue
             x,y = round(197+147.7*event.lane+event.dx),round(event.y)
             if event.action=='down':
                 active.add(event.contact)
@@ -247,9 +286,13 @@ def play(config_path):
                 job=controller.post_touch_up(event.contact)
             ok=job.wait().succeeded
             report['events'].append({**asdict(event),'late_ms':(sent-target)*1000,
+                                     'api_ms':(time.perf_counter()-sent)*1000,
                                      'phase_ms':correction*1000,'ok':ok})
             if not ok:
                 raise RuntimeError('触控输入失败')
+            if report['recoveries'] and 'resumed_at' not in report['recoveries'][-1]:
+                report['recoveries'][-1]['resumed_at']=event.time
+                report['recoveries'][-1]['resume_late_ms']=(sent-target)*1000
             if event.action=='up':
                 active.discard(event.contact)
         report['status']='input_complete'

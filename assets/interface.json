@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.5.3",
+    "version": "v0.5.4",
     "controller": [
         {
             "name": "安卓端",
@@ -102,22 +102,54 @@
             "name": "挖矿：成员小故事",
             "entry": "MineStories",
             "default_check": false,
-            "description": "在乐队培养中分别筛选未读小故事和回忆小故事，跳过阅读并确认奖励。材料解锁与练习均需开启对应选项；只练习所选星级。练习时开启游戏自动特训，可从1级一次练到特训后的满级，并消耗对应特训材料。材料或练习券不足时跳过。",
+            "pipeline_override": {
+                "MN_stars": {
+                    "attach": {
+                        "checkbox": true
+                    }
+                },
+                "MN_star_1": {
+                    "attach": {
+                        "enabled": false
+                    }
+                },
+                "MN_star_2": {
+                    "attach": {
+                        "enabled": false
+                    }
+                },
+                "MN_star_3": {
+                    "attach": {
+                        "enabled": false
+                    }
+                },
+                "MN_star_4": {
+                    "attach": {
+                        "enabled": false
+                    }
+                },
+                "MN_star_5": {
+                    "attach": {
+                        "enabled": false
+                    }
+                }
+            },
+            "description": "在游戏内按成员星级筛选未读小故事和回忆小故事，跳过阅读并确认奖励。开启“练习至满级”后，允许使用练习券、自动特训材料及故事解锁材料；关闭时只读已解锁故事。材料或练习券不足时跳过。",
             "option": [
                 "挖矿阅读小故事",
                 "挖矿阅读回忆",
-                "挖矿材料解锁",
-                "挖矿练习满级",
-                "挖矿练习星级"
+                "挖矿练习星级",
+                "挖矿练习满级"
             ]
         },
         {
             "name": "挖矿：舞台挑战",
             "entry": "MineChallenges",
             "default_check": false,
-            "description": "选择主舞台或特别舞台，使用推荐编组，确认区域道具更换，以EXPERT、极小偏差演出。可选每首火数和火不足策略。解锁下一等级则继续，否则切换其他挑战。",
+            "description": "按乐队列表顺序、舞台编号从小到大挑战。可选未完成或未满星，每关每轮最多尝试一次。使用推荐编组，以EXPERT、极小偏差演出。",
             "option": [
                 "挖矿舞台类型",
+                "挖矿挑战目标",
                 "挖矿每首火数",
                 "挖矿火不足策略",
                 "挖矿最大演出数"
@@ -11274,7 +11306,8 @@
                         }
                     }
                 }
-            ]
+            ],
+            "label": "阅读小故事"
         },
         "挖矿阅读回忆": {
             "type": "select",
@@ -11299,40 +11332,24 @@
                         }
                     }
                 }
-            ]
-        },
-        "挖矿材料解锁": {
-            "type": "select",
-            "cases": [
-                {
-                    "name": "关闭",
-                    "pipeline_override": {
-                        "MN_unlock": {
-                            "attach": {
-                                "value": false
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "启用",
-                    "pipeline_override": {
-                        "MN_unlock": {
-                            "attach": {
-                                "value": true
-                            }
-                        }
-                    }
-                }
-            ]
+            ],
+            "label": "阅读回忆"
         },
         "挖矿练习满级": {
             "type": "select",
+            "label": "练习至满级",
+            "default_case": "关闭",
+            "description": "开启后，允许为所选星级使用练习券和自动特训材料练至满级，并使用材料解锁故事；材料不足则跳过。关闭时只读已解锁故事。",
             "cases": [
                 {
                     "name": "关闭",
                     "pipeline_override": {
                         "MN_practice": {
+                            "attach": {
+                                "value": false
+                            }
+                        },
+                        "MN_unlock": {
                             "attach": {
                                 "value": false
                             }
@@ -11346,11 +11363,15 @@
                             "attach": {
                                 "value": true
                             }
+                        },
+                        "MN_unlock": {
+                            "attach": {
+                                "value": true
+                            }
                         }
                     }
                 }
-            ],
-            "description": "只对所选星级启用练习和游戏自动特训，使用练习券及特训材料，按特训后的上限推荐用券；提交前检查材料，完成后核对实际等级。"
+            ]
         },
         "挖矿舞台类型": {
             "type": "select",
@@ -11375,17 +11396,18 @@
                         }
                     }
                 }
-            ]
+            ],
+            "label": "舞台类型"
         },
         "挖矿最大演出数": {
             "type": "input",
             "inputs": [
                 {
                     "name": "次数",
-                    "label": "挖矿最大演出数",
-                    "default": "10",
+                    "label": "最大演出次数",
+                    "default": "",
                     "verify": "^$|^[1-9][0-9]{0,2}$",
-                    "pattern_msg": "留空不限次数，或填写1–999"
+                    "pattern_msg": "留空不限，或填写1–999"
                 }
             ],
             "pipeline_override": {
@@ -11394,26 +11416,70 @@
                         "value": "{次数}"
                     }
                 }
-            }
+            },
+            "label": "最大演出次数"
         },
         "挖矿练习星级": {
-            "type": "input",
-            "inputs": [
-                {
-                    "name": "星级",
-                    "label": "挖矿练习星级",
-                    "default": "1,2,3",
-                    "verify": "^[1-5](,[1-5])*$",
-                    "pattern_msg": "使用英文逗号，例如1,2,3"
-                }
+            "type": "checkbox",
+            "default_case": [
+                "1★",
+                "2★",
+                "3★"
             ],
-            "pipeline_override": {
-                "MN_stars": {
-                    "attach": {
-                        "value": "{星级}"
+            "description": "直接用于游戏内成员筛选；关闭练习至满级时也生效。全部取消则跳过成员故事任务。",
+            "cases": [
+                {
+                    "name": "1★",
+                    "pipeline_override": {
+                        "MN_star_1": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "2★",
+                    "pipeline_override": {
+                        "MN_star_2": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "3★",
+                    "pipeline_override": {
+                        "MN_star_3": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "4★",
+                    "pipeline_override": {
+                        "MN_star_4": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "5★",
+                    "pipeline_override": {
+                        "MN_star_5": {
+                            "attach": {
+                                "enabled": true
+                            }
+                        }
                     }
                 }
-            }
+            ],
+            "label": "成员星级"
         },
         "挖矿自由演出难度": {
             "type": "checkbox",
@@ -11476,7 +11542,8 @@
                         }
                     }
                 }
-            ]
+            ],
+            "label": "自由演出难度"
         },
         "挖矿每首火数": {
             "type": "select",
@@ -11522,7 +11589,8 @@
                         }
                     }
                 }
-            ]
+            ],
+            "label": "每首火数"
         },
         "挖矿火不足策略": {
             "type": "select",
@@ -11549,7 +11617,8 @@
                         }
                     }
                 }
-            ]
+            ],
+            "label": "火不足策略"
         },
         "歌曲难度_easy_normal_hard_expert_special": {
             "type": "select",
@@ -11654,6 +11723,34 @@
                     }
                 }
             ]
+        },
+        "挖矿挑战目标": {
+            "type": "select",
+            "default_case": "未完成",
+            "description": "未完成：仅挑战已解锁的0星舞台；未满星：挑战已解锁的0–2星舞台。跳过满星及未解锁舞台。",
+            "cases": [
+                {
+                    "name": "未完成",
+                    "pipeline_override": {
+                        "MN_challenge_target": {
+                            "attach": {
+                                "value": "uncleared"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "未满星",
+                    "pipeline_override": {
+                        "MN_challenge_target": {
+                            "attach": {
+                                "value": "not_full_stars"
+                            }
+                        }
+                    }
+                }
+            ],
+            "label": "挑战目标"
         },
         "谱面第1首难度_easy_normal_hard_expert_special": {
             "type": "select",
@@ -43350,9 +43447,9 @@
                     "name": "次数",
                     "label": "最大演出次数",
                     "description": "自由及联网演出成功结算一首计一次；巡演完整三首计一次。掉房不计次。留空持续运行，直到停止、火或道具不足。",
-                    "default": "1",
+                    "default": "",
                     "verify": "^$|^[1-9][0-9]{0,2}$",
-                    "pattern_msg": "留空不限次数，或填写1–999"
+                    "pattern_msg": "留空不限，或填写1–999"
                 }
             ],
             "pipeline_override": {

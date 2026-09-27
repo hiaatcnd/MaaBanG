@@ -100,6 +100,35 @@ class GestureEvent:
     dx: float = 0.
 
 
+class GestureRecovery:
+    """Discard expired gestures after a host stall without shifting song time.
+
+    Contacts are reused by the compiler. A held contact remains suppressed until
+    its old up, while a later down on that contact starts a new valid gesture.
+    """
+
+    def __init__(self):
+        self.cutoff = float('-inf')
+        self.suppressed = set()
+
+    def begin(self, chart_time, active):
+        self.cutoff = chart_time + .030
+        self.suppressed.update(active)
+
+    def skip(self, event):
+        expired = event.time < self.cutoff
+        if event.action == 'down':
+            if expired:
+                self.suppressed.add(event.contact)
+            else:
+                self.suppressed.discard(event.contact)
+            return expired
+        suppressed = event.contact in self.suppressed
+        if event.action == 'up':
+            self.suppressed.discard(event.contact)
+        return expired or suppressed
+
+
 def first_anchor(chart):
     """Return an unjittered chart head, preferring a tap in an opening chord."""
     tempo = TempoMap(chart)

@@ -123,6 +123,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.state('准备演出设置')
         self.navigate_menu()
         self.open_page('LV_FreeEntry','LV_SongPage')
+        self.reset_inherited_song_filters()
         # The current unlocked selection is sufficient to access global settings.
         self.tap(1070,648)
         self.wait_ready()
@@ -276,6 +277,22 @@ class OnlineLiveFlow(ChartLiveFlow):
             cancelled.set()
 
     def verify_chart_start(self,index,selection,amount):
+        for attempt in range(2):
+            # Every reread must still belong to the same room/song/difficulty.
+            self.verify_final_selection(selection)
+            try:
+                before,after=self.fire_preview()
+                balance=self.fire_balance()
+                if before-after!=amount or before<amount or before!=balance:
+                    raise FlowError(f'联网开演火数预览不符：预览 {before} → {after}，'
+                                    f'顶部 {balance}，要求消耗 {amount}')
+                return before
+            except FlowError:
+                if attempt==1:
+                    raise
+                self.pause(.25)
+
+    def verify_final_selection(self,selection):
         self.snap()
         if not self.reco('OL_FinalConfirm'):
             raise FlowError('联网确认页面已离开，不能确认开演配置')
@@ -289,10 +306,6 @@ class OnlineLiveFlow(ChartLiveFlow):
         area=self.image[554:586,x-15:x+15].astype(float)
         if (area.max(2)-area.min(2)>75).mean()<.25:
             raise FlowError('开演前联网难度发生变化')
-        before,after=self.fire_preview()
-        if before-after!=amount or before<amount:
-            raise FlowError('联网开演火数预览不符')
-        return before
 
     def submit_online_ready(self,selection):
         self.snap()
