@@ -12,7 +12,7 @@ def main():
     parser.add_argument('task',choices=['MineFullCombo','MineStories','MineChallenges'])
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',default='127.0.0.1:16416')
-    parser.add_argument('--max-rounds',default='1')
+    parser.add_argument('--max-rounds',default='')
     parser.add_argument('--fire',type=int,choices=range(4),default=0)
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
     parser.add_argument('--practice',action='store_true')

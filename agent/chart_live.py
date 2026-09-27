@@ -118,13 +118,7 @@ class ChartLiveFlow(LiveFlow):
         raise FlowError('设置调整未收敛')
 
     def configure_stage(self):
-        self.snap()
-        # The selected checkbox is pink; gray is OFF, even when it shows a tick.
-        if self.pink(self.image[637:663,487:513]):
-            self.tap(500,650)
-        mode=normalized(self.text([175,633,80,32])).upper()
-        if mode=='ON':
-            self.tap(145,650)
+        self.disable_mv()
         self.tap(951,650)
         self.tap(295,155)
         # Restore scroll position, then adjust the decimal speed with bounded feedback.
@@ -285,6 +279,9 @@ class ChartLiveFlow(LiveFlow):
 
     def play_chart(self, index, selection, metadata, amount, row):
         online=self.settings.mode == 'team'
+        if not online:
+            self.wait_ready(index)
+        self.disable_mv()
         destination=self.output/(f'attempt{self.report["attempts"]}_playback' if online else
                                  f'round{self.report["completed_rounds"]+1}_song{index}')
         destination.mkdir()

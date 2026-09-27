@@ -23,6 +23,20 @@ def hit(text,x,y,w=100,h=30):
 
 
 class NotificationTests(unittest.TestCase):
+    @patch('notifications.time.sleep')
+    def test_stage_reward_ticket_is_an_item_not_recruitment(self,_):
+        button=hit('OK',606,521)
+        f=self.flow([hit('舞台挑战达成报酬获得',400,160),hit('星石招募券',460,300),button])
+        self.assertTrue(f.dismiss_notifications())
+        f.tap_hit.assert_called_once_with(button)
+
+    def test_stage_ticket_exception_does_not_allow_purchase_or_cancel(self):
+        for body in ('是否消耗星石','购买星石招募券','取消','招募'):
+            f=self.flow([hit('舞台挑战达成报酬获得',400,160),hit('星石招募券',460,300),
+                         hit(body,440,350),hit('OK',606,521)])
+            with self.assertRaises(FlowError):f.dismiss_notifications()
+            f.tap_hit.assert_not_called()
+
     def flow(self,hits):
         f=NotificationMixin()
         f.image=panel()

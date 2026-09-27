@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--jitter',choices=JITTER_PROFILES,default='small')
     parser.add_argument('--fire',type=int,choices=range(4),default=1)
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
-    parser.add_argument('--max-rounds',default='1')
+    parser.add_argument('--max-rounds',default='')
     parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--package',type=Path,help='Packaged app directory; use its embedded Agent over IPC')
     args=parser.parse_args()

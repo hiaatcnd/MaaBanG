@@ -85,7 +85,7 @@ class OnlinePolicyTests(unittest.TestCase):
         self.assertEqual(options.songs_per_round,1)
         self.assertEqual(options.fire,1)
         self.assertEqual(options.shortage,'stop')
-        self.assertEqual(options.max_rounds,1)
+        self.assertIsNone(options.max_rounds)
         self.assertIsNone(ChartOptions.parse({'mode':'team','max_rounds':''}).max_rounds)
 
     def test_coop_is_pending_not_exposed_as_working_mode(self):
@@ -124,6 +124,39 @@ class OnlinePolicyTests(unittest.TestCase):
 
 
 class OnlineFlowTests(unittest.TestCase):
+    def test_fire_check_rereads_inconsistency_without_guessing_or_spending(self):
+        with tempfile.TemporaryDirectory() as folder:
+            f=self.make_flow(folder)
+            f.verify_final_selection=Mock()
+            f.fire_preview=Mock(side_effect=[(9,3),(6,3)])
+            f.fire_balance=Mock(return_value=6)
+            f.tap=Mock()
+            self.assertEqual(f.verify_chart_start(1,ChartSelection('646','expert'),3),6)
+            self.assertEqual(f.verify_final_selection.call_count,2)
+            f.tap.assert_not_called()
+
+    def test_fire_check_rejects_persistent_mismatch_and_wrong_cost(self):
+        for preview,balance in (((9,6),6),((6,6),6),((2,0),2)):
+            with self.subTest(preview=preview),tempfile.TemporaryDirectory() as folder:
+                f=self.make_flow(folder)
+                f.verify_final_selection=Mock()
+                f.fire_preview=Mock(return_value=preview)
+                f.fire_balance=Mock(return_value=balance)
+                with self.assertRaisesRegex(RuntimeError,'火数预览不符'):
+                    f.verify_chart_start(1,ChartSelection('646','expert'),3)
+                self.assertEqual(f.fire_preview.call_count,2)
+
+    def test_fire_reread_aborts_if_room_changes(self):
+        from costume_unlock import FlowError
+        with tempfile.TemporaryDirectory() as folder:
+            f=self.make_flow(folder)
+            f.verify_final_selection=Mock(side_effect=[None,FlowError('联网确认页面已离开')])
+            f.fire_preview=Mock(return_value=(9,3))
+            f.fire_balance=Mock(return_value=6)
+            with self.assertRaisesRegex(FlowError,'页面已离开'):
+                f.verify_chart_start(1,ChartSelection('646','expert'),3)
+            self.assertEqual(f.fire_preview.call_count,1)
+
     def test_confirmed_result_can_resume_cleanup_without_recounting(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
@@ -175,7 +208,7 @@ class OnlineFlowTests(unittest.TestCase):
 
     def make_flow(self,folder):
         flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
-                            ChartOptions.parse({'mode':'team','fire':0}),folder)
+                            ChartOptions.parse({'mode':'team','fire':0,'max_rounds':1}),folder)
         selection=ChartSelection.parse('306','expert')
         flow.store.prepare_online=Mock(side_effect=AssertionError('must not prefetch the song pool'))
         flow.prepare_final_chart=Mock(return_value={'duration':1,'cache_hit':True})

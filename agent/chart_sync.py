@@ -50,10 +50,17 @@ def locate_note_y(image, lane, color='cyan'):
                 for g in groups if 1 <= len(g) <= 18]
 
     candidates = candidates_for(mask)
-    if color == 'pink':
-        pale = ((red > 230) & (blue > 230) &
-                (red.astype(np.int16)-green > 15) &
-                (blue.astype(np.int16)-green > 15))
+    if color in ('pink', 'green'):
+        if color == 'pink':
+            pale = ((red > 230) & (blue > 230) &
+                    (red.astype(np.int16)-green > 15) &
+                    (blue.astype(np.int16)-green > 15))
+        else:
+            # Hold heads can brighten past the saturated mask's red ceiling.
+            # Keep green chroma to exclude white/cyan heads and yellow effects.
+            pale = ((green > 220) & (red >= 200) &
+                    (green.astype(np.int16)-blue > 25) &
+                    (green.astype(np.int16)-red > 15))
         # Preserve the existing head coordinate when its saturated pixels are
         # visible. Use the pale center only for otherwise missing note heads.
         candidates += [y for y in candidates_for(pale)
@@ -96,12 +103,36 @@ class FirstNoteLock:
             self.points.clear()
         if not self.points or y > self.points[-1][1]+3:
             self.points.append((timestamp, y))
-        if len(self.points) < 5 or y < 435:
+        if len(self.points) < 5:
             return None
         points = np.array([p for p in self.points if p[1] >= 100][-9:])
         if len(points) < 5:
             return None
         if np.ptp(points[:,1]) < 80:
+            return None
+        if self.travel_scale is not None and 300 <= y <= 554:
+            # Decide before a slow capture can skip the near-line window. Keep
+            # the motion/identity checks above; this is not a single-frame gate.
+            arrivals=points[-3:,0]+self.travel_scale*np.log(590/points[-3:,1])
+            center=float(np.median(arrivals))
+            spread=float(np.median(np.abs(arrivals-center)))
+            crossing=float(np.min(arrivals))
+            # A stale capture biases an arrival late. Prefer the earlier of
+            # three agreeing projections, and check every sample: MAD alone
+            # can hide a single outlier. Leave enough time for the first touch.
+            if (spread <= .018 and np.max(np.abs(arrivals-center)) <= .025 and
+                    .030 < crossing-timestamp < .200):
+                return {'crossing':crossing,'residual_ms':spread*1000,
+                        'points':3,'y':y,'method':'hybrid_early',
+                        'travel_scale':self.travel_scale}
+            # When capture jitter prevented agreement, a tracked head near
+            # the line gives a shorter projection. Identity guards still apply.
+            crossing=float(arrivals[-1])
+            if y >= 450 and .003 < crossing-timestamp < .080:
+                return {'crossing':crossing,'residual_ms':spread*1000,
+                        'points':3,'y':y,'method':'hybrid_line',
+                        'travel_scale':self.travel_scale}
+        if y < 435:
             return None
         if self.travel_scale is not None:
             # A calibrated projection avoids amplifying startup frame jitter
@@ -140,6 +171,21 @@ class ChartPhaseTracker:
         self.travel_scale = travel_scale
         self.phase_reference = phase_reference
         self.samples = []
+        self.sparse_samples = []
+
+    def origin_from_anchor(self, crossing, chart_time):
+        """Use the same judgment-line reference for startup and later notes.
+
+        crossing is an absolute projection onto y=590. A second startup-only
+        lead would create an artificial phase error that the tracker must undo.
+        """
+        return crossing-chart_time-self.phase_reference
+
+    @staticmethod
+    def _supported(samples, count, frames):
+        return (len(samples) >= count and len({s[0] for s in samples}) >= frames and
+                len({(s[1],s[2]) for s in samples}) >= 4 and
+                len({s[1] for s in samples}) >= 2)
 
     def observe(self, timestamp, image, correction=0.):
         positions = [(lane,locate_note_y(image,lane)) for lane in range(7)]
@@ -155,16 +201,27 @@ class ChartPhaseTracker:
             distances = np.abs(errors-correction)
             order = np.argsort(distances)
             i = int(order[0])
-            if distances[i] > .085:
+            if distances[i] > .120:
                 continue
             if len(order)>1 and distances[order[1]]-distances[i] < .040:
                 continue
-            self.samples.append((timestamp,lane,i,float(errors[i])))
+            sample=(timestamp,lane,i,float(errors[i]))
+            self.sparse_samples.append(sample)
+            if distances[i] <= .085:
+                self.samples.append(sample)
         self.samples = [s for s in self.samples if timestamp-s[0] <= 2.5]
-        if len(self.samples)<10 or len({s[0] for s in self.samples})<5:
+        self.sparse_samples = [s for s in self.sparse_samples if timestamp-s[0] <= 8.]
+        # EASY charts may never put four distinct notes in a 2.5s window.
+        # Extend the evidence window only when short-window support is missing;
+        # retain four-note/two-lane consensus and the same outlier/MAD checks.
+        if self._supported(self.samples,10,5):
+            samples,window=self.samples,2.5
+        elif self._supported(self.sparse_samples,6,4):
+            samples,window=self.sparse_samples,8.
+        else:
             return None
         grouped = {}
-        for t,lane,i,error in self.samples:
+        for t,lane,i,error in samples:
             grouped.setdefault((lane,i),[]).append(error)
         if len(grouped)<4 or len({key[0] for key in grouped})<2:
             return None
@@ -175,15 +232,15 @@ class ChartPhaseTracker:
             return None
         estimate = float(np.median(inliers))
         mad = float(np.median(np.abs(inliers-estimate)))
-        if mad > .009 or abs(estimate)>.080:
+        if mad > .009 or abs(estimate)>.100:
             return None
         return {'correction':estimate,'mad_ms':mad*1000,
-                'notes':len(inliers),'samples':len(self.samples)}
+                'notes':len(inliers),'samples':len(samples),'window':window}
 
 
 class SlewedClock:
     """Bounded continuous phase adjustment; event order remains monotonic."""
-    def __init__(self, rate=.010, limit=.080):
+    def __init__(self, rate=.010, limit=.100):
         if not 0 < rate < 1 or not 0 < limit <= .1:
             raise ValueError('Unsafe clock correction limits')
         self.rate, self.limit = rate, limit

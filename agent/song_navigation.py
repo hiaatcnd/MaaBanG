@@ -29,6 +29,20 @@ def title_key(text):
 
 
 class SongNavigationMixin:
+    def reset_inherited_song_filters(self):
+        """Clear persistent filters once before a task's ordinary song selection."""
+        if getattr(self,'_inherited_filters_cleared',False):
+            return
+        self.wait('LV_SongPage')
+        self.tap(1116,55)
+        self.snap()
+        if not self.hit_text([690,20,350,50],'乐曲筛选'):
+            raise FlowError('未打开歌曲筛选，不能清理上次任务的筛选条件')
+        self.tap(1165,44)
+        self.tap(963,652)
+        self.wait('LV_SongPage')
+        self._inherited_filters_cleared=True
+
     def filter_expert_level(self,level):
         self.set_song_level_range(level,level)
 
@@ -147,6 +161,7 @@ class SongNavigationMixin:
         self.wait('LV_SongPage')
 
     def find_song(self,song):
+        self.reset_inherited_song_filters()
         self.wait('LV_SongPage')
         if self.selected_song_matches(song):
             return

@@ -20,6 +20,38 @@ OPTION_NODES = {key: 'LV_' + suffix for key, suffix in (
 
 
 class LiveFlow(SongNavigationMixin, DailyFlow):
+    def disable_mv(self):
+        """Cycle the ready-page MV/3D selector to OFF and verify cut-ins too."""
+        self.snap()
+        # Stage challenges have no ready-page MV controls.
+        if self.reco('MN_ChallengeHeader'):
+            return
+        # Team final confirmation exposes only the Cut in checkbox.
+        online=bool(self.reco('OL_FinalConfirm'))
+        # Songs without a playable MV have an entirely blank selector area.
+        # Empty OCR alone is insufficient: require a known ready page and blank pixels.
+        blank_selector=(np.mean(np.all(self.image[620:680,110:320]>245,axis=2))>.98 and
+                        (self.reco('LV_FreeReady') or self.reco('LV_TourHeader')))
+        has_selector=not online and not blank_selector
+        if has_selector:
+            for _ in range(4):
+                mode=normalized(self.text([175,620,145,60])).upper()
+                if mode=='OFF':
+                    break
+                if not re.search(r'ON|MV|[23]D|演奏',mode):
+                    raise FlowError(f'无法确认 MV/3D 演奏开关：{mode!r}')
+                self.tap(145,650)
+                self.snap()
+            else:
+                raise FlowError('未能关闭 MV/3D 演奏')
+        # The 3D Cut in checkbox is pink only when selected.
+        if self.pink(self.image[637:663,487:513]):
+            self.tap(500,650)
+            self.snap()
+        if ((has_selector and normalized(self.text([175,620,145,60])).upper()!='OFF') or
+                self.pink(self.image[637:663,487:513])):
+            raise FlowError('未确认 MV/3D 演奏和 Cut in 均已关闭')
+
     def __init__(self, context, options):
         super().__init__(context)
         self.options = options
@@ -168,10 +200,16 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
         if len(xs)<10 or not 3<=int(xs.max()-xs.min())<=13:
             raise FlowError('未定位火数预览箭头')
         left,right=1058+int(xs.min()),1058+int(xs.max())
-        before=normalized(self.text([1043,540,left-1043-2,33]))
-        after=normalized(self.text([right+3,540,32,33]))
-        if not re.fullmatch(r'\d{1,2}',before) or not re.fullmatch(r'\d{1,2}',after):
-            raise FlowError(f'无法读取火数预览：{before} → {after}')
+        def read_number(roi):
+            # These crops already isolate a number. Running text detection again
+            # can clip a small 6 into a 9 (recorded team confirmation at 6 -> 3).
+            hits=self.ocr(roi,only_rec=True)
+            text=normalized(hits[0].text) if len(hits)==1 else ''
+            if not re.fullmatch(r'\d{1,2}',text) or hits[0].score<.9:
+                raise FlowError(f'无法可靠读取火数预览：{text!r}')
+            return text
+        before=read_number([1043,540,left-1043-2,33])
+        after=read_number([right+3,540,32,33])
         return int(before),int(after)
 
     def verify_start(self, index, difficulty, amount, required_auto):
@@ -307,6 +345,7 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
                 amount=fire_for_song(self.options.fire,self.fire_balance(),self.options.shortage)
                 if amount is None: raise FlowError('开演前火数减少，停止并保留现场')
                 self.configure_fire(amount)
+                self.disable_mv()
                 before,balance=self.verify_start(index,difficulty,amount,self.options.songs_per_round-index+1)
                 song={'index':index,'fire':amount,'fire_before':balance,'auto_before':before,'status':'submitted'}
                 row['songs'].append(song)

@@ -13,7 +13,7 @@
     },
     "MN_max_rounds": {
         "attach": {
-            "value": "10"
+            "value": ""
         }
     },
     "MN_stories": {
@@ -41,9 +41,29 @@
             "value": "1,2,3"
         }
     },
+    "MN_star_1": {
+        "attach": { "enabled": false }
+    },
+    "MN_star_2": {
+        "attach": { "enabled": false }
+    },
+    "MN_star_3": {
+        "attach": { "enabled": false }
+    },
+    "MN_star_4": {
+        "attach": { "enabled": false }
+    },
+    "MN_star_5": {
+        "attach": { "enabled": false }
+    },
     "MN_stage": {
         "attach": {
             "value": "main"
+        }
+    },
+    "MN_challenge_target": {
+        "attach": {
+            "value": "uncleared"
         }
     },
     "MN_SongFilter": {

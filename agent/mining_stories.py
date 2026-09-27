@@ -9,7 +9,7 @@ from daily_tasks import DailyFlow
 from costume_unlock import FlowError, normalized
 from notifications import dialog_box
 from mining_policy import (parse_level, can_practice, material_rois, member_cards,
-                           gold_member_stars, member_portrait_scores,
+                           gold_member_stars,
                            member_signature, same_member_portrait)
 
 
@@ -46,6 +46,7 @@ class StoryMiningFlow(DailyFlow):
         self.snap()
         if not all(self.checkbox(x,282) for x in (260,459,658,857)):
             raise FlowError('未确认培养筛选已全选所有属性')
+        self.filter_member_stars(memory)
         for _ in range(12):
             self.snap()
             hit = self.hit_text([700,170,260,330],'^回忆小故事$')
@@ -74,6 +75,28 @@ class StoryMiningFlow(DailyFlow):
                 return
             self.swipe(1010,495,300)
         raise FlowError('未定位小故事未读筛选')
+
+    def filter_member_stars(self, memory):
+        # Game order is five to one stars, independent of practice/unlock.
+        slots=((5,261),(4,419),(3,578),(2,736),(1,895))
+        for _ in range(6):
+            self.snap()
+            label=self.hit_text([235,170,180,340],'^稀有度$')
+            if label:
+                y=label.box[1]+label.box[3]//2+54
+                if 195<=y<=485:
+                    for stars,x in slots:
+                        if self.checkbox(x,y)!=(stars in self.mining.stars):
+                            self.tap(x,y)
+                    self.snap()
+                    if any(self.checkbox(x,y)!=(stars in self.mining.stars) for stars,x in slots):
+                        raise FlowError('成员星级筛选未与配置一致')
+                    self.save_frame(f'filter_{"memory" if memory else "story"}_stars.png')
+                    self.report.setdefault('filters',[]).append(
+                        {'memory':memory,'stars':sorted(self.mining.stars)})
+                    return
+            self.swipe(1010,490,300)
+        raise FlowError('未定位成员星级筛选')
 
     def checkbox(self, x, y, radio=False):
         area = self.image[y-6:y+7,x-6:x+7].astype(float)
@@ -218,10 +241,13 @@ class StoryMiningFlow(DailyFlow):
         raise FlowError('故事解锁弹窗未确认取消，不点击底层返回')
 
     def read_story(self, memory, row):
-        current,maximum = parse_level(self.text([654,348,150,35]))
+        # Capture the unobstructed detail now, but only require a valid level
+        # when the story is locked. Its modal covers the level's screen region.
+        level_text = self.text([654,348,150,35])
         self.tap(480 if memory else 225,620)
         self.snap()
         if self.reco('MN_StoryUnlock'):
+            current,maximum = parse_level(level_text)
             text = normalized(self.text([465,444,360,48]))
             match = re.search(r'解锁等级(\d+)级以上',text)
             if not match:
@@ -302,38 +328,33 @@ class StoryMiningFlow(DailyFlow):
             time.sleep(.4)
         raise FlowError('故事阅读/奖励确认超时')
 
-    def open_member_verified(self, target, cards):
-        before=self.image.copy()
+    def open_member_detail(self, target):
         number=len(self.report.setdefault('selections',[]))+1
         self.save_frame(f'selection_{number}_list.png')
         self.tap(*target)
         self.wait('MN_MemberDetail')
-        scores=member_portrait_scores(before,cards,self.image)
-        chosen=cards.index(target)
-        other=max((score for i,score in enumerate(scores) if i!=chosen),default=-1.)
-        audit={'position':list(target),'score':scores[chosen],'other_score':other}
+        audit={'position':list(target)}
         self.report['selections'].append(audit)
         self.save_frame(f'selection_{number}_detail.png')
-        if scores[chosen]<.75 or scores[chosen]-other<.06:
-            audit['status']='identity_mismatch'
-            raise FlowError('所选成员图像未与详情唯一匹配，不读取故事或消耗材料')
-        identity=normalized(self.text([292,156,296,72]))
-        self.snap()
-        if not identity or normalized(self.text([292,156,296,72]))!=identity:
-            audit['status']='unstable_name'
-            raise FlowError('成员详情名称尚未稳定，不标记已访问')
-        audit.update(member=identity,status='verified')
-        print(f'[成员选择] {target} -> {identity}，图像匹配 {scores[chosen]:.3f}',flush=True)
+        # Name OCR is only a log label, never an eligibility or deduplication
+        # gate. The SDK may swap lines after a one-pixel shift in their x value.
+        # Traversal deduplicates list artwork; story state controls eligibility.
+        hits=sorted(self.ocr([292,156,296,72]),key=lambda hit:(hit.box[1],hit.box[0]))
+        identity=normalized(' '.join(hit.text for hit in hits)) or f'成员{number}'
+        audit.update(member=identity,status='detail_ready')
+        print(f'[成员选择] {target} -> {identity}',flush=True)
         return identity
 
     def run(self):
+        if not self.mining.stars:
+            self.report['status']='no_stars_selected'
+            return
         self.member_list()
         for memory,enabled in ((False,self.mining.stories),(True,self.mining.memories)):
             if not enabled:
                 continue
             self.filter_unread(memory)
             seen = []
-            identities = set()
             for _ in range(3000):
                 self.wait('MN_Members')
                 target = None
@@ -349,15 +370,13 @@ class StoryMiningFlow(DailyFlow):
                         break
                     raise FlowError('未识别到完整成员卡片，无法确认列表为空')
                 if target:
-                    identity = self.open_member_verified(target,cards)
+                    identity = self.open_member_detail(target)
                     seen.append(signature)
-                    if identity not in identities:
-                        identities.add(identity)
-                        row = {'member':identity,'memory':memory}
-                        self.report['members'].append(row)
-                        print(f'[挖矿故事] {identity}：'+('回忆小故事' if memory else '小故事'),flush=True)
-                        self.read_story(memory,row)
-                        print(f'[挖矿故事] {row.get("status","unknown")}',flush=True)
+                    row = {'member':identity,'memory':memory}
+                    self.report['members'].append(row)
+                    print(f'[挖矿故事] {identity}：'+('回忆小故事' if memory else '小故事'),flush=True)
+                    self.read_story(memory,row)
+                    print(f'[挖矿故事] {row.get("status","unknown")}',flush=True)
                     self.back()
                     self.wait('MN_Members')
                     continue

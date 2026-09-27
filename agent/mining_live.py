@@ -20,11 +20,54 @@ class MiningLiveFlow(ChartLiveFlow):
         self.report.update(mining_options={**asdict(options), 'stars': sorted(options.stars)},
                            scanned=[], skipped=[], full_combos=[], attempted=0)
         self.configured = False
+        self.scan_initialized = False
+        self.scan_difficulty_index = 0
+
+    def configure_pending_filter(self, difficulty):
+        self._inherited_filters_cleared=False
+        self.tap(1165,44)
+        for _ in range(3):
+            self.swipe(1200,200,550)
+        x,y=dict(easy=(711,493),normal=(892,493),hard=(1073,493),
+                 expert=(711,540),special=(892,540))[difficulty]
+        self.tap(x,y)
+        self.snap()
+        if not self.pink(self.image[y-8:y+9,x-8:x+9]):
+            raise FlowError('未确认挖矿筛选难度')
+        for _ in range(5):
+            self.snap()
+            hit=self.hit_text([725,90,135,500],r'未\s*FULL')
+            if hit:
+                y=hit.box[1]+hit.box[3]//2
+                self.tap(711,y)
+                self.snap()
+                if not self.pink(self.image[y-8:y+9,703:720]):
+                    raise FlowError('未确认未 FULL COMBO 筛选')
+                self.report.setdefault('pending_filters',[]).append(difficulty)
+                return
+            self.swipe(1200,550,280)
+        raise FlowError('未找到未 FULL COMBO 筛选')
+
+    def ensure_song_page(self):
+        self.snap()
+        # Both header templates can match the shared white/pink chrome.
+        # Read the actual page label before deciding whether to go back.
+        label=normalized(self.text([120,50,280,38]))
+        if label=='选择乐曲':
+            return
+        if label=='选择乐队':
+            self.back()
+            self.wait('LV_SongPage')
+            return
+        self.navigate_menu()
+        self.open_page('LV_FreeEntry','LV_SongPage')
 
     def limited(self):
         return self.mining.max_rounds is not None and self.report['attempted'] >= self.mining.max_rounds
 
     def result_modals(self):
+        if self.report['rounds'] and self.hit_text([940,430,280,55],r'FULL\s*COMBO|ALL\s*PERFECT'):
+            self.report['rounds'][-1]['full_combo_confirmed']=True
         # The JP song title can make OCR read the Chinese 一 as a long vowel ー.
         if self.hit_text([175,48,875,54],r'达成(?:报酬|奖励)[一ー—-]览'):
             hit = self.hit_text([510,580,260,80],'^关闭$')
@@ -41,8 +84,7 @@ class MiningLiveFlow(ChartLiveFlow):
                 if d in available_difficulties(song)}
 
     def open_all_songs(self, from_top=True):
-        self.navigate_menu()
-        self.open_page('LV_FreeEntry', 'LV_SongPage')
+        self.ensure_song_page()
         for _ in range(12):
             self.snap()
             hit = self.hit_text([0,106,180,95], '^所有$')
@@ -54,7 +96,7 @@ class MiningLiveFlow(ChartLiveFlow):
             raise FlowError('未找到所有歌曲分类')
         self.tap(1116,55)
         self.wait('MN_SongFilter')
-        self.tap(1165,44)  # Restore all filters, including difficulty/level/status.
+        self.configure_pending_filter(self.mining.difficulties[self.scan_difficulty_index])
         self.tap(963,652)
         self.wait('LV_SongPage')
         if not from_top:
@@ -70,14 +112,29 @@ class MiningLiveFlow(ChartLiveFlow):
         raise FlowError('歌曲列表未能滚动到顶部')
 
     def next_song(self, seen):
-        self.open_all_songs(from_top=not seen)
+        while self.scan_difficulty_index<len(self.mining.difficulties):
+            pending=self.scan_pending_song(seen)
+            if pending:
+                return pending
+            self.scan_difficulty_index+=1
+            self.scan_initialized=False
+        return []
+
+    def scan_pending_song(self, seen):
+        difficulty=self.mining.difficulties[self.scan_difficulty_index]
+        if not self.scan_initialized:
+            # A new difficulty has its own candidate list; scan it from the top.
+            self.open_all_songs(from_top=True)
+            self.scan_initialized=True
+        else:
+            self.ensure_song_page()
         previous = None
         for _ in range(1200):
             self.wait('LV_SongPage')
             candidates = []
             for hit in self.ocr([201,105,365,590]):
                 matches = [s for s in BY_ID.values() if self.title_matches(hit.text,s)]
-                if matches and any(s['id'] not in seen for s in matches):
+                if matches and any((s['id'],difficulty) not in seen for s in matches):
                     candidates.append((hit,matches))
             if candidates:
                 hit, matches = candidates[0]
@@ -89,7 +146,7 @@ class MiningLiveFlow(ChartLiveFlow):
                 if len(selected) != 1:
                     raise FlowError('歌曲名称/乐队无法唯一确认，停止扫描')
                 song = selected[0]
-                seen.add(song['id'])
+                seen.add((song['id'],difficulty))
                 states = self.song_stars(song)
                 self.pause(.2)
                 self.snap()
@@ -97,7 +154,7 @@ class MiningLiveFlow(ChartLiveFlow):
                     raise FlowError('歌曲星星状态不稳定')
                 self.report['scanned'].append({'song_id':song['id'],'stars':states})
                 pending = [ChartSelection.parse(song['id'],d)
-                           for d in pending_difficulties(states,self.mining.difficulties)]
+                           for d in pending_difficulties(states,(difficulty,))]
                 if any(state == 'unknown' for state in states.values()):
                     self.report['skipped'].append({'song_id':song['id'],'reason':'unknown_star'})
                 if pending:
@@ -108,7 +165,8 @@ class MiningLiveFlow(ChartLiveFlow):
             if previous is not None and np.mean(np.abs(area-previous)) < 1:
                 return []
             previous = area
-            self.swipe(385,650,220)
+            # Keep overlapping rows visible instead of flinging past unread titles.
+            self.swipe(385,520,360)
         raise FlowError('歌曲扫描达到保护上限，未确认扫描完成')
 
     def perform(self, selection):
@@ -149,19 +207,31 @@ class MiningLiveFlow(ChartLiveFlow):
                 for attempt in range(3):
                     if self.limited():
                         break
-                    self.navigate_menu()
-                    self.open_page('LV_FreeEntry','LV_SongPage')
-                    self.find_song(selection.song)
+                    self.ensure_song_page()
+                    if not self.selected_song_matches(selection.song):
+                        self.find_song(selection.song)
+                        self.clear_song_level_filter(selection.song)
+                        self.scan_initialized=False
                     if self.song_stars(selection.song)[selection.difficulty] == 'full_combo':
                         break
-                    self.select_song(selection)
+                    # next_song already selected and verified this song with all levels visible.
+                    self.choose_difficulty_exact(selection.difficulty)
+                    self.tap(1070,648)
                     self.wait_ready()
                     row = self.perform(selection)
                     if row is None:
                         return
-                    self.navigate_menu()
-                    self.open_page('LV_FreeEntry','LV_SongPage')
-                    self.find_song(selection.song)
+                    if row.get('full_combo_confirmed'):
+                        row['star_after']='full_combo'
+                        self.report['full_combos'].append(asdict(selection))
+                        # Completed songs disappear from the filtered list. Keep its
+                        # cursor and let the next scan read the remaining candidates.
+                        break
+                    self.ensure_song_page()
+                    if not self.selected_song_matches(selection.song):
+                        self.find_song(selection.song)
+                        self.clear_song_level_filter(selection.song)
+                        self.scan_initialized=False
                     state = self.song_stars(selection.song)[selection.difficulty]
                     row['star_after'] = state
                     if state == 'full_combo':
@@ -194,13 +264,91 @@ class ChallengeMiningFlow(MiningLiveFlow):
 
     def challenge_cards(self):
         from PIL import Image
-        for hit in self.ocr([260,104,80,610],r'\d+\s*/\s*\d+'):
+        hits = self.ocr([260,104,80,610],r'\d+\s*/\s*\d+')
+        for hit in sorted(hits,key=lambda hit:(hit.box[1],hit.box[0])):
             y = hit.box[1]+hit.box[3]//2
             if not 120 < y < 675:
                 continue
             signature = np.asarray(Image.fromarray(self.image[y-22:y+24,40:155]).resize((30,12))).astype(float)
             current, maximum = map(int,re.search(r'(\d+)\s*/\s*(\d+)',hit.text).groups())
             yield y,signature,current,maximum
+
+    def select_pending_stage(self, attempted):
+        from mining_policy import challenge_star_count, challenge_pending, challenge_row_stars
+        self.wait('MN_StageSelect')
+        # Stages are displayed in descending order. Reach stage 1 first, then
+        # scan upward; never trust the game's previously selected stage.
+        for _ in range(30 if not attempted else 0):
+            hits = self.ocr([35,95,155,475],r'^舞台\s*\d+$')
+            if any(int(re.search(r'\d+',h.text)[0])==1 for h in hits):
+                break
+            self.swipe(180,520,180)
+            self.wait('MN_StageSelect')
+        else:
+            if not attempted:
+                raise FlowError('未找到舞台1，不跳过前面的挑战')
+        inspected = set(attempted)
+        stagnant = 0
+        for _ in range(40):
+            hits = self.ocr([35,95,155,475],r'^舞台\s*\d+$')
+            levels = sorted({int(re.search(r'\d+',h.text)[0]) for h in hits})
+            if not levels:
+                raise FlowError('无法读取舞台列表')
+            for level in levels:
+                if level in inspected:
+                    continue
+                if level != max(inspected,default=0)+1:
+                    raise FlowError('舞台编号识别不连续，不跳过前面的挑战')
+                row=next(h for h in hits if int(re.search(r'\d+',h.text)[0])==level)
+                row_stars=challenge_row_stars(self.image,row.box)
+                if row_stars is not None and not challenge_pending(row_stars,self.mining.challenge_target):
+                    inspected.add(level)
+                    attempted.add(level)
+                    self.report.setdefault('stage_scan',[]).append({'level':level,'stars':row_stars,
+                        'target':self.mining.challenge_target,'source':'list'})
+                    continue
+                # Selecting a row recenters the list. Re-read positions before
+                # every tap instead of reusing coordinates from the old frame.
+                self.snap()
+                rows = self.ocr([35,95,155,475],r'^舞台\s*\d+$')
+                hit = next((h for h in rows if int(re.search(r'\d+',h.text)[0])==level),None)
+                if hit is None:
+                    break
+                y = hit.box[1]+hit.box[3]//2
+                if self.reco('MN_StageLock',roi=[218,max(95,y-25),55,55]):
+                    return None
+                self.tap_hit(hit)
+                if self.selected_level()!=level:
+                    raise FlowError('舞台选择未确认')
+                stars = challenge_star_count(self.image)
+                if stars is None:
+                    raise FlowError('无法确认舞台星数，不自动开演')
+                inspected.add(level)
+                self.report.setdefault('stage_scan',[]).append({'level':level,'stars':stars,
+                    'target':self.mining.challenge_target,'source':'detail'})
+                if challenge_pending(stars,self.mining.challenge_target):
+                    return level
+                attempted.add(level)
+                # A detail fallback recentered the list: old hit boxes no
+                # longer describe this frame. Restart the batch on a new frame.
+                break
+            # Re-read after the recentering above. Only scroll when every
+            # currently visible level has been inspected.
+            self.snap()
+            remaining = self.ocr([35,95,155,475],r'^舞台\s*\d+$')
+            if any(int(re.search(r'\d+',h.text)[0]) not in inspected for h in remaining):
+                continue
+            before=self.image[100:540,35:275].astype(float)
+            self.swipe(180,180,520)
+            self.wait('MN_StageSelect')
+            # The game can snap the scrolled list back to its selected row.
+            # An unchanged image alone does not prove we reached the end.
+            after_rows=self.ocr([35,95,155,475],r'^舞台\s*\d+$')
+            unread=any(int(re.search(r'\d+',h.text)[0]) not in inspected for h in after_rows)
+            stagnant = stagnant+1 if after_rows and not unread and np.mean(np.abs(before-self.image[100:540,35:275]))<1 else 0
+            if stagnant>=2:
+                return None
+        raise FlowError('舞台扫描未收敛')
 
     def restore_challenge(self):
         # Returning through home resets the challenge category and selection.
@@ -410,10 +558,14 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 continue
             self.tap(200,target)
             self.tap(1070,648)
+            attempted_levels = set()
             for _ in range(30):
                 if self.limited():
                     break
-                level = self.selected_level()
+                level = self.select_pending_stage(attempted_levels)
+                if level is None:
+                    break
+                attempted_levels.add(level)
                 title = self.text([460,124,480,44])
                 songs = [s for s in BY_ID.values() if self.title_matches(title,s)]
                 if len(songs) != 1:
@@ -438,8 +590,6 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 row['stage_level'] = level
                 row['stage_kind'] = self.mining.stage
                 row['next_unlocked'] = self.advance_level(level)
-                if not row['next_unlocked']:
-                    break
             self.back()
             self.wait('MN_ChallengeSelect')
         self.report['status'] = 'max_rounds_reached'

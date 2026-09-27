@@ -55,7 +55,7 @@ class ChartOptions:
         if shortage not in ('stop', 'items'):
             raise ValueError('火不足策略必须为停止或使用回复道具')
         fire = number(data.get('fire', 1), '每首火数', 3)
-        limit = data.get('max_rounds', '1')
+        limit = data.get('max_rounds', '')
         rounds = None if limit in ('', None) else number(limit, '最大演出次数', 999)
         if rounds == 0:
             raise ValueError('最大演出次数请留空或填写 1–999')
@@ -74,7 +74,7 @@ class ChartOptions:
         return 3 if self.mode in ('tour_free', 'tour_fixed') else 1
 
 
-OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='1',
+OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='',
                        **{f'song{i}':'306' for i in range(1,4)},
                        **{f'difficulty{i}':'expert' for i in range(1,4)})
 OPTION_NODES = {key: 'CL_'+key for key in OPTION_DEFAULTS}

@@ -65,7 +65,7 @@ def update(interface):
         'description':'优先小型饮料，不足时使用普通饮料。只补足本轮需要的火；不用星石。'}
     options['谱面最大演出次数']={'type':'input','label':'最大演出次数','inputs':[{'name':'次数','label':'最大演出次数',
         'description':'自由及联网演出成功结算一首计一次；巡演完整三首计一次。掉房不计次。留空持续运行，直到停止、火或道具不足。',
-        'default':'1','verify':'^$|^[1-9][0-9]{0,2}$','pattern_msg':'留空不限次数，或填写1–999'}],
+        'default':'','verify':'^$|^[1-9][0-9]{0,2}$','pattern_msg':'留空不限，或填写1–999'}],
         'pipeline_override':{OPTION_NODES['max_rounds']:{'attach':{'value':'{次数}'}}}}
     return interface
 

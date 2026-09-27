@@ -13,6 +13,23 @@ from song_navigation import BAND_BUTTONS,OTHER_BAND_BUTTON
 
 
 class SongFilterTests(unittest.TestCase):
+    def test_selected_song_fast_path_still_clears_inherited_status_filter(self):
+        f=LiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),LiveOptions.parse({}))
+        f.wait=Mock();f.snap=Mock();f.tap=Mock();f.hit_text=Mock(return_value=object())
+        f.selected_song_matches=Mock(return_value=True);f.all_songs=Mock()
+        f.find_song(BY_ID['200'])
+        self.assertEqual([c.args for c in f.tap.call_args_list],[(1116,55),(1165,44),(963,652)])
+        f.find_song(BY_ID['200'])
+        self.assertEqual(f.tap.call_count,3)
+        f.all_songs.assert_not_called()
+
+    def test_failed_filter_cleanup_does_not_mark_it_complete(self):
+        f=LiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),LiveOptions.parse({}))
+        f.wait=Mock();f.snap=Mock();f.tap=Mock();f.hit_text=Mock(return_value=None)
+        with self.assertRaisesRegex(RuntimeError,'清理'):
+            f.reset_inherited_song_filters()
+        self.assertFalse(getattr(f,'_inherited_filters_cleared',False))
+
     def slider_flow(self):
         controller=Mock()
         for method in ('post_touch_down','post_touch_move','post_touch_up'):

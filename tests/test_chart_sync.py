@@ -9,6 +9,100 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_startup_and_observed_notes_share_one_phase_reference(self):
+        chart=[{'type':'BPM','beat':0,'bpm':60}]+[
+            {'type':'Single','beat':2+i*.2,'lane':i%3} for i in range(12)]
+        for reference in (.025,.037,.050):
+            tracker=ChartPhaseTracker(chart,phase_reference=reference)
+            origin=tracker.origin_from_anchor(100+2+reference,2)
+            self.assertAlmostEqual(origin,100.)
+            estimates=[]
+            for timestamp in np.arange(1.7,4.3,.035):
+                positions=[]
+                for lane,notes in tracker.notes.items():
+                    for note in notes:
+                        y=590*np.exp((timestamp-note-reference)/tracker.travel_scale)
+                        if 160<y<430:positions.append((lane,y))
+                estimate=tracker.observe_positions(timestamp,positions)
+                if estimate:estimates.append(estimate)
+            self.assertTrue(estimates)
+            self.assertAlmostEqual(estimates[0]['correction'],0.,places=7)
+
+    def test_team_capture_jitter_locks_before_the_near_line_frame(self):
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        for name in ('team_scary_capture_jitter','scary_skipped_gate'):
+            with self.subTest(trace=name):
+                trace=json.loads((root/f'{name}.json').read_text(encoding='utf8'))['trace']
+                lock=FirstNoteLock(travel_scale=.245)
+                result=None
+                for row in trace:
+                    result=lock.observe(row['time'],row['y'])
+                    if result:break
+                self.assertIsNotNone(result)
+                self.assertLess(result['y'],400)
+                # Reserve time for capture completion and the first SDK dispatch.
+                remaining=result['crossing']-row['time']-row['capture_ms']/2000
+                self.assertGreater(remaining,.050)
+
+    def test_latest_projection_outlier_is_not_hidden_by_small_mad(self):
+        lock=FirstNoteLock(travel_scale=.245)
+        for y in (100,140,180,230,290):
+            self.assertIsNone(lock.observe(2.-.245*np.log(590/y),y))
+        # The last sample is 40ms late while the other two agree perfectly.
+        # Median absolute deviation alone is zero and cannot reject it.
+        self.assertIsNone(lock.observe(2.-.245*np.log(590/360)+.040,360))
+
+    def test_unstable_early_blue_lock_waits_for_more_evidence(self):
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        trace=json.loads((root/'teardrops_unstable_early_lock.json').read_text(encoding='utf8'))['trace']
+        lock=FirstNoteLock(travel_scale=.245)
+        # An 18ms early-lock tolerance accepted this recorded 16.5ms spread;
+        # the resulting live run had 26 GOOD and 2 BAD. Do not commit this fit.
+        for row in trace:
+            self.assertIsNone(lock.observe(row['time'],row['y']))
+
+    def test_recorded_capture_jump_locks_before_unreliable_late_frame(self):
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        trace=json.loads((root/'scary_latest_outlier.json').read_text(encoding='utf8'))['trace']
+        lock=FirstNoteLock(travel_scale=.245)
+        result=None
+        for row in trace:
+            result=lock.observe(row['time'],row['y'])
+            if result:break
+        self.assertIsNotNone(result)
+        self.assertLess(result['y'],400)
+        self.assertGreater(result['crossing']-row['time'],.080)
+
+    def test_yakusoku_bright_hold_keeps_first_note_identity(self):
+        from PIL import Image
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        trace=json.loads((root/'yakusoku_first_hold.json').read_text())
+        lock=FirstNoteLock(travel_scale=.245)
+        fitted=None
+        for row in trace:
+            y=row['y']
+            if 'image' in row:
+                frame=np.array(Image.open(root/row['image']))[:,:,::-1].copy()
+                y=locate_note_y(frame,0,'green')
+                # Previously the first bright head at 220 became a later one at 92.
+                self.assertAlmostEqual(y,row['y'],delta=2)
+            fitted=lock.observe(row['t'],y)
+            if fitted:break
+        self.assertIsNotNone(fitted)
+        self.assertLessEqual(fitted['residual_ms'],9)
+        self.assertGreater(fitted['crossing']-row['t'],.04)
+
+    def test_bright_green_fallback_excludes_other_colors_and_preserves_head(self):
+        frame=np.zeros((720,1280,3),dtype=np.uint8)
+        for color in ([255,255,255],[230,240,230],[255,255,100],
+                      [80,255,255],[253,230,254]):
+            frame[390:395,600:680]=color
+            self.assertIsNone(locate_note_y(frame,3,'green'))
+        frame[390:395,600:680]=[180,255,220]
+        self.assertEqual(locate_note_y(frame,3,'green'),390)
+        frame[380:385,600:680]=[80,255,100]
+        self.assertEqual(locate_note_y(frame,3,'green'),380)
+
     def test_departures_pale_flick_keeps_first_note_identity(self):
         from PIL import Image
         root=Path(__file__).parent/'fixtures/chart_sync'
@@ -167,6 +261,37 @@ class ChartSyncTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertAlmostEqual(result['correction'],-.040,delta=.004)
         self.assertGreaterEqual(result['notes'],4)
+
+    def test_recorded_sparse_song_acquires_phase_without_dense_bursts(self):
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        data=json.loads((root/'teardrops_sparse_phase.json').read_text(encoding='utf8'))
+        tracker=ChartPhaseTracker(data['chart'])
+        hits=[]
+        for row in data['trace']:
+            result=tracker.observe_positions(row['time'],row['positions'])
+            if result:hits.append((row['time'],result))
+        self.assertTrue(hits)
+        self.assertLess(hits[0][0],15)
+        self.assertAlmostEqual(hits[0][1]['correction'],-.070,delta=.008)
+        self.assertGreaterEqual(hits[0][1]['notes'],4)
+
+    def test_sparse_phase_requires_multiple_lanes_and_expires(self):
+        for multiple_lanes in (False,True):
+            chart=[{'type':'BPM','beat':0,'bpm':60}]+[
+                {'type':'Single','beat':1+i*2,'lane':i%2 if multiple_lanes else 0}
+                for i in range(4)]
+            tracker=ChartPhaseTracker(chart);results=[]
+            for i in range(4):
+                for y in (230,300):
+                    stamp=1+i*2+.037-.095-.245*np.log(590/y)
+                    result=tracker.observe_positions(stamp,[(i%2 if multiple_lanes else 0,y)])
+                    if result:results.append(result)
+            if multiple_lanes:
+                self.assertTrue(results)
+                self.assertAlmostEqual(results[-1]['correction'],-.095)
+            else:self.assertFalse(results)
+            self.assertIsNone(tracker.observe_positions(30,[]))
+            self.assertEqual(tracker.samples,[])
 
     def test_single_note_cannot_adjust_clock_and_samples_expire(self):
         tracker=ChartPhaseTracker([{'type':'BPM','beat':0,'bpm':60},

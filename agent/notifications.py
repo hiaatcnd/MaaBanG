@@ -79,7 +79,14 @@ class NotificationMixin:
             if title is None:
                 return handled
             text = ' '.join(normalized(hit.text) for hit in hits)
-            if TRANSACTION.search(text):
+            # A recruitment ticket is a reward item, not a recruitment action.
+            # Exempt only this complete item label on the known stage-reward
+            # receipt. Purchase/consumption/cancel text still blocks dismissal.
+            transaction_text = text
+            if re.fullmatch(r'舞台挑战达成(?:报酬|奖励)获得',title):
+                transaction_text = ' '.join(normalized(hit.text) for hit in hits
+                    if not re.fullmatch(r'星石招募券(?:[x×X]\d+)?',normalized(hit.text)))
+            if TRANSACTION.search(transaction_text):
                 raise FlowError(f'通知包含交易或选择内容，交由任务处理：{title}')
             buttons = [hit for hit in hits if BUTTON.fullmatch(normalized(hit.text))
                        and hit.box[1] > y+h*.55
