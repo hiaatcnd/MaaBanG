@@ -19,12 +19,14 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',required=True)
-    parser.add_argument('--mode',choices=['free','tour_free','tour_fixed','team'],default='free')
+    parser.add_argument('--mode',choices=['free','tour_free','tour_fixed','team','coop','challenge'],default='free')
     for i in range(1,4):
         parser.add_argument(f'--song{i}',default='306')
         parser.add_argument(f'--difficulty{i}',default='expert')
     parser.add_argument('--jitter',choices=JITTER_PROFILES,default='small')
     parser.add_argument('--fire',type=int,choices=range(4),default=1)
+    parser.add_argument('--cp',type=int,choices=[200,400,800,1600],default=200)
+    parser.add_argument('--cp-song',default='',help='挑战活动歌曲ID或完整歌名；留空沿用当前活动选曲')
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
     parser.add_argument('--max-rounds',default='')
     parser.add_argument('--prepare-only',action='store_true')
@@ -34,7 +36,7 @@ def main():
         parser.error('--package tests the actual packaged task and cannot use --prepare-only')
     values={key:getattr(args,key) for key in OPTION_NODES}
     options=ChartOptions.parse(values)
-    if args.prepare_only and options.mode == 'team':
+    if args.prepare_only and options.mode in ('team','coop'):
         parser.error('--prepare-only is not supported for automatically starting online rooms')
     from maa.controller import AdbController
     from maa.custom_action import CustomAction
@@ -52,10 +54,18 @@ def main():
     class Prepare(CustomAction):
         def run(self,context,argv):
             import traceback
-            flow=ChartLiveFlow(context,options,Path('debug/chart_live_prepare')/time.strftime('%Y%m%d-%H%M%S'))
+            from cp_live import CPLiveFlow
+            flow_type=CPLiveFlow if options.mode=='challenge' else ChartLiveFlow
+            flow=flow_type(context,options,Path('debug/chart_live_prepare')/time.strftime('%Y%m%d-%H%M%S'))
             try:
                 selections,charts=flow.prepare_round()
+                if not selections:
+                    print('Preparation stopped:',flow.report['status'],flush=True)
+                    return True
                 flow.configure_stage()
+                if options.mode=='challenge':
+                    balance=flow.verify_chart_start(1,selections[0],options.cp)
+                    print(f'CP verified before start: {balance}, cost: {options.cp}',flush=True)
                 flow.snap();flow.save_frame('ready.png')
                 print('Prepared',selections,flush=True)
                 return True

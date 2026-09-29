@@ -1,8 +1,10 @@
-"""Offline China-server song catalog, bundled with the Agent."""
+"""Separate bundled catalogs for CN choices and all-server song recognition."""
 import json
 from pathlib import Path
 
 CATALOG = json.loads((Path(__file__).parent/'data/songs_cn.json').read_text(encoding='utf-8'))
+RECOGNITION_CATALOG = json.loads((Path(__file__).parent/'data/songs_all.json').read_text(encoding='utf-8'))
+RECOGNITION_BY_ID = {song['id']: song for song in RECOGNITION_CATALOG['songs']}
 TITLE_OCR_ALIASES = json.loads((Path(__file__).parent/'data/song_ocr_aliases.json').read_text(encoding='utf-8'))
 _songs = [s for s in CATALOG['songs'] if s['active'] and
           s['difficulties'].get('expert', {}).get('available')]

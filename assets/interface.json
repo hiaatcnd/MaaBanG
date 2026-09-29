@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.5.4",
+    "version": "v0.6.0",
     "controller": [
         {
             "name": "安卓端",
@@ -27,12 +27,10 @@
             "name": "Maa代打演出",
             "entry": "ChartLive",
             "default_check": false,
-            "description": "根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。当前版本需MuMu安卓15、16:9横屏（支持2560×1440，内部自动缩放）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。 支持团队联网演出；掉房重进，房间3分钟未开演重进，仅成功结算计次。识别最终歌曲后按需获取谱面，已有共享缓存直接复用。协力演出暂未开放。",
+            "description": "根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。当前版本需MuMu安卓15、16:9横屏（支持2560×1440，内部自动缩放）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。 支持团队及协力联网演出；协力沿用当前房间，选择不指定歌曲，匹配15秒后可不足五人开演。掉房重进，房间3分钟未开演重进，仅成功结算计次。识别最终歌曲后按需获取谱面，已有共享缓存直接复用。 支持活动挑战演出，消耗CP而非火，CP不足时停止。",
             "option": [
                 "谱面演出模式",
                 "谱面随机偏差",
-                "谱面每首火数",
-                "谱面火不足策略",
                 "谱面最大演出次数"
             ]
         },
@@ -8709,6 +8707,48 @@
                     }
                 },
                 {
+                    "name": "[超高难易度 新SPECIAL] SENSENFUKOKU",
+                    "label": "[超高难易度 新SPECIAL] SENSENFUKOKU · Afterglow",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "[超高难易度 新SPECIAL] SENSENFUKOKU"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] HELL! or HELL?",
+                    "label": "[超高难易度 新SPECIAL] HELL! or HELL? · RAISE A SUILEN",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "[超高难易度 新SPECIAL] HELL! or HELL?"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] 六兆年と一夜物語",
+                    "label": "[超高难易度 新SPECIAL] 六兆年と一夜物語 · Roselia",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "[超高难易度 新SPECIAL] 六兆年と一夜物語"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "トレモロアイズ",
                     "label": "トレモロアイズ · Poppin'Party",
                     "option": [
@@ -9955,6 +9995,20 @@
                     }
                 },
                 {
+                    "name": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！",
+                    "label": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！ · 香澄×兰×彩×友希那×心",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "Second to None",
                     "label": "Second to None · Roselia",
                     "option": [
@@ -11103,6 +11157,48 @@
                     }
                 },
                 {
+                    "name": "MATSURI BAYASHI",
+                    "label": "MATSURI BAYASHI · Poppin'Party",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "MATSURI BAYASHI"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [790]",
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [790]"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "雪华翩跹，笑看无常",
                     "label": "雪华翩跹，笑看无常 · 思念和哀伤无法诉说！",
                     "option": [
@@ -11126,6 +11222,20 @@
                         "LV_Song": {
                             "attach": {
                                 "value": "蝴蝶飞翔的星月夜"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "MANIA CARNIVAL",
+                    "label": "MANIA CARNIVAL · RAISE A SUILEN",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "MANIA CARNIVAL"
                             }
                         }
                     }
@@ -11620,6 +11730,34 @@
             ],
             "label": "火不足策略"
         },
+        "挖矿挑战目标": {
+            "type": "select",
+            "default_case": "未完成",
+            "description": "未完成：仅挑战已解锁的0星舞台；未满星：挑战已解锁的0–2星舞台。跳过满星及未解锁舞台。",
+            "cases": [
+                {
+                    "name": "未完成",
+                    "pipeline_override": {
+                        "MN_challenge_target": {
+                            "attach": {
+                                "value": "uncleared"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "未满星",
+                    "pipeline_override": {
+                        "MN_challenge_target": {
+                            "attach": {
+                                "value": "not_full_stars"
+                            }
+                        }
+                    }
+                }
+            ],
+            "label": "挑战目标"
+        },
         "歌曲难度_easy_normal_hard_expert_special": {
             "type": "select",
             "label": "演出难度",
@@ -11723,34 +11861,6 @@
                     }
                 }
             ]
-        },
-        "挖矿挑战目标": {
-            "type": "select",
-            "default_case": "未完成",
-            "description": "未完成：仅挑战已解锁的0星舞台；未满星：挑战已解锁的0–2星舞台。跳过满星及未解锁舞台。",
-            "cases": [
-                {
-                    "name": "未完成",
-                    "pipeline_override": {
-                        "MN_challenge_target": {
-                            "attach": {
-                                "value": "uncleared"
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "未满星",
-                    "pipeline_override": {
-                        "MN_challenge_target": {
-                            "attach": {
-                                "value": "not_full_stars"
-                            }
-                        }
-                    }
-                }
-            ],
-            "label": "挑战目标"
         },
         "谱面第1首难度_easy_normal_hard_expert_special": {
             "type": "select",
@@ -19744,6 +19854,48 @@
                     "label": "「僕は...」 · MyGO!!!!!"
                 },
                 {
+                    "name": "[超高难易度 新SPECIAL] SENSENFUKOKU",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "596"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] SENSENFUKOKU · Afterglow"
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] HELL! or HELL?",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "597"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] HELL! or HELL? · RAISE A SUILEN"
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] 六兆年と一夜物語",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "598"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] 六兆年と一夜物語 · Roselia"
+                },
+                {
                     "name": "トレモロアイズ",
                     "pipeline_override": {
                         "CL_song1": {
@@ -20990,6 +21142,20 @@
                     "label": "again · Morfonica"
                 },
                 {
+                    "name": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "689"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！ · 香澄×兰×彩×友希那×心"
+                },
+                {
                     "name": "Second to None",
                     "pipeline_override": {
                         "CL_song1": {
@@ -22138,6 +22304,48 @@
                     "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！"
                 },
                 {
+                    "name": "MATSURI BAYASHI",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "774"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "MATSURI BAYASHI · Poppin'Party"
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "786"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈"
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [790]",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "790"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈"
+                },
+                {
                     "name": "雪华翩跹，笑看无常",
                     "pipeline_override": {
                         "CL_song1": {
@@ -22164,6 +22372,20 @@
                         "谱面第1首难度_easy_normal_hard_expert"
                     ],
                     "label": "蝴蝶飞翔的星月夜 · Morfonica"
+                },
+                {
+                    "name": "MANIA CARNIVAL",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "10005"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "MANIA CARNIVAL · RAISE A SUILEN"
                 }
             ]
         },
@@ -30217,6 +30439,48 @@
                     "label": "「僕は...」 · MyGO!!!!!"
                 },
                 {
+                    "name": "[超高难易度 新SPECIAL] SENSENFUKOKU",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "596"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] SENSENFUKOKU · Afterglow"
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] HELL! or HELL?",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "597"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] HELL! or HELL? · RAISE A SUILEN"
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] 六兆年と一夜物語",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "598"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] 六兆年と一夜物語 · Roselia"
+                },
+                {
                     "name": "トレモロアイズ",
                     "pipeline_override": {
                         "CL_song2": {
@@ -31463,6 +31727,20 @@
                     "label": "again · Morfonica"
                 },
                 {
+                    "name": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "689"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！ · 香澄×兰×彩×友希那×心"
+                },
+                {
                     "name": "Second to None",
                     "pipeline_override": {
                         "CL_song2": {
@@ -32611,6 +32889,48 @@
                     "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！"
                 },
                 {
+                    "name": "MATSURI BAYASHI",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "774"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "MATSURI BAYASHI · Poppin'Party"
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "786"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈"
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [790]",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "790"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈"
+                },
+                {
                     "name": "雪华翩跹，笑看无常",
                     "pipeline_override": {
                         "CL_song2": {
@@ -32637,6 +32957,20 @@
                         "谱面第2首难度_easy_normal_hard_expert"
                     ],
                     "label": "蝴蝶飞翔的星月夜 · Morfonica"
+                },
+                {
+                    "name": "MANIA CARNIVAL",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "10005"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "MANIA CARNIVAL · RAISE A SUILEN"
                 }
             ]
         },
@@ -40690,6 +41024,48 @@
                     "label": "「僕は...」 · MyGO!!!!!"
                 },
                 {
+                    "name": "[超高难易度 新SPECIAL] SENSENFUKOKU",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "596"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] SENSENFUKOKU · Afterglow"
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] HELL! or HELL?",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "597"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] HELL! or HELL? · RAISE A SUILEN"
+                },
+                {
+                    "name": "[超高难易度 新SPECIAL] 六兆年と一夜物語",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "598"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[超高难易度 新SPECIAL] 六兆年と一夜物語 · Roselia"
+                },
+                {
                     "name": "トレモロアイズ",
                     "pipeline_override": {
                         "CL_song3": {
@@ -41936,6 +42312,20 @@
                     "label": "again · Morfonica"
                 },
                 {
+                    "name": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "689"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "[期间限定 SPECIAL]ピコっと！パピっと！！ガルパ☆ピコ！！！ · 香澄×兰×彩×友希那×心"
+                },
+                {
                     "name": "Second to None",
                     "pipeline_override": {
                         "CL_song3": {
@@ -43084,6 +43474,48 @@
                     "label": "かぽーんっと極楽☆ 湯〜とぴあ！ · Hello, Happy World！"
                 },
                 {
+                    "name": "MATSURI BAYASHI",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "774"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "MATSURI BAYASHI · Poppin'Party"
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "786"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert_special"
+                    ],
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈"
+                },
+                {
+                    "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [790]",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "790"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈"
+                },
+                {
                     "name": "雪华翩跹，笑看无常",
                     "pipeline_override": {
                         "CL_song3": {
@@ -43110,6 +43542,20 @@
                         "谱面第3首难度_easy_normal_hard_expert"
                     ],
                     "label": "蝴蝶飞翔的星月夜 · Morfonica"
+                },
+                {
+                    "name": "MANIA CARNIVAL",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "10005"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "MANIA CARNIVAL · RAISE A SUILEN"
                 }
             ]
         },
@@ -43185,7 +43631,9 @@
                         }
                     },
                     "option": [
-                        "谱面第1首歌曲"
+                        "谱面第1首歌曲",
+                        "谱面每首火数",
+                        "谱面火不足策略"
                     ]
                 },
                 {
@@ -43200,7 +43648,9 @@
                     "option": [
                         "谱面第1首歌曲",
                         "谱面第2首歌曲",
-                        "谱面第3首歌曲"
+                        "谱面第3首歌曲",
+                        "谱面每首火数",
+                        "谱面火不足策略"
                     ]
                 },
                 {
@@ -43215,7 +43665,9 @@
                     "option": [
                         "谱面课题第1首难度",
                         "谱面课题第2首难度",
-                        "谱面课题第3首难度"
+                        "谱面课题第3首难度",
+                        "谱面每首火数",
+                        "谱面火不足策略"
                     ]
                 },
                 {
@@ -43228,8 +43680,166 @@
                         }
                     },
                     "option": [
-                        "谱面联网难度"
+                        "谱面联网难度",
+                        "谱面每首火数",
+                        "谱面火不足策略"
                     ]
+                },
+                {
+                    "name": "协力演出",
+                    "pipeline_override": {
+                        "CL_mode": {
+                            "attach": {
+                                "value": "coop"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面联网难度",
+                        "谱面每首火数",
+                        "谱面火不足策略"
+                    ]
+                },
+                {
+                    "name": "挑战演出（消耗CP）",
+                    "pipeline_override": {
+                        "CL_mode": {
+                            "attach": {
+                                "value": "challenge"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面挑战歌曲",
+                        "谱面挑战难度",
+                        "谱面每首CP"
+                    ]
+                }
+            ]
+        },
+        "谱面挑战歌曲": {
+            "type": "input",
+            "label": "活动歌曲",
+            "inputs": [
+                {
+                    "name": "歌曲",
+                    "label": "歌名或ID",
+                    "default": "",
+                    "verify": ".*",
+                    "description": "留空沿用游戏当前选中的挑战歌曲；指定歌曲必须在当前活动歌单中。"
+                }
+            ],
+            "pipeline_override": {
+                "CL_cp_song": {
+                    "attach": {
+                        "value": "{歌曲}"
+                    }
+                }
+            }
+        },
+        "谱面挑战难度": {
+            "type": "select",
+            "label": "挑战难度",
+            "default_case": "EXPERT",
+            "description": "所选难度必须在活动歌曲中开放，不自动降级。",
+            "cases": [
+                {
+                    "name": "EASY",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "easy"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "NORMAL",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "normal"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "HARD",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "hard"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "EXPERT",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "expert"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "SPECIAL",
+                    "pipeline_override": {
+                        "CL_difficulty1": {
+                            "attach": {
+                                "value": "special"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "谱面每首CP": {
+            "type": "select",
+            "label": "每首消耗CP",
+            "default_case": "200 CP",
+            "description": "不消耗火。CP不足时停止，不自动补充或改用其他档位。",
+            "cases": [
+                {
+                    "name": "200 CP",
+                    "pipeline_override": {
+                        "CL_cp": {
+                            "attach": {
+                                "value": 200
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "400 CP",
+                    "pipeline_override": {
+                        "CL_cp": {
+                            "attach": {
+                                "value": 400
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "800 CP",
+                    "pipeline_override": {
+                        "CL_cp": {
+                            "attach": {
+                                "value": 800
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "1600 CP",
+                    "pipeline_override": {
+                        "CL_cp": {
+                            "attach": {
+                                "value": 1600
+                            }
+                        }
+                    }
                 }
             ]
         },

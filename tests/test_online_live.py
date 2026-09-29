@@ -57,8 +57,9 @@ class OnlinePolicyTests(unittest.TestCase):
         interface=update({'task':[],'option':{}})
         cases=interface['option']['谱面演出模式']['cases']
         team=next(c for c in cases if c['name']=='团队演出')
-        self.assertEqual(team['option'],['谱面联网难度'])
-        self.assertNotIn('协力演出',[c['name'] for c in cases])
+        self.assertEqual(team['option'],['谱面联网难度','谱面每首火数','谱面火不足策略'])
+        coop=next(c for c in cases if c['name']=='协力演出')
+        self.assertEqual(coop['option'],team['option'])
 
     def test_prefetch_covers_expert_and_only_available_special(self):
         catalog={'1':{'id':'1','difficulties':{'expert':{'available':True},'special':{'available':True}}},
@@ -88,9 +89,11 @@ class OnlinePolicyTests(unittest.TestCase):
         self.assertIsNone(options.max_rounds)
         self.assertIsNone(ChartOptions.parse({'mode':'team','max_rounds':''}).max_rounds)
 
-    def test_coop_is_pending_not_exposed_as_working_mode(self):
-        with self.assertRaises(ValueError):
-            ChartOptions.parse({'mode':'coop'})
+    def test_coop_ignores_stale_song_choice_and_uses_online_difficulty(self):
+        options=ChartOptions.parse({'mode':'coop','song1':'invalid','difficulty1':'hard','fire':0})
+        self.assertEqual(options.selections,())
+        self.assertEqual(options.difficulties,('hard',))
+        self.assertEqual(options.songs_per_round,1)
 
     def test_sp_falls_back_only_when_not_visible(self):
         song=next(s for s in BY_ID.values() if s['difficulties'].get('special',{}).get('available'))
@@ -110,7 +113,7 @@ class OnlinePolicyTests(unittest.TestCase):
     def test_ambiguous_song_requires_disambiguation(self):
         songs={str(i):{'id':str(i),'title':'same title','aliases':[],
                       'band':band,'band_aliases':[]} for i,band in enumerate(('A','B'))}
-        with patch('online_policy.BY_ID',songs):
+        with patch('online_policy.RECOGNITION_BY_ID',songs):
             with self.assertRaises(ValueError): final_song('same title')
             self.assertEqual(final_song('same title','B')['id'],'1')
 
@@ -124,6 +127,24 @@ class OnlinePolicyTests(unittest.TestCase):
 
 
 class OnlineFlowTests(unittest.TestCase):
+    def test_final_song_outside_cn_catalog_survives_repeated_confirmation(self):
+        song={'id':'999999','title':'Global song','aliases':[],
+              'difficulties':{'expert':{'available':True,'notes':1}}}
+        self.assertNotIn(song['id'],BY_ID)
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.snap=Mock()
+            flow.reco=Mock(return_value=True)
+            flow.text=Mock(return_value=song['title'])
+            with patch('online_policy.RECOGNITION_BY_ID',{song['id']:song}):
+                recognized=flow.read_final_song()
+                selection=final_selection(recognized,'special',False)
+                self.assertEqual(flow.read_final_song()['id'],selection.song_id)
+            with patch('chart_policy.RECOGNITION_BY_ID',{song['id']:song}):
+                self.assertIs(selection.song,song)
+            self.assertEqual(selection.difficulty,'expert')
+            self.assertEqual(flow.snap.call_count,4)
+
     def test_fire_check_rereads_inconsistency_without_guessing_or_spending(self):
         with tempfile.TemporaryDirectory() as folder:
             f=self.make_flow(folder)

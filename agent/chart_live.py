@@ -17,7 +17,7 @@ from chart_policy import ChartOptions, ChartSelection, OPTION_DEFAULTS, OPTION_N
 from chart_store import ChartStore
 from costume_unlock import FlowError, normalized
 from live_policy import DIFFICULTIES
-from song_catalog import BY_ID
+from song_catalog import RECOGNITION_BY_ID
 
 
 from song_navigation import title_key
@@ -56,10 +56,10 @@ class ChartLiveFlow(LiveFlow):
         result=[]
         for i,difficulty in enumerate(self.settings.difficulties):
             text=self.text([30+413*i,345,385,37])
-            matches=[song for song in BY_ID.values() if self.title_matches(text,song)]
+            matches=[song for song in RECOGNITION_BY_ID.values() if self.title_matches(text,song)]
             if len(matches)!=1:
                 raise FlowError(f'课题巡演第 {i+1} 首无法唯一识别：{text}')
-            result.append(ChartSelection.parse(matches[0]['id'],difficulty))
+            result.append(ChartSelection.from_recognized(matches[0],difficulty))
             centers=tuple(x+413*i for x in (66,143,218,294,377))
             self.choose_difficulty_exact(difficulty,centers,415)
         return tuple(result)
@@ -278,7 +278,7 @@ class ChartLiveFlow(LiveFlow):
         return balance
 
     def play_chart(self, index, selection, metadata, amount, row):
-        online=self.settings.mode == 'team'
+        online=self.settings.mode in ('team','coop')
         if not online:
             self.wait_ready(index)
         self.disable_mv()
@@ -302,7 +302,7 @@ class ChartLiveFlow(LiveFlow):
                 if process.poll() is not None or time.monotonic()>deadline:
                     raise FlowError(f'演奏进程准备失败，详见 {destination}/worker.log')
                 self.pause(.1)
-            row['fire_before']=self.verify_chart_start(index,selection,amount)
+            row['cp_before' if self.settings.mode=='challenge' else 'fire_before']=self.verify_chart_start(index,selection,amount)
             row['status']='submitted'
             self.save_frame(f'ready_attempt{self.report["attempts"]}.png' if online else
                             f'ready_{self.report["completed_rounds"]+1}_{index}.png')
@@ -352,7 +352,7 @@ class ChartLiveFlow(LiveFlow):
             if self.hit_text([190,200,350,90],'演出失败'):
                 row['status']='game_failed'
                 raise FlowError('演出失败，已停止；不会使用星石继续')
-            if self.settings.mode!='free' and index<3:
+            if self.settings.mode in ('tour_free','tour_fixed') and index<3:
                 if self.reco('LV_TourHeader') and self.tour_index()==index+1:
                     row['status']='next_song_ready'
                     return
@@ -360,7 +360,7 @@ class ChartLiveFlow(LiveFlow):
                 button=self.hit_text([940,602,274,100],'^下一步$')
                 if button:
                     self.save_frame(f'judgment_{self.report["completed_rounds"]+1}_{index}.png')
-                    if self.settings.mode=='free':
+                    if self.settings.mode in ('free','challenge'):
                         row['status']='result_confirmed'
                         row['judgment_text']=self.text([680,270,250,211])
                     else:
@@ -402,25 +402,22 @@ class ChartLiveFlow(LiveFlow):
             if self.reco('LV_TalkMenu'):
                 self.click('LV_TalkMenu');continue
             self.require_clear_notification_overlay()
-            if any(self.reco(n) for n in ('CU_HomeBand','LV_Menu','LV_TourHome','LV_TourSetup','LV_SongPage')):
+            if self.settlement_destination():
                 return
             manual=bool(self.hit_text([680,314,170,160],'GREAT|GOOD|BAD|MISS'))
-            known=manual or any(self.reco(n) for n in ('LV_ScoreAuto','LV_TourSummary','LV_Rewards',
-                                                       'LV_Experience','LV_LoginReward'))
-            known=known or bool(self.hit_text([110,270,175,148],'获得活动|获得徽章'))
-            known=known or bool(self.reco('LV_EventResult'))
-            known=known or self.login_reward_page()
-            if known:
-                button=self.hit_text([940,602,274,100],'^下一步$|^确定$|^确认$')
-                if button:
-                    if manual:
-                        page+=1
-                        self.save_frame(f'result_{self.report["completed_rounds"]+1}_{page}.png')
-                    self.tap_hit(button)
-                    self.pause(1)
-                    continue
+            button=self.hit_text([940,602,274,100],'^下一步$|^确定$|^确认$|^关闭$')
+            if button:
+                if manual:
+                    page+=1
+                    self.save_frame(f'result_{self.report["completed_rounds"]+1}_{page}.png')
+                self.tap_hit(button)
+                self.pause(1)
+                continue
             self.pause(1)
         raise FlowError('未识别谱面演出结算页面，保留现场')
+
+    def settlement_destination(self):
+        return any(self.reco(n) for n in ('CU_HomeBand','LV_Menu','LV_TourHome','LV_TourSetup','LV_SongPage'))
 
     def run(self):
         stage_configured=False
@@ -469,9 +466,12 @@ class ChartLive(CustomAction):
                 data=context.get_node_data(node)
                 values[key]=(data or {}).get('attach',{}).get('value',OPTION_DEFAULTS[key])
             options=ChartOptions.parse(values)
-            if options.mode == 'team':
+            if options.mode in ('team','coop'):
                 from online_live import OnlineLiveFlow
                 flow=OnlineLiveFlow(context,options,destination)
+            elif options.mode == 'challenge':
+                from cp_live import CPLiveFlow
+                flow=CPLiveFlow(context,options,destination)
             else:
                 flow=ChartLiveFlow(context,options,destination)
             report=flow.report

@@ -1,0 +1,7 @@
+{
+    "CP_Entry": {"recognition":"OCR","expected":"^挑战演出$","roi":[690,290,240,55]},
+    "CP_Header": {"recognition":"OCR","expected":"^挑战演出$","roi":[115,15,260,35]},
+    "CP_Select": {"recognition":"OCR","expected":"^选择乐曲$","roi":[115,48,260,38]},
+    "CP_Ready": {"recognition":"OCR","expected":"^最终确认$","roi":[115,48,260,38]},
+    "CP_Dialog": {"recognition":"OCR","expected":"选择要消费的挑战点数","roi":[380,55,480,42]}
+}

@@ -164,7 +164,7 @@ class LiveFlowTests(unittest.TestCase):
         f.tap_hit=Mock(side_effect=lambda hit:state.update(scene='home'))
         f.pause=Mock()
         f.settle_results()
-        f.hit_text.assert_called_once_with([940,602,274,100], '^下一步$|^确定$|^确认$')
+        f.hit_text.assert_called_once_with([940,602,274,100], '^下一步$|^确定$|^确认$|^关闭$')
         f.tap_hit.assert_called_once_with(button)
         f.tap.assert_not_called()
 

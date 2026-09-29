@@ -63,7 +63,8 @@ class SongFilterTests(unittest.TestCase):
         self.assertFalse(any(key.startswith(('清火筛选_','谱面筛选')) for key in data['option']))
         auto=next(t for t in data['task'] if t['entry']=='AutoLive')
         self.assertIn('演出歌曲',auto['option'])
-        self.assertEqual(data['option']['谱面演出模式']['cases'][0]['option'],['谱面第1首歌曲'])
+        self.assertEqual(data['option']['谱面演出模式']['cases'][0]['option'],
+                         ['谱面第1首歌曲','谱面每首火数','谱面火不足策略'])
 
     def test_game_filter_uses_other_for_collaborations_and_resets_difficulty(self):
         for sid,button in [('96',BAND_BUTTONS[5]),('306',OTHER_BAND_BUTTON)]:

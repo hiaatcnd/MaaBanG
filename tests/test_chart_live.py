@@ -16,6 +16,53 @@ from song_catalog import BY_ID, available_difficulties
 
 
 class ChartLiveTests(unittest.TestCase):
+    def test_settlement_advances_unknown_page_by_footer_button(self):
+        from auto_live import LiveFlow
+        for settle in (ChartLiveFlow.settle_results,LiveFlow.settle_results):
+            with self.subTest(settle=settle.__qualname__),tempfile.TemporaryDirectory() as folder:
+                flow=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+                                   ChartOptions.parse({}),folder)
+                phase=[0];button=object()
+                flow.snap=Mock();flow.pause=Mock()
+                flow.dismiss_daily_reward=Mock(return_value=False)
+                flow.result_modals=Mock(return_value=False)
+                flow.require_clear_notification_overlay=Mock()
+                flow.reco=Mock(side_effect=lambda node:phase[0] and node=='CU_HomeBand')
+                flow.hit_text=Mock(side_effect=lambda roi,pattern:button if '^下一步$' in pattern else None)
+                flow.tap_hit=Mock(side_effect=lambda hit:phase.__setitem__(0,1))
+                settle(flow)
+                flow.tap_hit.assert_called_once_with(button)
+
+    def test_fixed_tour_uses_recognition_metadata_outside_cn_choices(self):
+        song={'id':'999999','title':'Global song','aliases':[],
+              'difficulties':{'expert':{'available':True,'notes':1}}}
+        self.assertNotIn(song['id'],BY_ID)
+        with tempfile.TemporaryDirectory() as folder:
+            flow=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+                               ChartOptions.parse({'mode':'tour_fixed'}),folder)
+            flow.text=Mock(return_value=song['title'])
+            flow.choose_difficulty_exact=Mock()
+            with patch('chart_live.RECOGNITION_BY_ID',{song['id']:song}):
+                selections=flow.fixed_selections()
+            self.assertEqual(len(selections),3)
+            with patch('chart_policy.RECOGNITION_BY_ID',{song['id']:song}):
+                self.assertTrue(all(s.song is song for s in selections))
+            self.assertEqual(flow.choose_difficulty_exact.call_count,3)
+
+    def test_recognized_song_chart_retains_note_count_validation(self):
+        song={'id':'999999','title':'Global song',
+              'difficulties':{'expert':{'available':True,'notes':2}}}
+        chart=[{'type':'BPM','beat':0,'bpm':120},{'type':'Single','beat':1,'lane':1}]
+        selection=ChartSelection.from_recognized(song,'expert')
+        with tempfile.TemporaryDirectory() as folder,patch('chart_policy.RECOGNITION_BY_ID',{'999999':song}):
+            (Path(folder)/'999999_expert.json').write_text(json.dumps(chart),encoding='utf8')
+            with self.assertRaisesRegex(ValueError,'音符数与目录不符'):
+                ChartStore(folder).get(selection)
+            song['difficulties']['expert']['notes']=1
+            actual,metadata=ChartStore(folder).get(selection)
+            self.assertEqual(actual,chart)
+            self.assertTrue(metadata['cache_hit'])
+
     def test_rewards_page_confirms_result_before_settlement_navigation(self):
         with tempfile.TemporaryDirectory() as folder:
             f=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
@@ -29,7 +76,7 @@ class ChartLiveTests(unittest.TestCase):
             self.assertEqual(row['result_evidence'],'rewards_page')
             f.tap_hit.assert_not_called()
 
-    def test_story_unlock_modal_requires_known_header_and_own_confirm(self):
+    def test_modal_uses_own_confirm_without_known_header(self):
         import numpy as np
         for header in ('解锁活动故事','解锁主线故事','无关弹窗'):
             with self.subTest(header=header),tempfile.TemporaryDirectory() as folder:
@@ -45,8 +92,8 @@ class ChartLiveTests(unittest.TestCase):
                 flow.snap=Mock(side_effect=lambda:flow.image.fill(0))
                 flow.tap_hit=Mock()
                 with patch('notifications.time.sleep'):
-                    self.assertEqual(flow.result_modals(),header!='无关弹窗')
-                self.assertEqual(flow.tap_hit.call_count,int(header!='无关弹窗'))
+                    self.assertTrue(flow.result_modals())
+                flow.tap_hit.assert_called_once_with(button)
 
     def test_nonzero_profiles_and_invalid_options(self):
         self.assertTrue(all(t>0 and p>0 for t,p in JITTER_PROFILES.values()))
