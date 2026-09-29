@@ -34,7 +34,7 @@ class NotificationTests(unittest.TestCase):
         for body in ('是否消耗星石','购买星石招募券','取消','招募'):
             f=self.flow([hit('舞台挑战达成报酬获得',400,160),hit('星石招募券',460,300),
                          hit(body,440,350),hit('OK',606,521)])
-            with self.assertRaises(FlowError):f.dismiss_notifications()
+            self.assertFalse(f.dismiss_notifications())
             f.tap_hit.assert_not_called()
 
     def flow(self,hits):
@@ -69,30 +69,29 @@ class NotificationTests(unittest.TestCase):
 
     @patch('notifications.time.sleep')
     def test_notify_uses_own_button_and_observes_next_frame(self,_):
-        for title in ('区域解锁','获得报酬','解锁活动故事','等级提升','舞台挑战达成报酬获得',
-                      'BROKEN GAMES 达成报酬一览'):
-            button=hit('确定',606,521)
-            f=self.flow([hit(title,400,160),button])
-            self.assertTrue(f.dismiss_notifications())
-            f.tap_hit.assert_called_once_with(button)
-            f.snap.assert_called_once()
+        for title in ('区域解锁','新活动的未知提示','OCR ??? 完全无法读懂',''):
+            for label in ('确定','确认','关闭','下一步','OK'):
+                button=hit(label,606,521)
+                f=self.flow([hit(title,400,160),button])
+                self.assertTrue(f.dismiss_notifications())
+                f.tap_hit.assert_called_once_with(button)
+                f.snap.assert_called_once()
 
-    def test_unknown_and_transaction_dialogs_are_not_confirmed(self):
+    def test_transaction_dialogs_are_not_confirmed(self):
         for title,body in (('购买确认','是否消耗星石'),('获得报酬','消耗100星石'),
-                           ('获得报酬','取消'),('未知提示','普通消息')):
+                           ('获得报酬','取消'),('未知提示','购买100星石')):
             f=self.flow([hit(title,400,160),hit(body,410,300),hit('确定',606,521)])
-            if title=='获得报酬':
-                with self.assertRaises(FlowError): f.dismiss_notifications()
-            else:
-                self.assertFalse(f.dismiss_notifications())
+            self.assertFalse(f.dismiss_notifications())
             f.tap_hit.assert_not_called()
 
     def test_missing_or_ambiguous_button_blocks_background(self):
-        for buttons in ([],[hit('确定',606,521),hit('关闭',610,550)],
-                        [hit('下一步',1060,645)]):
+        for buttons in ([],[hit('下一步',1060,645)], [hit('确认',900,521)]):
             f=self.flow([hit('区域解锁',400,160)]+buttons)
-            with self.assertRaises(FlowError): f.dismiss_notifications()
+            self.assertFalse(f.dismiss_notifications())
             f.tap_hit.assert_not_called()
+        f=self.flow([hit('确定',606,521),hit('关闭',610,550)])
+        with self.assertRaises(FlowError): f.dismiss_notifications()
+        f.tap_hit.assert_not_called()
 
     @patch('notifications.time.sleep')
     def test_stuck_dialog_has_bounded_retries(self,_):

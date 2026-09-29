@@ -8,13 +8,60 @@ from unittest.mock import Mock
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 sys.path.insert(0,str(ROOT/'tools'))
-from song_catalog import BY_ID, BY_KEY, resolve_song, available_difficulties
+from song_catalog import BY_ID, BY_KEY, RECOGNITION_BY_ID, resolve_song, available_difficulties
 from live_policy import LiveOptions
 from auto_live import LiveFlow
-from update_song_catalog import build_catalog, apply_verified_availability
+from update_song_catalog import build_catalog, build_recognition_catalog, apply_verified_availability
 
 
 class SongCatalogTests(unittest.TestCase):
+    def test_recognition_keeps_all_servers_and_dates_out_of_cn_choices(self):
+        song={'bandId':1,'musicTitle':['JP','EN',None,'CN',None],
+              'publishedAt':['1',None,None,'20',None],
+              'closedAt':[None]*5,'difficulty':{
+                  '3':{'playLevel':26},
+                  '4':{'playLevel':27,'publishedAt':['1',None,None,None,None]}},
+              'notes':{'3':500,'4':600}}
+        sources={'1':song,
+                 '2':dict(song,publishedAt=['1',None,None,'500',None]),
+                 '3':dict(song,closedAt=[None,None,None,'50',None]),
+                 '4':dict(song,musicTitle=['JP only',None,None,None,None],
+                          publishedAt=['1',None,None,None,None])}
+        choices=build_catalog(sources,{},100)
+        recognition=build_recognition_catalog(sources,{})
+        self.assertEqual([s['id'] for s in choices],['1','3'])
+        self.assertEqual([s['id'] for s in recognition],['1','2','3','4'])
+        self.assertEqual(recognition[0]['aliases'],['JP','EN','CN'])
+        self.assertEqual(recognition[3]['title'],'JP only')
+        self.assertFalse(choices[0]['difficulties']['special']['available'])
+        self.assertTrue(recognition[0]['difficulties']['special']['available'])
+        self.assertEqual(recognition[0]['difficulties']['special']['notes'],600)
+
+    def test_recognition_catalog_contains_cn_catalog_but_does_not_expand_choices(self):
+        self.assertTrue(set(BY_ID).issubset(RECOGNITION_BY_ID))
+        extra=set(RECOGNITION_BY_ID)-set(BY_ID)
+        self.assertTrue(extra)
+        from chart_policy import ChartSelection
+        from online_policy import final_selection
+        song=next(RECOGNITION_BY_ID[sid] for sid in extra
+                  if 'expert' in RECOGNITION_BY_ID[sid]['difficulties'])
+        with self.assertRaises(ValueError):
+            resolve_song(song['id'])
+        with self.assertRaises(ValueError):
+            ChartSelection.parse(song['id'],'expert')
+        selected=final_selection(song,'expert',False)
+        self.assertIs(selected.song,song)
+        self.assertEqual(selected.song_id,song['id'])
+        with self.assertRaises(ValueError):
+            ChartSelection.from_recognized(song,'nonexistent')
+
+    def test_invalid_recognition_download_cannot_generate_empty_or_broken_catalog(self):
+        for source in ({},{'1':{'musicTitle':[], 'bandId':1}},
+                       {'1':{'musicTitle':['title'], 'bandId':1,
+                             'difficulty':{'3':{'playLevel':0}}}}):
+            with self.subTest(source=source),self.assertRaises(ValueError):
+                build_recognition_catalog(source,{})
+
     def test_verified_availability_only_fills_missing_dates_for_exact_active_song(self):
         from copy import deepcopy
         source = {'id':'690', 'title':'Second to None', 'band_id':5, 'active':True,

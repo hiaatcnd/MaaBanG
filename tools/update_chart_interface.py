@@ -21,7 +21,7 @@ def update(interface):
     interface['task']=[t for t in interface['task'] if t['entry']!='ChartLive']
     interface['task'].insert(0,{'name':'Maa代打演出','entry':'ChartLive','default_check':False,
         'description':'根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。当前版本需MuMu安卓15、16:9横屏（支持2560×1440，内部自动缩放）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。',
-        'option':['谱面演出模式','谱面随机偏差','谱面每首火数','谱面火不足策略','谱面最大演出次数']})
+        'option':['谱面演出模式','谱面随机偏差','谱面最大演出次数']})
     options=interface['option']
     for key in list(options):
         if key.startswith('谱面'):
@@ -44,15 +44,29 @@ def update(interface):
             'description':'读取当前课题固定歌曲；所选难度不存在时停止，不替换难度。',
             'cases':[choice(name.upper(),f'difficulty{slot}',name) for name in DIFFICULTIES]}
     selectors=[f'谱面第{i}首歌曲' for i in range(1,4)]
+    fire_options=['谱面每首火数','谱面火不足策略']
     options['谱面演出模式']={'type':'select','label':'演出模式','cases':[
-        choice('自由演出','mode','free',[selectors[0]]),
-        choice('自由巡演（三首自选）','mode','tour_free',selectors),
-        choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)]),
-        choice('团队演出','mode','team',['谱面联网难度'])]}
+        choice('自由演出','mode','free',[selectors[0],*fire_options]),
+        choice('自由巡演（三首自选）','mode','tour_free',selectors+fire_options),
+        choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)]+fire_options),
+        choice('团队演出','mode','team',['谱面联网难度',*fire_options]),
+        choice('协力演出','mode','coop',['谱面联网难度',*fire_options]),
+        choice('挑战演出（消耗CP）','mode','challenge',['谱面挑战歌曲','谱面挑战难度','谱面每首CP'])]}
+    options['谱面挑战歌曲']={'type':'input','label':'活动歌曲','inputs':[
+        {'name':'歌曲','label':'歌名或ID','default':'','verify':'.*',
+         'description':'留空沿用游戏当前选中的挑战歌曲；指定歌曲必须在当前活动歌单中。'}],
+        'pipeline_override':{OPTION_NODES['cp_song']:{'attach':{'value':'{歌曲}'}}}}
+    options['谱面挑战难度']={'type':'select','label':'挑战难度','default_case':'EXPERT',
+        'description':'所选难度必须在活动歌曲中开放，不自动降级。',
+        'cases':[choice(name.upper(),'difficulty1',name) for name in DIFFICULTIES]}
+    options['谱面每首CP']={'type':'select','label':'每首消耗CP','default_case':'200 CP',
+        'description':'不消耗火。CP不足时停止，不自动补充或改用其他档位。',
+        'cases':[choice(f'{amount} CP','cp',amount) for amount in (200,400,800,1600)]}
     options['谱面联网难度']={'type':'select','label':'演出难度','default_case':'EXPERT',
         'description':'SPECIAL 不可用时降为 EXPERT；其他难度不替换。识别最终歌曲后优先读取共享缓存，缺失时只下载对应谱面。',
         'cases':[choice(name.upper(),'difficulty1',name) for name in DIFFICULTIES]}
-    interface['task'][0]['description'] += ' 支持团队联网演出；掉房重进，房间3分钟未开演重进，仅成功结算计次。识别最终歌曲后按需获取谱面，已有共享缓存直接复用。协力演出暂未开放。'
+    interface['task'][0]['description'] += ' 支持团队及协力联网演出；协力沿用当前房间，选择不指定歌曲，匹配15秒后可不足五人开演。掉房重进，房间3分钟未开演重进，仅成功结算计次。识别最终歌曲后按需获取谱面，已有共享缓存直接复用。'
+    interface['task'][0]['description'] += ' 支持活动挑战演出，消耗CP而非火，CP不足时停止。'
     names=['极小偏差（优先准确）','小偏差','中等偏差','中大偏差','大偏差','很大偏差（可能频繁MISS）']
     options['谱面随机偏差']={'type':'select','label':'随机偏差','default_case':'小偏差',
         'description':'时间和位置均采用以0为中心的截断正态分布：小偏差常见，大偏差少见，标准差为上限的1/3。各档均非零，不提供关闭；不保证ALL PERFECT，大偏差可能导致演出失败。',

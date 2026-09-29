@@ -1,6 +1,6 @@
 """Pure decisions for online rooms; no UI or network dependencies."""
 from chart_policy import ChartSelection
-from song_catalog import BY_ID, recognition_titles
+from song_catalog import RECOGNITION_BY_ID, recognition_titles
 from song_navigation import title_key
 
 ROOM_TIMEOUT = 180.
@@ -14,7 +14,7 @@ def retry_delay(failures):
 
 
 def final_song(title, band=''):
-    matches=[song for song in BY_ID.values() if title_key(title) in
+    matches=[song for song in RECOGNITION_BY_ID.values() if title_key(title) in
              {title_key(v) for v in recognition_titles(song)}]
     if len(matches)>1 and band:
         matches=[s for s in matches if title_key(band) in
@@ -26,7 +26,7 @@ def final_song(title, band=''):
 
 def final_selection(song, requested, special_visible):
     actual='expert' if requested=='special' and not special_visible else requested
-    return ChartSelection.parse(song['id'],actual)
+    return ChartSelection.from_recognized(song,actual)
 
 
 class RoomClock:

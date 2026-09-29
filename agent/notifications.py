@@ -7,22 +7,17 @@ import numpy as np
 from costume_unlock import FlowError, normalized
 
 
-NOTICE_TITLE = re.compile(
-    r'^(?:区域解锁|(?:解锁.*故事)|(?:.*故事解锁)|'
-    r'(?:获得|领取|已领取|达成)(?:奖励|报酬)(?:一览)?|'
-    r'.+达成(?:报酬|奖励)一览|'
-    r'获得(?:服装|新服装|成员|道具|称号|背景)|'
-    r'舞台挑战达成(?:报酬|奖励)获得|'
-    r'(?:等级提升|等级上升|玩家等级提升|升级)|首次.*奖励)$')
-BUTTON = re.compile(r'^(?:确定|确认|关闭|OK)$', re.I)
-TRANSACTION = re.compile(r'是否|取消|消耗|购买|花费|招募|交换|兑换|恢复体力|继续演出')
+BUTTON = re.compile(r'^(?:确定|确认|关闭|下一步|OK)$', re.I)
+# Recruitment tickets can be reward items. Actual purchases/choices remain
+# owned by the calling task, even if their affirmative button says "OK".
+TRANSACTION = re.compile(r'是否|取消|消耗|购买|花费|招募(?!券)|交换|兑换|恢复体力|继续演出')
 
 
 def dialog_box(image):
     """Find a centered white dialog using its top and uninterrupted side margins.
 
     No OpenCV dependency; positions are derived from the current 1280x720 frame.
-    Header semantics and a single in-dialog button are checked separately.
+    A single in-dialog button and absence of transaction choices are checked separately.
     """
     if not isinstance(image, np.ndarray) or image.shape[:2] != (720, 1280):
         return None
@@ -61,8 +56,9 @@ class NotificationMixin:
     def dismiss_notifications(self):
         """Drain safe notifications, verifying progress before another click.
 
-        Unknown/transaction dialogs remain owned by their task. A recognized
-        notification without a unique button blocks background-page actions.
+        Titles are used only for logging, never as an allowlist. Transaction
+        dialogs remain owned by their task. Missing buttons may still be
+        animating; callers must keep the overlay in front of background actions.
         """
         handled = False
         previous = None
@@ -75,22 +71,16 @@ class NotificationMixin:
             hits = self.ocr([x+12,y+8,w-24,h-16])
             titles = [normalized(hit.text) for hit in hits
                       if hit.box[1] < y+min(115,h*.3)]
-            title = next((t for t in titles if NOTICE_TITLE.fullmatch(t)), None)
-            if title is None:
-                return handled
+            title = ' '.join(titles) or '提示'
             text = ' '.join(normalized(hit.text) for hit in hits)
-            # A recruitment ticket is a reward item, not a recruitment action.
-            # Exempt only this complete item label on the known stage-reward
-            # receipt. Purchase/consumption/cancel text still blocks dismissal.
-            transaction_text = text
-            if re.fullmatch(r'舞台挑战达成(?:报酬|奖励)获得',title):
-                transaction_text = ' '.join(normalized(hit.text) for hit in hits
-                    if not re.fullmatch(r'星石招募券(?:[x×X]\d+)?',normalized(hit.text)))
-            if TRANSACTION.search(transaction_text):
-                raise FlowError(f'通知包含交易或选择内容，交由任务处理：{title}')
+            if TRANSACTION.search(text):
+                return handled
             buttons = [hit for hit in hits if BUTTON.fullmatch(normalized(hit.text))
                        and hit.box[1] > y+h*.55
-                       and abs(hit.box[0]+hit.box[2]/2-(x+w/2)) < w*.23]
+                       and x <= hit.box[0] and hit.box[0]+hit.box[2] <= x+w
+                       and hit.box[1]+hit.box[3] <= y+h]
+            if not buttons:
+                return handled
             if len(buttons) != 1:
                 raise FlowError(f'通知弹窗未找到唯一确认按钮：{title}')
             fingerprint = (title, text)

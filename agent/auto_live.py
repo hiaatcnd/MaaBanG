@@ -304,14 +304,11 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
             if (self.reco('CU_HomeBand') or self.reco('LV_Menu') or self.reco('LV_TourHome') or
                     self.reco('LV_TourSetup') or self.reco('LV_SongPage')):
                 return
-            if (self.reco('LV_ScoreAuto') or self.reco('LV_TourSummary') or
-                    self.reco('LV_Rewards') or self.reco('LV_Experience') or self.reco('LV_LoginReward') or
-                    self.reco('LV_EventResult') or self.login_reward_page()):
-                button=self.hit_text([940,602,274,100], '^下一步$|^确定$|^确认$')
-                if button:
-                    self.tap_hit(button)
-                    self.pause(2)
-                    continue
+            button=self.hit_text([940,602,274,100], '^下一步$|^确定$|^确认$|^关闭$')
+            if button:
+                self.tap_hit(button)
+                self.pause(2)
+                continue
             self.pause(2)
         raise FlowError('未识别演出结算页面，保留现场')
 

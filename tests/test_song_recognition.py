@@ -7,11 +7,23 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from online_policy import final_song
-from song_catalog import BY_ID, TITLE_OCR_ALIASES, recognition_titles
+from song_catalog import BY_ID, RECOGNITION_BY_ID, TITLE_OCR_ALIASES, recognition_titles
 from song_navigation import SongNavigationMixin, title_key
 
 
 class SongRecognitionTests(unittest.TestCase):
+    def test_all_server_only_song_matches_offline_with_all_its_names(self):
+        from unittest.mock import patch
+        song=next(s for sid,s in RECOGNITION_BY_ID.items()
+                  if sid not in BY_ID and all(
+                      sum(title_key(name) in {title_key(v) for v in recognition_titles(other)}
+                          for other in RECOGNITION_BY_ID.values())==1
+                      for name in recognition_titles(s)))
+        with patch('urllib.request.urlopen',side_effect=AssertionError('matching must be offline')):
+            for title in recognition_titles(song):
+                with self.subTest(title=title):
+                    self.assertEqual(final_song(title)['id'],song['id'])
+
     def test_ocr_boundary_quotes_are_formatting_but_body_is_exact(self):
         for title in ('“Say cheese!!!!!”', '"Say cheese!!!!!"”"', '“Say cheese!!!!!"'):
             self.assertEqual(final_song(title)['id'], '646')

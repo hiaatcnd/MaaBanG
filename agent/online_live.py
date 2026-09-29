@@ -9,6 +9,7 @@ import time
 from chart_live import ChartLiveFlow
 from costume_unlock import FlowError
 from online_policy import RoomClock, RoomInterrupted, retry_delay, final_song, final_selection
+from notifications import dialog_box
 
 
 class OnlineLiveFlow(ChartLiveFlow):
@@ -24,11 +25,20 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.charts={}
         self.current_attempt=None
         self._last_foreground_check=0.
+        self.entry_node='OL_CoopEntry' if options.mode=='coop' else 'OL_TeamEntry'
+        self.home_node='OL_RoomPage' if options.mode=='coop' else 'OL_TeamHome'
+        self.difficulty_y=594 if options.mode=='coop' else 574
+
+    def reco(self, name, **override):
+        if name=='OL_FinalConfirm' and self.settings.mode=='coop':
+            name='OL_CoopFinalConfirm'
+        return super().reco(name,**override)
 
     def state(self, value):
         if self.report['state']!=value:
             self.report['state']=value
-            print(f'[团队演出] {value}',flush=True)
+            label='协力演出' if self.settings.mode=='coop' else '团队演出'
+            print(f'[{label}] {value}',flush=True)
             if self.current_attempt is not None:
                 self.current_attempt.setdefault('states',[]).append(value)
 
@@ -56,9 +66,9 @@ class OnlineLiveFlow(ChartLiveFlow):
             raise RoomInterrupted(str(lost.best_result.text))
         if self.reco('CU_HomeBand') or self.reco('LV_Menu'):
             raise RoomInterrupted('已返回主界面或演出菜单')
-        entry=bool(self.reco('OL_TeamHome'))
+        entry=bool(self.reco(self.home_node))
         if entry and self.left_entry:
-            raise RoomInterrupted('已返回团队演出主页')
+            raise RoomInterrupted('已返回联网演出入口')
         if not entry:
             self.left_entry=True
         if self.room_clock and self.room_clock.expired(time.monotonic()):
@@ -113,7 +123,7 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.snap()
             if self.dismiss_talk() or self.result_modals():
                 continue
-            if self.reco('OL_TeamHome'):
+            if self.reco(self.home_node):
                 self.back()
                 continue
             return super().navigate_menu()
@@ -150,7 +160,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.navigate_menu()
         if not self.configure_menu_fire():
             return False
-        self.open_page('OL_TeamEntry','OL_TeamHome')
+        self.open_page(self.entry_node,self.home_node)
         self.report['attempts']+=1
         self.current_attempt={'attempt':self.report['attempts'],'status':'matching',
                               'songs':[],'fire_before_matching':self.fire_balance()}
@@ -169,13 +179,36 @@ class OnlineLiveFlow(ChartLiveFlow):
             if self.reco('OL_FinalConfirm'):
                 self.state('确认最终歌曲和难度')
                 return
+            if self.settings.mode=='coop' and self.hit_text([450,300,400,100],'以[2-5]人开始演出'):
+                button=self.hit_text([650,415,250,90],'^开始$')
+                if button:
+                    self.tap_hit(button)
+                    unknown_since=None
+                    continue
+            if self.settings.mode=='coop' and self.reco('OL_CoopSongPage'):
+                self.state('协力选曲')
+                self.save_frame('coop_song_page.png')
+                random=self.hit_text([685,605,200,80],'^不指定歌曲$')
+                if random:
+                    self.tap_hit(random)
+                unknown_since=None
+                self.pause(.25)
+                continue
+            if self.settings.mode=='coop' and time.monotonic()-self.room_clock.entered>15:
+                start=self.hit_text([920,610,275,70],'^立即开始$|^立刻开始$')
+                if start and self.pink(self.image[625:638,960:980]):
+                    self.tap_hit(start)
+                    unknown_since=None
+                    continue
             if self.reco('OL_RandomSong'):
                 self.state('随机选曲')
                 unknown_since=None
-            elif self.reco('OL_Matching') or self.reco('OL_TeamHome'):
+            elif self.reco('OL_Matching') or self.reco(self.home_node):
                 unknown_since=None
             else:
                 unknown_since=unknown_since or time.monotonic()
+                if self.settings.mode=='coop':
+                    self.save_frame('coop_waiting.png')
                 if time.monotonic()-unknown_since>30:
                     raise FlowError('联网房间出现未知页面超过30秒')
             self.pause(.25)
@@ -210,12 +243,12 @@ class OnlineLiveFlow(ChartLiveFlow):
         selection=final_selection(song,self.settings.difficulties[0],special)
         if selection.difficulty not in centers:
             raise FlowError('未找到目标难度按钮：'+selection.difficulty)
-        self.quick_tap(centers[selection.difficulty],574)
+        self.quick_tap(centers[selection.difficulty],self.difficulty_y)
         self.snap()
         if not self.reco('OL_FinalConfirm'):
             raise FlowError('未能在倒计时内确认难度')
         x=centers[selection.difficulty]
-        area=self.image[554:586,x-15:x+15].astype(float)
+        area=self.image[self.difficulty_y-20:self.difficulty_y+12,x-15:x+15].astype(float)
         if (area.max(2)-area.min(2)>75).mean()<.25:
             raise FlowError('联网难度未选中：'+selection.difficulty)
         # Cut-in checkbox is separate per mode; disable it before ready submission.
@@ -282,7 +315,16 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.verify_final_selection(selection)
             try:
                 before,after=self.fire_preview()
-                balance=self.fire_balance()
+                if self.settings.mode=='coop':
+                    # Coop replaces the top currency bar with player cards.
+                    # Verify its only counter twice on the same final page.
+                    self.pause(.15)
+                    self.snap()
+                    if not self.reco('OL_FinalConfirm') or self.fire_preview()!=(before,after):
+                        raise FlowError('协力火数预览读数不稳定或已离开准备页')
+                    balance=before
+                else:
+                    balance=self.fire_balance()
                 if before-after!=amount or before<amount or before!=balance:
                     raise FlowError(f'联网开演火数预览不符：预览 {before} → {after}，'
                                     f'顶部 {balance}，要求消耗 {amount}')
@@ -303,7 +345,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         if target is None:
             raise FlowError('开演前联网难度按钮消失')
         x=target.box[0]+target.box[2]//2
-        area=self.image[554:586,x-15:x+15].astype(float)
+        area=self.image[self.difficulty_y-20:self.difficulty_y+12,x-15:x+15].astype(float)
         if (area.max(2)-area.min(2)>75).mean()<.25:
             raise FlowError('开演前联网难度发生变化')
 
@@ -311,7 +353,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.snap()
         if not self.reco('OL_FinalConfirm'):
             raise FlowError('准备提交前联网确认页面已离开')
-        ready=self.hit_text([1010,580,225,105],'^准备完毕$')
+        ready=self.hit_text([1010,580,225,105],'^准备完毕[！!]?$')
         if not ready:
             raise FlowError('未找到联网准备完毕按钮')
         self.quick_tap(ready.box[0]+ready.box[2]//2,ready.box[1]+ready.box[3]//2)
@@ -339,6 +381,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.state('结算')
         deadline=time.monotonic()+180
         confirmed=bool(row.get('counted'))
+        overlay_since=None
         while time.monotonic()<deadline:
             self.snap()
             if confirmed and self.reco('OL_Disconnected'):
@@ -357,6 +400,13 @@ class OnlineLiveFlow(ChartLiveFlow):
                     break
             if modal_handled:
                 continue
+            if dialog_box(self.image) is not None:
+                overlay_since=overlay_since or time.monotonic()
+                if time.monotonic()-overlay_since>3:
+                    self.require_clear_notification_overlay()
+                self.pause(.2)
+                continue
+            overlay_since=None
             if self.hit_text([680,275,220,220],'GREAT|GOOD|BAD|MISS'):
                 if not confirmed:
                     self.save_frame(f'judgment_attempt{self.report["attempts"]}.png')
@@ -365,19 +415,21 @@ class OnlineLiveFlow(ChartLiveFlow):
                     confirmed=True
                     self.count_result(row)
                     self.room_active=False
-            known=confirmed or self.hit_text([100,405,190,70],'^演出报酬$')
-            if known:
-                button=self.hit_text([940,600,290,105],'^下一步$|^确定$|^确认$')
-                if button:
-                    self.tap_hit(button)
-                    # Confirmation is durable before any subsequent home navigation.
-                    if confirmed:
-                        self.room_active=False
-                    continue
-            if confirmed and (self.reco('OL_TeamHome') or self.reco('LV_Menu') or self.reco('CU_HomeBand')):
+            group_result=self.settings.mode=='coop' and self.reco('OL_CoopGroupResult')
+            if group_result:
+                self.save_frame(f'group_result_attempt{self.report["attempts"]}.png')
+            # We are already settling a finished playback and have excluded
+            # overlays. Advance the footer without enumerating result titles.
+            button=self.hit_text([940,600,290,105],'^下一步$|^确定$|^确认$|^关闭$')
+            if button:
+                self.tap_hit(button)
+                if confirmed:
+                    self.room_active=False
+                continue
+            if confirmed and (self.reco(self.home_node) or self.reco('LV_Menu') or self.reco('CU_HomeBand')):
                 return
             self.pause(.4)
-        raise FlowError('团队演出结算超时，保留现场')
+        raise FlowError('联网演出结算超时，保留现场')
 
     def recover_room(self):
         self.room_active=False
@@ -415,7 +467,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 continue
             if self.reco('CU_HomeBand') or self.reco('LV_Menu'):
                 return
-            if self.reco('OL_TeamHome'):
+            if self.reco(self.home_node):
                 self.back()
                 continue
             waiting=any(self.reco(node) for node in

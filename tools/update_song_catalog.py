@@ -1,4 +1,4 @@
-"""Refresh China-server song metadata and dependent UI options from Bestdori."""
+"""Refresh CN song choices and the all-server recognition catalog from Bestdori."""
 import argparse
 import csv
 from datetime import datetime, timezone
@@ -62,6 +62,45 @@ def build_catalog(songs, bands, now_ms):
 def playable(catalog):
     return [s for s in catalog if s['active'] and
             s['difficulties'].get('expert', {}).get('available')]
+
+
+def build_recognition_catalog(songs, bands):
+    """Keep every song identity; game-visible difficulty decides what can be played.
+
+    Release dates deliberately do not filter this catalog. Bestdori may lag CN
+    releases, while its chart metadata and names are already present elsewhere.
+    This catalog must never be used to generate user-selectable song choices.
+    """
+    result = []
+    for song_id, source in sorted(songs.items(), key=lambda pair: int(pair[0])):
+        names = source.get('musicTitle', [])
+        aliases = list(dict.fromkeys(v for v in names if isinstance(v, str) and v))
+        if not aliases:
+            raise ValueError(f'Missing song titles: {song_id}')
+        band_names = bands.get(str(source['bandId']), {}).get('bandName', [])
+        band_aliases = list(dict.fromkeys(v for v in band_names if isinstance(v, str) and v))
+        charts = {}
+        for key, chart in source.get('difficulty', {}).items():
+            if key not in tuple(map(str, range(5))):
+                continue
+            level = chart.get('playLevel')
+            notes = source.get('notes', {}).get(key)
+            if not isinstance(level, int) or level <= 0:
+                raise ValueError(f'Invalid chart level: {song_id}/{key}')
+            if notes is not None and (not isinstance(notes, int) or notes <= 0):
+                raise ValueError(f'Invalid chart notes: {song_id}/{key}')
+            charts[DIFFICULTIES[int(key)]] = {
+                'level': level, 'notes': notes, 'available': True,
+            }
+        result.append({
+            'id': str(song_id), 'title': cn(names) or aliases[0], 'aliases': aliases,
+            'band_id': source['bandId'], 'band': cn(band_names) or next(iter(band_aliases), ''),
+            'band_aliases': band_aliases, 'difficulties': charts,
+            'url': f'https://bestdori.com/info/songs/{song_id}',
+        })
+    if not result:
+        raise ValueError('Empty recognition catalog; refusing to replace local data')
+    return result
 
 
 def apply_verified_availability(catalog, overrides):
@@ -138,8 +177,10 @@ def main():
     now = datetime.now(timezone.utc)
     raw = args.songs_file.read_bytes() if args.songs_file else fetch(SONGS_URL)
     bands_raw = args.bands_file.read_bytes() if args.bands_file else fetch(BANDS_URL)
-    songs = build_catalog(json.loads(raw.decode('utf-8-sig')),
-                          json.loads(bands_raw.decode('utf-8-sig')), int(now.timestamp()*1000))
+    source_songs = json.loads(raw.decode('utf-8-sig'))
+    source_bands = json.loads(bands_raw.decode('utf-8-sig'))
+    songs = build_catalog(source_songs, source_bands, int(now.timestamp()*1000))
+    recognition_songs = build_recognition_catalog(source_songs, source_bands)
     observations = ROOT/'agent/data/song_cn_verified_availability.json'
     if observations.exists():
         apply_verified_availability(songs, json.loads(observations.read_text(encoding='utf-8')))
@@ -151,6 +192,11 @@ def main():
     out = ROOT/'agent/data/songs_cn.json'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    recognition_payload = {key: value for key, value in payload.items()
+                           if key not in ('server', 'server_index', 'songs')}
+    recognition_payload.update(scope='all_servers', songs=recognition_songs)
+    (out.parent/'songs_all.json').write_text(
+        json.dumps(recognition_payload, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     # Import after writing the catalog so generated chart choices use the refresh.
     from update_chart_interface import update as update_chart_interface
     interface = update_chart_interface(interface)
@@ -167,6 +213,7 @@ def main():
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     csv_path.write_text(csv_out.getvalue(), encoding='utf-8-sig')
     print(f'CN released: {len(songs)}; active: {sum(s["active"] for s in songs)}; selectable: {len(playable(songs))}')
+    print(f'All-server recognition: {len(recognition_songs)}')
 
 
 if __name__ == '__main__':
