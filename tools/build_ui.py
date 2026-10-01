@@ -3,6 +3,7 @@ import hashlib
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import urllib.request
 import zipfile
 
@@ -30,6 +31,7 @@ def build_ui():
         subprocess.run(['git', 'apply', '--check', '-'], input=patch_bytes, cwd=source_dir, check=True)
         subprocess.run(['git', 'apply', '-'], input=patch_bytes, cwd=source_dir, check=True)
     output = cache / 'ui-build'
+    shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGUpdate.cs')
     dotnet = os.environ.get('MAABANG_DOTNET', 'dotnet')
     subprocess.run([dotnet, 'build', str(source_dir / 'MFAAvalonia/MFAAvalonia.csproj'),
                     '-c', 'Release', '-r', 'win-x64', '-o', str(output),

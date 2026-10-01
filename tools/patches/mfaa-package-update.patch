@@ -1,0 +1,174 @@
+--- a/MFAAvalonia/Helper/VersionChecker.cs
++++ b/MFAAvalonia/Helper/VersionChecker.cs
+@@ -210,7 +210,8 @@
+         if (segments.Length == 2)
+             return segments[1].Equals("interface.json", StringComparison.OrdinalIgnoreCase);
+         return segments.Length == 3
+-               && segments[1].Equals("assets", StringComparison.OrdinalIgnoreCase)
++               && (segments[1].Equals("assets", StringComparison.OrdinalIgnoreCase)
++                   || segments[1].Equals("app", StringComparison.OrdinalIgnoreCase))
+                && segments[2].Equals("interface.json", StringComparison.OrdinalIgnoreCase);
+     }
+ 
+@@ -376,7 +377,7 @@
+                 return;
+             }
+ 
+-            AddCDKCheckTask();
++            // MaaBanG releases are distributed through GitHub.
+ 
+             if (config.AutoUpdateResource)
+             {
+@@ -517,6 +518,7 @@
+         bool notifyWhenUpToDate = true,
+         bool notifyOnError = true)
+     {
++        isGithub = true; // The project has no Mirror resource ID.
+         Instances.RootViewModel.SetUpdating(true);
+         var url = MaaProcessor.Interface?.Github ?? MaaProcessor.Interface?.Url ?? string.Empty;
+ 
+@@ -675,6 +677,7 @@
+ 
+     public async static Task UpdateResource(bool isGithub = true, bool closeDialog = false, bool noDialog = false, Action action = null, string currentVersion = "", string? localPackagePath = null)
+     {
++        isGithub = true;
+         shouldShowToast = false;
+         Instances.RootViewModel.SetUpdating(true);
+         var debugEnabled = IsEnvEnabled(ResourceUpdateDebugEnv);
+@@ -898,7 +901,10 @@
+         }
+         else if (string.IsNullOrWhiteSpace(sha256))
+         {
+-            LoggerHelper.Warning($"已跳过 SHA256 校验：文件={tempZipFilePath}，原因=未提供校验值");
++            Dismiss(sukiToast);
++            ToastHelper.Warn("更新包缺少 GitHub SHA256 校验值，已取消更新。");
++            Instances.RootViewModel.SetUpdating(false);
++            return;
+         }
+         else
+         {
+@@ -910,6 +916,34 @@
+             Dismiss(sukiToast);
+             ToastHelper.Warn(LangKeys.Warning.ToLocalization(), LangKeys.HashVerificationFailed.ToLocalization());
+             Instances.RootViewModel.SetUpdating(false);
++            return;
++        }
++        if (OperatingSystem.IsWindows())
++        {
++            try
++            {
++                SetStatusText(textBlock, downloadSpeedTextBlock, "正在校验 MaaBanG 完整安装包");
++                var work = await MaaBanGUpdate.PrepareAsync(tempZipFilePath, isLocalPackage ? "" : latestVersion);
++                if (dryRun)
++                {
++                    ToastHelper.Info("整包更新检查通过，未替换安装文件", work, 5000);
++                    return;
++                }
++                await StopTaskersAndAgentsForUpdateAsync();
++                MaaBanGUpdate.ApplyAfterExit(work);
++                Interlocked.Exchange(ref _restartPending, 1);
++                DispatcherHelper.PostOnMainThread(() => Instances.ShutdownApplication(forceStop: true));
++            }
++            catch (Exception ex)
++            {
++                LoggerHelper.Error("MaaBanG 整包更新准备失败", ex);
++                ToastHelper.Warn("更新未完成，原安装保持不变", ex.Message, -1);
++            }
++            finally
++            {
++                Dismiss(sukiToast);
++                Instances.RootViewModel.SetUpdating(false);
++            }
+             return;
+         }
+         if (OperatingSystem.IsAndroid())
+@@ -1979,6 +2013,7 @@
+ 
+     public async static Task UpdateMFA(bool isGithub, bool noDialog = false)
+     {
++        if (OperatingSystem.IsWindows()) { await UpdateResource(true); return; }
+         Instances.RootViewModel.SetUpdating(true);
+         ProgressBar? progress = null;
+         TextBlock? textBlock = null;
+@@ -2407,6 +2442,7 @@
+ 
+     public async static Task UpdateMaaFw()
+     {
++        if (OperatingSystem.IsWindows()) { await UpdateResource(true); return; }
+         Instances.RootViewModel.SetUpdating(true);
+         ProgressBar? progress = null;
+         TextBlock? textBlock = null;
+--- a/MFAAvalonia/ViewModels/UsersControls/Settings/VersionUpdateSettingsUserControlModel.cs
++++ b/MFAAvalonia/ViewModels/UsersControls/Settings/VersionUpdateSettingsUserControlModel.cs
+@@ -192,10 +192,9 @@
+         {
+             Name = "GitHub"
+         },
+-        new(LangKeys.MirrorChyan),
+     ];
+ 
+-    [ObservableProperty] private int _downloadSourceIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.DownloadSourceIndex, 1);
++    [ObservableProperty] private int _downloadSourceIndex = 0; // MaaBanG uses GitHub releases.
+ 
+     partial void OnDownloadSourceIndexChanged(int value)
+     {
+--- a/MFAAvalonia/Helper/Instances.cs
++++ b/MFAAvalonia/Helper/Instances.cs
+@@ -673,7 +673,7 @@
+                 if (IsResolved<VersionUpdateSettingsUserControlModel>())
+                 {
+                     var version = VersionUpdateSettingsUserControlModel;
+-                    version.DownloadSourceIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.DownloadSourceIndex, 1);
++                    version.DownloadSourceIndex = 0; // MaaBanG uses GitHub releases.
+                     version.UIUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.UIUpdateChannelIndex, 2);
+                     version.ResourceUpdateChannelIndex = ConfigurationManager.Current.GetValue(ConfigurationKeys.ResourceUpdateChannelIndex, 2);
+                     version.GitHubToken = SimpleEncryptionHelper.Decrypt(ConfigurationManager.Current.GetValue(ConfigurationKeys.GitHubToken, string.Empty));
+--- a/MFAAvalonia/Views/UserControls/Settings/VersionUpdateSettingsUserControl.axaml
++++ b/MFAAvalonia/Views/UserControls/Settings/VersionUpdateSettingsUserControl.axaml
+@@ -272,7 +272,7 @@
+                         <TextBlock
+                             FontSize="16"
+                             FontWeight="SemiBold"
+-                            Text="{markup:I18n {x:Static helper:LangKeys.AutomaticUpdateResource}}"
++                            Text="自动更新 MaaBanG（完成后重启）"
+                             VerticalAlignment="Center" />
+                     </StackPanel>
+                 </DockPanel>
+@@ -330,12 +330,12 @@
+                         Height="40"
+                         HorizontalAlignment="Center"
+                         Margin="0,0,4,0"
+-                        ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.CheckResource}}" />
+-                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+-                        <TextBlock
+-                            FontSize="16"
+-                            FontWeight="SemiBold"
+-                            Text="{markup:I18n {x:Static helper:LangKeys.CheckResource}}"
++                        ToolTip.Tip="检查 MaaBanG 更新" />
++                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
++                        <TextBlock
++                            FontSize="16"
++                            FontWeight="SemiBold"
++                            Text="检查 MaaBanG 更新"
+                             VerticalAlignment="Center" />
+                     </StackPanel>
+                 </DockPanel>
+@@ -374,12 +374,12 @@
+                         Height="40"
+                         HorizontalAlignment="Center"
+                         Margin="0,0,4,0"
+-                        ToolTip.Tip="{markup:I18n {x:Static helper:LangKeys.UpdateResource}}" />
+-                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+-                        <TextBlock
+-                            FontSize="16"
+-                            FontWeight="SemiBold"
+-                            Text="{markup:I18n {x:Static helper:LangKeys.UpdateResource}}"
++                        ToolTip.Tip="更新 MaaBanG（整包）" />
++                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
++                        <TextBlock
++                            FontSize="16"
++                            FontWeight="SemiBold"
++                            Text="更新 MaaBanG（整包）"
+                             VerticalAlignment="Center" />
+                     </StackPanel>
+                 </DockPanel>

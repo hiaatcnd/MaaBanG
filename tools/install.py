@@ -11,6 +11,7 @@ import sys
 import urllib.request
 import zipfile
 from build_ui import build_ui
+from package_manifest import build_updater, write_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -71,7 +72,9 @@ def build(version):
     for patch in (ROOT / 'tools/patches').glob('mfaa-*.patch'):
         shutil.copy2(patch, source_bundle)
     shutil.copy2(ROOT / 'tools/build_ui.py', source_bundle)
+    shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_bundle)
     (package / "tools").mkdir()
+    build_updater(package / 'tools/MaaBanGUpdater.exe')
     shutil.copy2(ROOT / "tools/package_smoke.py", package / "tools/package_smoke.py")
     compiler = Path(os.environ["WINDIR"]) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
     subprocess.run([str(compiler), "/nologo", "/target:winexe", "/reference:System.Windows.Forms.dll",
@@ -83,6 +86,7 @@ def build(version):
         shutil.rmtree(package / "debug")
     for bytecode in package.rglob("__pycache__"):
         shutil.rmtree(bytecode)
+    write_manifest(release, version)
     output = ROOT / "dist"
     output.mkdir(exist_ok=True)
     archive = Path(shutil.make_archive(str(output / release.name), "zip", release.parent, release.name))
