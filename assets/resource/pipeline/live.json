@@ -21,6 +21,24 @@
         ],
         "threshold": 0.85
     },
+    "LV_FeverEntry": {
+        "recognition": "OCR",
+        "expected": "^设[定置]$",
+        "roi": [850, 110, 130, 70]
+    },
+    "LV_FeverDialog": {
+        "recognition": "OCR",
+        "expected": "[Ff][Ee][Vv][Ee][Rr]印章消费设[定置]",
+        "roi": [380, 177, 300, 50]
+    },
+    "LV_FeverConfirm": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "roi": [535, 465, 210, 65]
+    },
+    "LV_Fever": {
+        "attach": {"value": "off"}
+    },
     "LV_FreeEntry": {
         "recognition": "OCR",
         "expected": "^自由演出$",

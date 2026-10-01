@@ -17,11 +17,12 @@ def main():
     parser.add_argument('--song',default=SONGS[0],help='中国服歌名或 Bestdori 歌曲ID；同名歌曲使用ID')
     parser.add_argument('--difficulty',choices=DIFFICULTIES,default='expert')
     parser.add_argument('--fire',type=int,choices=range(4),default=3)
+    parser.add_argument('--fever',choices=['off','on'],default='off',help='使用Fever印章；无法开启时继续演出')
     parser.add_argument('--shortage',choices=['stop','lower'],default='stop')
     parser.add_argument('--max-rounds',default='')
     parser.add_argument('--prepare-only',action='store_true',help='只选歌和难度并读取准备页，不开演')
     args=parser.parse_args()
-    values={k:getattr(args,k) for k in ('mode','song','difficulty','fire','shortage','max_rounds')}
+    values={k:getattr(args,k) for k in ('mode','song','difficulty','fire','shortage','max_rounds','fever')}
     options=LiveOptions.parse(values)
     from maa.resource import Resource
     from maa.controller import AdbController

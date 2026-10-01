@@ -21,8 +21,13 @@ class DailyPolicyTests(unittest.TestCase):
             with self.assertRaises(ValueError): remaining_draws(text)
 
     def test_paid_or_unrelated_recruitment_is_rejected(self):
-        verify_free_confirmation('每日3次免费！演出招募\n进行招募。确认吗？')
-        for text in ['每天免费10连','演出招募 250星石','每日3次免费！演出招募 消耗250星石']:
+        for wording in ['每日3次免费', '每日最多3次免费', '每日 最多３次 免费']:
+            verify_free_confirmation(wording+'！演出招募\n进行招募。确认吗？')
+        for text in ['每天免费10连','演出招募 250星石','每日3次免费！演出招募 消耗250星石',
+                     '每日最多3次免费！演出招募 消耗100星石',
+                     '每日最多3次免费！演出招募 付费',
+                     '每日最多3次免费！演出招募 2500星石',
+                     '每日最多3次免费！其他招募', '每日最多10次免费！演出招募']:
             with self.assertRaises(ValueError): verify_free_confirmation(text)
 
     def test_exchange_guards_category_quantity_and_balance(self):
@@ -36,6 +41,75 @@ class DailyPolicyTests(unittest.TestCase):
 
 
 class DailyFlowTests(unittest.TestCase):
+    def test_free_recruit_scroll_avoids_fixed_promotion(self):
+        f=self.flow();f.click=Mock();f.snap=Mock()
+        f.image=np.zeros((720,1280,3),dtype=np.uint8)
+        position=[0]
+        def swipe(x,y1,y2):
+            # The fixed promotion covers the old y=595 gesture origin.
+            if x==130 and 300<=y2<y1<565:
+                position[0]+=1
+                f.image[100:565,28:229]=position[0]*30
+        f.swipe=Mock(side_effect=swipe)
+        f.reco=Mock(side_effect=lambda node:position[0]>=3)
+        DailyFlow.select_free_recruit(f)
+        self.assertEqual(f.swipe.call_count,3)
+        f.click.assert_called_with('DY_FreeTab')
+        f.wait.assert_called_once_with('DY_FreeBanner')
+
+    def test_free_recruit_stops_at_unchanged_list_without_drawing(self):
+        f=self.flow();f.click=Mock();f.snap=Mock();f.swipe=Mock()
+        f.image=np.zeros((720,1280,3),dtype=np.uint8)
+        f.reco=Mock(return_value=None)
+        with self.assertRaisesRegex(FlowError,'招募列表未找到'):
+            DailyFlow.select_free_recruit(f)
+        f.swipe.assert_called_once()
+        f.tap.assert_not_called()
+
+    def test_real_invitation_claim_buttons_at_lower_position(self):
+        root=Path(__file__).resolve().parents[1]
+        if not (root/'assets/resource/model/ocr/rec.onnx').is_file():
+            self.skipTest('Local OCR models required')
+        from PIL import Image
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+        frames=[np.asarray(Image.open(root/f'tests/fixtures/daily/{name}.png').convert('RGB'))[:,:,::-1].copy()
+                for name in ('linked_invitation','return_invitation')]
+        class Controller(CustomController):
+            def connect(self): return True
+            def request_uuid(self): return 'daily-claim-fixtures'
+            def screencap(self): return frames[0]
+        resource=Resource();self.assertTrue(resource.post_bundle(root/'assets/resource').wait().succeeded)
+        controller=Controller();self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker();tasker.bind(resource,controller)
+        case=self;errors=[]
+        class Check(CustomAction):
+            def run(self,ctx,argv):
+                try:
+                    f=DailyFlow(ctx);f.wait=Mock();f.tap_hit=Mock()
+                    for frame in frames:
+                        f.image=frame
+                        case.assertIsNone(f.hit_text([1020,100,252,96],'全部领取|一键领取'))
+                        f.claim_mission_category('任意关系任务')
+                    f.tap_hit.assert_not_called()
+                    # An enabled button in the same place must still be claimed.
+                    hit=f.hit_text([1020,100,252,190],'^(?:全部领取|一键领取)$')
+                    case.assertIsNotNone(hit)
+                    x,y,w,h=hit.box
+                    enabled=frame.copy();enabled[y+2:y+h-2,max(1020,x-25):x-7]=255
+                    f.image=enabled
+                    f.finish_claim=Mock(side_effect=lambda _:setattr(f,'image',frame))
+                    f.claim_mission_category('任意关系任务')
+                    f.tap_hit.assert_called_once()
+                    case.assertEqual(f.report['claims'],['任意关系任务'])
+                    return True
+                except Exception as exc:errors.append(repr(exc));return False
+        resource.register_custom_action('DailyCheck',Check())
+        job=tasker.post_task('DailyCheck',{'DailyCheck':{'action':'Custom','custom_action':'DailyCheck'}}).wait()
+        self.assertTrue(job.succeeded,errors)
+
     def test_missions_visit_unknown_tabs_and_scroll_without_reclaiming(self):
         f=self.flow(); f.click=Mock(); f.claim_mission_category=Mock()
         first=[('新活动页',(150,210)),('任意新增页',(150,305))]
@@ -115,6 +189,23 @@ class DailyFlowTests(unittest.TestCase):
         self.assertEqual(f.finish_draw.call_count,2)
         self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),2)
         f.home.assert_called_once()
+
+    def test_updated_free_confirmation_completes_draw(self):
+        f=self.flow(); f.text.return_value='每日最多3次免费！演出招募 进行招募。确认吗？'
+        f.free_remaining=Mock(side_effect=[1,0,0]); f.finish_draw=Mock()
+        f.recruit()
+        self.assertEqual(f.report['draws'],1)
+        self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),1)
+        f.home.assert_called_once()
+
+    def test_paid_confirmation_never_submits_draw(self):
+        f=self.flow(); f.text.return_value='每日最多3次免费！演出招募 消耗100星石'
+        f.free_remaining=Mock(return_value=3); f.finish_draw=Mock()
+        with self.assertRaisesRegex(ValueError,'收费信息'):
+            f.recruit()
+        self.assertNotIn((770,476),[c.args for c in f.tap.call_args_list])
+        f.finish_draw.assert_not_called()
+        self.assertFalse(f.report.get('draw_in_flight',False))
 
     def test_uncertain_recruit_result_does_not_retry(self):
         f=self.flow(); f.free_remaining=Mock(return_value=2)

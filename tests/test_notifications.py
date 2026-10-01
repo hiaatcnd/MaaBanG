@@ -23,6 +23,12 @@ def hit(text,x,y,w=100,h=30):
 
 
 class NotificationTests(unittest.TestCase):
+    def test_loading_comic_is_not_a_dialog(self):
+        from PIL import Image
+        path=Path(__file__).parent/'fixtures'/'coop'/'loading.png'
+        image=np.array(Image.open(path).convert('RGB'))[:,:,::-1].copy()
+        self.assertIsNone(dialog_box(image))
+
     @patch('notifications.time.sleep')
     def test_stage_reward_ticket_is_an_item_not_recruitment(self,_):
         button=hit('OK',606,521)

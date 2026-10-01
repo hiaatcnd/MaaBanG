@@ -7,6 +7,12 @@ from song_catalog import SONGS, resolve_song, available_difficulties
 DIFFICULTIES = ("easy", "normal", "hard", "expert", "special")
 
 
+def fever_option(value):
+    if value not in ('on', 'off'):
+        raise ValueError('Fever印章设置必须为开或关')
+    return value
+
+
 def number(value, name, maximum):
     if isinstance(value, bool):
         raise ValueError(f"{name}必须为整数")
@@ -25,6 +31,7 @@ class LiveOptions:
     shortage: str = "stop"
     max_rounds: int | None = None
     song_id: str | None = None
+    fever: str = 'off'
 
     @classmethod
     def parse(cls, data):
@@ -48,7 +55,8 @@ class LiveOptions:
         max_rounds = None if limit is None or limit == "" else number(limit, "最大演出次数", 999)
         if max_rounds == 0:
             raise ValueError("最大演出次数请留空或填写 1–999")
-        return cls(mode, catalog_song['title'], difficulty, fire, shortage, max_rounds, catalog_song['id'])
+        return cls(mode, catalog_song['title'], difficulty, fire, shortage, max_rounds, catalog_song['id'],
+                   fever_option(data.get('fever', 'off')))
 
     @property
     def songs_per_round(self):

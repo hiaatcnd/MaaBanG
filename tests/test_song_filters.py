@@ -43,7 +43,7 @@ class SongFilterTests(unittest.TestCase):
 
     def test_level_range_is_confirmed_only_when_both_ends_match(self):
         f,c=self.slider_flow()
-        f.text=Mock(side_effect=['5','30','28','30','28','28'])
+        f.text=Mock(side_effect=['5','30','5','28','28','28'])
         f.filter_expert_level(28)
         self.assertEqual(f.report['song_filters'],[{'verified_range':[28,28]}])
         self.assertEqual(c.post_touch_down.call_count,2)

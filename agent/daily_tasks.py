@@ -133,7 +133,8 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         # The all-claim button covers the category, including its offscreen rows/pages.
         for _ in range(100):
             self.wait("DY_MissionHeader")
-            button = self.hit_text([1020,100,252,96], "全部领取|一键领取")
+            # Relationship cards push the shared claim button below the header.
+            button = self.hit_text([1020,100,252,190], "^(?:全部领取|一键领取)$")
             if not button:
                 if self.hit_text([950,580,282,76], "^创建邀请码$|^输入邀请码$"):
                     self.report.setdefault('skipped_missions',[]).append({'category':category,'reason':'invitation_not_linked'})
@@ -283,11 +284,13 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 self.click("DY_FreeTab")
                 self.wait("DY_FreeBanner")
                 return
-            area = self.image[100:709,28:229].astype(float)
+            # The bottom-left promotion is fixed over the scrollable tabs.
+            # Neither start a gesture there nor include it in movement checks.
+            area = self.image[100:565,28:229].astype(float)
             if previous is not None and np.mean(np.abs(area-previous)) < 1:
                 break
             previous = area
-            self.swipe(130,595,335)
+            self.swipe(130,520,320)
         raise FlowError("招募列表未找到每日三次免费演出招募")
 
     def free_remaining(self):

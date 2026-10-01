@@ -9,6 +9,13 @@ from chart_timing import TempoMap, compile_basic_chart, compile_chart, first_anc
 
 
 class ChartTimingTests(unittest.TestCase):
+    def test_opening_skill_tap_uses_yellow_anchor_and_plain_chord_tap_wins(self):
+        chart=[{'type':'BPM','beat':0,'bpm':132},
+               {'type':'Single','beat':12,'lane':0,'skill':True}]
+        self.assertEqual(first_anchor(chart),(60/132*12,0,'yellow'))
+        chart.append({'type':'Single','beat':12,'lane':4})
+        self.assertEqual(first_anchor(chart),(60/132*12,4,'cyan'))
+
     def test_normal_tails_are_resampled_instead_of_clipped(self):
         rng=Mock()
         rng.gauss.side_effect=[4.,-5.,.25]

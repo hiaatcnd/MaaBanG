@@ -59,7 +59,7 @@ class OnlinePolicyTests(unittest.TestCase):
         team=next(c for c in cases if c['name']=='团队演出')
         self.assertEqual(team['option'],['谱面联网难度','谱面每首火数','谱面火不足策略'])
         coop=next(c for c in cases if c['name']=='协力演出')
-        self.assertEqual(coop['option'],team['option'])
+        self.assertEqual(coop['option'],['谱面协力房间类别','谱面协力房间','谱面协力歌曲',*team['option']])
 
     def test_prefetch_covers_expert_and_only_available_special(self):
         catalog={'1':{'id':'1','difficulties':{'expert':{'available':True},'special':{'available':True}}},
@@ -310,6 +310,29 @@ class OnlineFlowTests(unittest.TestCase):
             OnlineLiveFlow.recover_room(flow)
             flow.back.assert_called_once()
             flow.background_room.assert_called_once()
+
+    def test_failed_playback_pauses_and_interrupts_before_returning_home(self):
+        import numpy as np
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.foreground_package=Mock(return_value='com.bilibili.star.bili')
+            flow.snap=Mock();flow.image=np.zeros((720,1280,3),dtype=np.uint8)
+            flow.image[587:589,280:1000]=[255,255,0]
+            phase=[0];button=object()
+            flow.reco=Mock(side_effect=lambda node: (node=='OL_LeaveConfirm' and phase[0]==2)
+                           or (node=='CU_HomeBand' and phase[0]==3))
+            def hit(roi,pattern):
+                if phase[0]==1 and pattern in ('^暂停$','^中断$'):return button
+                if phase[0]==2 and '^中断$' in pattern:return button
+                return None
+            flow.hit_text=Mock(side_effect=hit)
+            flow.tap=Mock(side_effect=lambda *args:phase.__setitem__(0,1))
+            flow.tap_hit=Mock(side_effect=lambda hit:phase.__setitem__(0,phase[0]+1))
+            flow.back=Mock();flow.background_room=Mock()
+            OnlineLiveFlow.recover_room(flow)
+            flow.tap.assert_called_once_with(1240,50)
+            self.assertEqual(flow.tap_hit.call_count,2)
+            flow.back.assert_not_called();flow.background_room.assert_not_called()
 
     def test_real_errors_and_user_stop_are_not_retried(self):
         with tempfile.TemporaryDirectory() as folder:

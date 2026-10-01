@@ -66,6 +66,7 @@ class ChartLiveFlow(LiveFlow):
 
     def prepare_round(self):
         self.navigate_menu()
+        self.configure_fever(self.settings.fever)
         if self.settings.mode=='free':
             selections=self.settings.selections
             charts=[self.store.get(s) for s in selections]
