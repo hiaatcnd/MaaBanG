@@ -32,6 +32,12 @@ def locate_note_y(image, lane, color='cyan'):
         mask = (blue > 190) & (green > 190) & (red < 180)
     elif color == 'green':
         mask = (green > 220) & (blue < 200) & (red < 200)
+    elif color == 'yellow':
+        # Skill taps have a gold head instead of the ordinary cyan head.
+        # Require yellow chroma rather than matching white outlines/highlights.
+        mask = ((red > 220) & (green > 210) &
+                (red.astype(np.int16)-blue > 35) &
+                (green.astype(np.int16)-blue > 25))
     elif color == 'pink':
         # Flick heads brighten as they approach the line. Their green channel
         # can exceed 230, but magenta chroma still separates them from white.

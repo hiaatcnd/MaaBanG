@@ -1,7 +1,7 @@
 """User-facing chart live configuration, independent of the built-in auto quota."""
 from dataclasses import dataclass
 
-from live_policy import DIFFICULTIES, number
+from live_policy import DIFFICULTIES, number, fever_option
 from song_catalog import RECOGNITION_BY_ID, resolve_song, available_difficulties
 
 # Truncated normal timing and position jitter (sigma = bound/3), without clipping.
@@ -14,6 +14,10 @@ JITTER_PROFILES = {
     'large': (90., 12.),
     'extreme': (180., 22.),
 }
+
+COOP_ROOMS = {'free':'自由房间', 'beginner':'新手房间',
+              'master':'首席房间', 'legend':'传说房间'}
+COOP_ROOM_GROUPS = {'normal':'普通', 'special':'特别'}
 
 
 @dataclass(frozen=True)
@@ -53,6 +57,10 @@ class ChartOptions:
     max_rounds: int | None
     cp: int = 200
     cp_song: str = ''
+    coop_room: str = 'free'
+    coop_room_group: str = 'normal'
+    coop_song: str = ''
+    fever: str = 'off'
 
     @classmethod
     def parse(cls, data):
@@ -82,15 +90,25 @@ class ChartOptions:
         selections = (() if mode == 'tour_fixed' or online or challenge else tuple(
             ChartSelection.parse(data.get(f'song{i}', '306'), d)
             for i, d in enumerate(difficulties, 1)))
+        coop_room = data.get('coop_room', 'free')
+        coop_room_group = data.get('coop_room_group', 'normal')
+        coop_song = str(data.get('coop_song', '')).strip()
+        if mode == 'coop':
+            if coop_room not in COOP_ROOMS or coop_room_group not in COOP_ROOM_GROUPS:
+                raise ValueError('未知协力房间类型')
+            if coop_song:
+                coop_song = resolve_song(coop_song)['id']
         return cls(mode, selections, difficulties, jitter, fire, shortage, rounds,
-                   cp, str(data.get('cp_song', '')).strip())
+                   cp, str(data.get('cp_song', '')).strip(), coop_room, coop_room_group, coop_song,
+                   fever_option(data.get('fever', 'off')))
 
     @property
     def songs_per_round(self):
         return 3 if self.mode in ('tour_free', 'tour_fixed') else 1
 
 
-OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='', cp=200, cp_song='',
+OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='', cp=200, cp_song='', fever='off',
+                       coop_room='free', coop_room_group='normal', coop_song='',
                        **{f'song{i}':'306' for i in range(1,4)},
                        **{f'difficulty{i}':'expert' for i in range(1,4)})
 OPTION_NODES = {key: 'CL_'+key for key in OPTION_DEFAULTS}

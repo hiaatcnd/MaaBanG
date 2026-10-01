@@ -38,6 +38,10 @@ def dialog_box(image):
         gaps = np.flatnonzero(~sides)
         bottom = y+int(gaps[0]) if len(gaps) else 720
         if 180 <= bottom-y <= 660 and bottom < 690:
+            # Side decorations can end the detected panel inside a loading
+            # illustration. Require an actual white bottom margin as well.
+            if white[bottom-8:bottom,x+24:end-24].mean()<.75:
+                continue
             # White result panels share the same geometry. A modal additionally
             # has the long pink separator under its title, inside this panel.
             header=image[y+15:min(y+135,bottom),x+12:end-12].astype(np.int16)

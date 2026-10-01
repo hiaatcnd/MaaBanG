@@ -62,7 +62,8 @@ class SongNavigationMixin:
         else:
             raise FlowError('未定位乐曲等级筛选滑块')
         for _ in range(10):
-            self.snap()
+            if _:
+                self.snap()
             values=[]
             for x,width in ((695,52),(1183,65)):
                 text=normalized(self.text([x,y-24,width,48]))
@@ -76,7 +77,9 @@ class SongNavigationMixin:
             if not 5<=values[0]<=values[1]<=30 or not 5<=minimum<=maximum<=30:
                 raise FlowError('乐曲等级范围超出当前游戏筛选范围')
             handles=level_slider_handles(self.image,y)
-            index=0 if values[0]!=minimum else 1
+            # Narrow the upper bound first when possible. The lower handle
+            # then clamps to it instead of overshooting a single-level range.
+            index=1 if values[1]!=maximum and maximum>=values[0] else 0
             delta=(minimum,maximum)[index]-values[index]
             target=int(round(np.clip(handles[index]+delta*15.2+(5 if delta>0 else -5),772,1152)))
             self.report['level_filter_steps'][-1].update(handles=handles,index=index,x=target)
@@ -120,19 +123,37 @@ class SongNavigationMixin:
                 normalized(self.text([201,365,374,35])) in
                 {normalized(v) for v in song['band_aliases']})
 
-    def all_songs(self,song):
-        self.wait('LV_SongPage')
-        # Leave favorites/genre before applying the narrow band filter.
-        for _ in range(12):
-            self.snap()
-            hit=self.hit_text([0,106,180,95],'^所有$')
+    def all_songs_category(self,quick=False):
+        """Leave the separate Favorites list; its 'All' only means all favorites."""
+        for _ in range(5):
+            hit=self.hit_text([0,106,180,75],'^所有$')
             if hit:
-                self.tap_hit(hit)
-                break
-            self.swipe(85,210,650)
-        else:
-            raise FlowError('无法找到全部歌曲分类')
-        self.tap(1116,55)
+                if quick:
+                    x,y,w,h=hit.box
+                    self.quick_tap(x+w//2,y+h//2)
+                    self.pause(.25)
+                else:
+                    self.tap_hit(hit)
+                self.wait('LV_SongPage')
+                return
+            # Scroll the category sidebar itself. Favorites has another All
+            # entry below its heading; never treat it as the main All category.
+            if self.hit_text([0,630,115,75],'^范围$'):
+                self.tap(590,55)
+            else:
+                (self.quick_swipe if quick else self.swipe)(155,210,650)
+            self.wait('LV_SongPage')
+        raise FlowError('无法找到全部歌曲分类')
+
+    def all_songs(self,song,quick=False):
+        def tap(x,y):
+            if quick:
+                self.quick_tap(x,y)
+                self.pause(.25)
+            else:
+                self.tap(x,y)
+        self.all_songs_category(quick=quick)
+        tap(1116,55)
         self.snap()
         if not self.hit_text([690,20,350,50],'乐曲筛选'):
             raise FlowError('未打开歌曲筛选')
@@ -143,21 +164,23 @@ class SongNavigationMixin:
             self.snap()
         else:
             raise FlowError('未定位乐队筛选区域')
-        self.tap(1165,44)
+        tap(1165,44)
         # The current CN filter puts collaborations and bands without a dedicated
         # button (including Ave Mujica) under Other, rather than All.
         x,y=BAND_BUTTONS.get(song['band_id'],OTHER_BAND_BUTTON)
-        self.tap(x,y)
+        tap(x,y)
         # All selectable catalog songs have EXPERT. Do not retain a SPECIAL
         # filter that would hide an otherwise selectable target song.
-        self.tap(711,540)
+        tap(711,540)
         self.snap()
         if not self.pink(self.image[y-25:y-17,x-42:x+42]):
             raise FlowError(f"未确认乐队筛选：{song['band']}")
         if not self.pink(self.image[532:549,703:720]):
             raise FlowError('未确认选歌搜索难度为 EXPERT')
+        if quick:
+            self.quick_swipe(1200,550,290)
         self.filter_expert_level(int(song['difficulties']['expert']['level']))
-        self.tap(963,652)
+        tap(963,652)
         self.wait('LV_SongPage')
 
     def find_song(self,song):
@@ -166,11 +189,20 @@ class SongNavigationMixin:
         if self.selected_song_matches(song):
             return
         self.all_songs(song)
-        for start,end in ((230,650),(650,200)):
+        self.find_filtered_song(song)
+
+    def find_filtered_song(self,song,max_swipes=250,forward_first=False,quick=False):
+        """Search an already configured list without rebuilding its filters."""
+        if self.selected_song_matches(song):
+            return
+        directions=((650,200),(230,650)) if forward_first else ((230,650),(650,200))
+        for start,end in directions:
             previous=None
-            for _ in range(250):
-                self.wait('LV_SongPage')
-                for hit in self.ocr([201,105,365,590]):
+            for _ in range(max_swipes):
+                hits=self.ocr([201,105,365,590])
+                self.report.setdefault('song_search',[]).append(
+                    {'target':song['id'],'direction':[start,end],'visible':[hit.text for hit in hits]})
+                for hit in hits:
                     if not self.title_matches(hit.text,song):
                         continue
                     self.tap_hit(hit)
@@ -178,8 +210,9 @@ class SongNavigationMixin:
                     if self.selected_song_matches(song):
                         return
                 area=self.image[105:703,201:565].astype(float)
-                if previous is not None and np.mean(np.abs(area-previous))<1:
+                if previous is not None and np.mean(np.abs(area-previous))<.1:
                     break
                 previous=area
-                self.swipe(385,start,end)
+                (self.quick_swipe if quick else self.swipe)(385,start,end)
+                self.wait('LV_SongPage')
         raise FlowError(f"未找到或未解锁歌曲：{song['title']}；已按乐队筛选全部歌曲")

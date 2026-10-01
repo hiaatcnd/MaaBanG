@@ -142,7 +142,7 @@ class CPTests(unittest.TestCase):
     def test_cp_shortage_is_checked_before_song_download(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.flow(folder,cp=800)
-            flow.navigate_menu=Mock();flow.open_page=Mock()
+            flow.navigate_menu=Mock();flow.open_page=Mock();flow.configure_fever=Mock()
             flow.stable_integer=Mock(return_value=556)
             flow.select_event_song=Mock();flow.store.get=Mock()
             self.assertEqual(flow.prepare_round(),((),[]))

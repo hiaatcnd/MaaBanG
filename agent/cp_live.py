@@ -98,6 +98,7 @@ class CPLiveFlow(ChartLiveFlow):
 
     def prepare_round(self):
         self.navigate_menu()
+        self.configure_fever(self.settings.fever)
         self.open_page('CP_Entry','CP_Select')
         balance=self.stable_integer([1200,133,67,34])
         if balance<self.settings.cp:

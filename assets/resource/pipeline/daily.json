@@ -231,15 +231,14 @@
         "threshold": 0.85
     },
     "DY_FreeConfirm": {
-        "recognition": "TemplateMatch",
-        "template": "daily/FreeConfirm.png",
+        "recognition": "OCR",
+        "expected": "每日\\s*(?:最多\\s*)?[3３]\\s*次\\s*免费",
         "roi": [
             480,
             260,
             330,
             125
-        ],
-        "threshold": 0.85
+        ]
     },
     "DY_RecruitCut": {
         "recognition": "OCR",

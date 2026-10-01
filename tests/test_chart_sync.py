@@ -9,6 +9,31 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_recorded_yellow_skill_head_locks_before_crossing(self):
+        from PIL import Image
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        trace=json.loads((root/'peak_first_skill.json').read_text(encoding='utf8'))
+        lock=FirstNoteLock(travel_scale=.245)
+        result=None
+        for row in trace:
+            y=row['y']
+            if 'image' in row:
+                frame=np.asarray(Image.open(root/row['image']).convert('RGB'))[:,:,::-1].copy()
+                self.assertEqual(locate_note_y(frame,0,'yellow'),y)
+                self.assertIsNone(locate_note_y(frame,0,'cyan'))
+            result=lock.observe(row['time'],y)
+            if result:break
+        self.assertIsNotNone(result)
+        self.assertGreater(result['crossing']-row['time'],.1)
+
+    def test_yellow_head_does_not_match_white_cyan_green_or_pink(self):
+        frame=np.zeros((720,1280,3),dtype=np.uint8)
+        for color in ([255,255,255],[255,255,100],[80,255,100],[253,230,254]):
+            frame[390:395,600:680]=color
+            self.assertIsNone(locate_note_y(frame,3,'yellow'))
+        frame[390:395,600:680]=[50,245,255]
+        self.assertEqual(locate_note_y(frame,3,'yellow'),390)
+
     def test_startup_and_observed_notes_share_one_phase_reference(self):
         chart=[{'type':'BPM','beat':0,'bpm':60}]+[
             {'type':'Single','beat':2+i*.2,'lane':i%3} for i in range(12)]

@@ -124,7 +124,7 @@ class SongCatalogTests(unittest.TestCase):
         f.reset_inherited_song_filters=Mock()
         wrong=SimpleNamespace(text=options.song); correct=SimpleNamespace(text=options.song)
         f.ocr=Mock(return_value=[wrong,correct])
-        f.text=Mock(side_effect=['not selected',options.song,'wrong band',options.song,BY_ID['676']['band']])
+        f.text=Mock(side_effect=['not selected','not selected',options.song,'wrong band',options.song,BY_ID['676']['band']])
         f.choose_difficulty=Mock(return_value='expert')
         self.assertEqual(f.choose_song(),'expert')
         self.assertEqual(f.tap_hit.call_count,2)

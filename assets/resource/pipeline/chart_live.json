@@ -38,6 +38,26 @@
             "value": ""
         }
     },
+    "CL_fever": {
+        "attach": {
+            "value": "off"
+        }
+    },
+    "CL_coop_room": {
+        "attach": {
+            "value": "free"
+        }
+    },
+    "CL_coop_room_group": {
+        "attach": {
+            "value": "normal"
+        }
+    },
+    "CL_coop_song": {
+        "attach": {
+            "value": ""
+        }
+    },
     "CL_song1": {
         "attach": {
             "value": "306"

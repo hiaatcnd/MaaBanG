@@ -138,7 +138,8 @@ def first_anchor(chart):
             continue
         p = note.get('connections', [note])[0]
         color = ('pink' if p.get('flick') or note['type'] == 'Directional'
-                 else 'green' if 'connections' in note else 'cyan')
+                 else 'green' if 'connections' in note
+                 else 'yellow' if p.get('skill') else 'cyan')
         heads.append((tempo.seconds(p['beat']), color != 'cyan', p['lane'], color))
     if not heads:
         raise ValueError('Empty chart')

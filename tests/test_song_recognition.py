@@ -1,4 +1,4 @@
-"""Regression coverage for screenshot-reviewed, exact song identities."""
+"""Regression coverage for tolerant OCR matching without ambiguous song choices."""
 import csv
 from pathlib import Path
 import sys
@@ -24,10 +24,33 @@ class SongRecognitionTests(unittest.TestCase):
                 with self.subTest(title=title):
                     self.assertEqual(final_song(title)['id'],song['id'])
 
-    def test_ocr_boundary_quotes_are_formatting_but_body_is_exact(self):
-        for title in ('“Say cheese!!!!!”', '"Say cheese!!!!!"”"', '“Say cheese!!!!!"'):
+    def test_ocr_punctuation_and_boundary_quotes_are_formatting(self):
+        for title in ('“Say cheese!!!!!”', '"Say cheese!!!!!"”"', '“Say cheese!!!!!"', '“Say cheese”'):
             self.assertEqual(final_song(title)['id'], '646')
-        with self.assertRaises(ValueError): final_song('“Say cheese”')
+        for title in ('「僕は….」', '「僕は……」', '僕は...', '「僕は...」'):
+            self.assertEqual(final_song(title)['id'], '595')
+        self.assertEqual(final_song('COMIC PANIC')['title'], 'COMIC PANIC!!!')
+
+    def test_small_ocr_errors_match_when_one_candidate_is_clear(self):
+        from unittest.mock import patch
+        songs={'a':{'id':'a','title':'Wonderful Melody','aliases':[], 'band':'A','band_aliases':[]},
+               'b':{'id':'b','title':'Unrelated Anthem','aliases':[], 'band':'B','band_aliases':[]}}
+        with patch('online_policy.RECOGNITION_BY_ID',songs):
+            for title in ('Wonderfu1 Melody', 'Wonderul Melody', 'Womderful Me1ody'):
+                self.assertEqual(final_song(title)['id'],'a')
+            for title in ('Wonderful Melo', 'random unknown song', 'Wonderful'):
+                with self.assertRaises(ValueError): final_song(title)
+
+    def test_near_ties_and_punctuation_collisions_are_not_guessed(self):
+        from unittest.mock import patch
+        songs={str(i):{'id':str(i),'title':title,'aliases':[], 'band':str(i),'band_aliases':[]}
+               for i,title in enumerate(('Melody dawn','Melody down','Spark!','Spark?'))}
+        with patch('online_policy.RECOGNITION_BY_ID',songs):
+            for title in ('Melody d0wn','Spark…'):
+                with self.assertRaises(ValueError): final_song(title)
+            self.assertEqual(final_song('Spark!')['id'],'2')
+            self.assertEqual(final_song('Spark…','3')['id'],'3')
+            self.assertEqual(final_song('Melody d0wn','1')['id'],'1')
 
     def test_complete_device_audit_corpus(self):
         with (ROOT/'docs/data/free_song_recognition_audit.csv').open(encoding='utf-8-sig',newline='') as stream:
@@ -54,7 +77,7 @@ class SongRecognitionTests(unittest.TestCase):
                     self.assertTrue(SongNavigationMixin().title_matches(variant, BY_ID[sid]))
 
     def test_unreviewed_truncations_and_similar_titles_are_not_guessed(self):
-        for title in ('Jump', 'CiRCLE THANKS', 'COMIC PANIC', 'Singing OUR', 'Second to Non'):
+        for title in ('Jump', 'CiRCLE THANKS', 'Singing OUR', 'Second to Non'):
             with self.subTest(title=title), self.assertRaises(ValueError):
                 final_song(title)
 

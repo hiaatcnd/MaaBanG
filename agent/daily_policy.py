@@ -47,7 +47,7 @@ def verify_exchange(category, quantity, before, after, cost):
 
 def verify_free_confirmation(text):
     text = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
-    if "每日3次免费" not in text or "演出招募" not in text:
+    if not re.search(r"每日(?:最多)?3次免费", text) or "演出招募" not in text:
         raise ValueError("不是每日三次免费演出招募确认页")
     if any(word in text for word in ("消耗", "付费", "250", "2500")):
         raise ValueError("招募确认页含有收费信息")

@@ -11,15 +11,16 @@ from costume_unlock import FlowError, normalized
 from daily_tasks import DailyFlow
 from song_catalog import resolve_song
 from song_navigation import SongNavigationMixin
+from fever_settings import FeverSettingsMixin
 from live_policy import (LiveOptions, DIFFICULTIES, parse_auto_remaining,
                          fire_for_song, round_stop_reason)
 
 OPTION_NODES = {key: 'LV_' + suffix for key, suffix in (
     ('mode','Mode'), ('song','Song'), ('difficulty','Difficulty'),
-    ('fire','Fire'), ('shortage','Shortage'), ('max_rounds','MaxRounds'))}
+    ('fire','Fire'), ('shortage','Shortage'), ('max_rounds','MaxRounds'), ('fever','Fever'))}
 
 
-class LiveFlow(SongNavigationMixin, DailyFlow):
+class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
     def disable_mv(self):
         """Cycle the ready-page MV/3D selector to OFF and verify cut-ins too."""
         self.snap()
@@ -105,6 +106,9 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
         # Only unwind pre-live screens. Never abandon an in-progress tour automatically.
         for _ in range(5):
             self.snap()
+            if self.reco('LV_FeverDialog'):
+                self.click('LV_FeverConfirm')
+                continue
             if self.reco('LV_Menu'): return
             if self.reco('LV_TourHeader') and self.tour_index() in (2,3):
                 raise FlowError('当前有未完成巡演，请先完成或手动结束')
@@ -151,6 +155,7 @@ class LiveFlow(SongNavigationMixin, DailyFlow):
 
     def prepare_round(self):
         self.navigate_menu()
+        self.configure_fever(self.options.fever)
         if self.options.mode=='free':
             self.open_page('LV_FreeEntry','LV_SongPage')
             difficulty=self.choose_song()
