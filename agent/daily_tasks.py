@@ -322,7 +322,10 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 stage = "skip"
                 x, y, w, h = hit.box
                 target = (x+w//2, y+h//2)
-            elif self.reco("DY_MemberReveal"):
+            elif self.reco("DY_MemberReveal") or self.reco("DY_FiveStarReveal"):
+                # The full-screen five-star reveal has no bottom-left Share
+                # button. Advance only its recognized star strip, with the
+                # same bounded member-stage retries and submission guard.
                 stage, target = "member", (985,570)
             else:
                 time.sleep(0.4)

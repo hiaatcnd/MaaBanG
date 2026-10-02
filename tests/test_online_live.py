@@ -57,7 +57,7 @@ class OnlinePolicyTests(unittest.TestCase):
         interface=update({'task':[],'option':{}})
         cases=interface['option']['谱面演出模式']['cases']
         team=next(c for c in cases if c['name']=='团队演出')
-        self.assertEqual(team['option'],['谱面联网难度','谱面每首火数','谱面火不足策略'])
+        self.assertEqual(team['option'],['谱面联网难度','谱面火不足策略'])
         coop=next(c for c in cases if c['name']=='协力演出')
         self.assertEqual(coop['option'],['谱面协力房间类别','谱面协力房间','谱面协力歌曲',*team['option']])
 

@@ -26,10 +26,16 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.6.2-ci' }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.6.3-ci' }
           python tools/install.py $version
-      - name: Test whole-package upgrade and rollback
-        run: python -m unittest discover -s tests -p test_package_update.py -v
+      - name: Test refreshed catalogs and release sources
+        run: |
+          python -m pip install -r tools/release-requirements.txt --require-hashes
+          python -m unittest discover -s tests -v
+      - name: Validate refreshed resource and interface schemas
+        run: |
+          python -m pip install jsonschema==4.26.0 referencing==0.37.0
+          python tools/validate_schema.py --schema-dir deps/tools --resource-dirs assets/resource --exclude-dirs assets/resource/announcement --interface-files assets/interface.json
       - name: Verify upgrade with the packaged runtime
         shell: pwsh
         run: |

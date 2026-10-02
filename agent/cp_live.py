@@ -98,7 +98,6 @@ class CPLiveFlow(ChartLiveFlow):
 
     def prepare_round(self):
         self.navigate_menu()
-        self.configure_fever(self.settings.fever)
         self.open_page('CP_Entry','CP_Select')
         balance=self.stable_integer([1200,133,67,34])
         if balance<self.settings.cp:
@@ -163,7 +162,6 @@ class CPLiveFlow(ChartLiveFlow):
             self.snap()
 
     def run(self):
-        configured=False
         while self.settings.max_rounds is None or self.report['completed_rounds']<self.settings.max_rounds:
             selections,charts=self.prepare_round()
             if not selections:
@@ -171,9 +169,6 @@ class CPLiveFlow(ChartLiveFlow):
                 self.home()
                 self.report['returned_home']=True
                 return
-            if not configured:
-                self.configure_stage()
-                configured=True
             selection=selections[0]
             song={**asdict(selection),'cp':self.settings.cp,'status':'preparing'}
             row={'songs':[song],'status':'running'}

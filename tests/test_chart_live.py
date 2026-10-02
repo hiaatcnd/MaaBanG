@@ -175,7 +175,8 @@ class ChartLiveTests(unittest.TestCase):
             self.assertEqual([c.args[0] for c in f.play_chart.call_args_list],[1,2,3,1,2,3])
             f.remaining.assert_not_called()
             f.home.assert_called_once()
-            f.configure_stage.assert_called_once()
+            f.configure_stage.assert_not_called()
+            f.configure_fire.assert_not_called()
 
     def test_insufficient_fire_does_not_start_or_change_fire_selection(self):
         with tempfile.TemporaryDirectory() as folder:

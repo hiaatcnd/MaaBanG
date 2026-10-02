@@ -1,12 +1,13 @@
 {
   "server": "cn",
   "server_index": 3,
-  "fetched_at": "2026-09-29T09:45:17.750744+00:00",
+  "fetched_at": "2026-10-02T12:18:25.142704+00:00",
   "sources": [
     "https://bestdori.com/api/songs/all.7.json",
     "https://bestdori.com/api/bands/all.1.json"
   ],
-  "source_sha256": "d61c55bfa80c87e4a92aaacac354bd3ac00645edd1f2dab6c9b4d8be0f7e1b49",
+  "source_sha256": "8a04a9a8a67d2b89dfca9ccbdf0127b4f8fa376943bbd299018737b4b20ee165",
+  "bands_source_sha256": "b7739d0139d3ffd29bd872b774336c6428f24b51536bf9c1171481df84f97ea6",
   "songs": [
     {
       "id": "1",
@@ -37318,6 +37319,149 @@
         "774_matsuri_bayashi"
       ],
       "url": "https://bestdori.com/info/songs/774"
+    },
+    {
+      "id": "775",
+      "title": "メロウ",
+      "aliases": [
+        "メロウ",
+        "Mellow"
+      ],
+      "band_id": 21,
+      "band": "Morfonica",
+      "band_aliases": [
+        "Morfonica"
+      ],
+      "tag": "anime",
+      "length_seconds": 115.92,
+      "published_at": 1790744400000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 7,
+          "notes": 107,
+          "published_at": 1790744400000,
+          "available": true
+        },
+        "normal": {
+          "level": 12,
+          "notes": 192,
+          "published_at": 1790744400000,
+          "available": true
+        },
+        "hard": {
+          "level": 19,
+          "notes": 375,
+          "published_at": 1790744400000,
+          "available": true
+        },
+        "expert": {
+          "level": 25,
+          "notes": 524,
+          "published_at": 1790744400000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "775_mellow"
+      ],
+      "url": "https://bestdori.com/info/songs/775"
+    },
+    {
+      "id": "776",
+      "title": "DAY×DAY",
+      "aliases": [
+        "DAY×DAY"
+      ],
+      "band_id": 2,
+      "band": "Afterglow",
+      "band_aliases": [
+        "Afterglow"
+      ],
+      "tag": "anime",
+      "length_seconds": 105.768,
+      "published_at": 1790830800000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 8,
+          "notes": 127,
+          "published_at": 1790830800000,
+          "available": true
+        },
+        "normal": {
+          "level": 13,
+          "notes": 227,
+          "published_at": 1790830800000,
+          "available": true
+        },
+        "hard": {
+          "level": 21,
+          "notes": 481,
+          "published_at": 1790830800000,
+          "available": true
+        },
+        "expert": {
+          "level": 26,
+          "notes": 811,
+          "published_at": 1790830800000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "776_day_day"
+      ],
+      "url": "https://bestdori.com/info/songs/776"
+    },
+    {
+      "id": "777",
+      "title": "革命道中",
+      "aliases": [
+        "革命道中",
+        "On The Way "
+      ],
+      "band_id": 18,
+      "band": "RAISE A SUILEN",
+      "band_aliases": [
+        "RAISE A SUILEN"
+      ],
+      "tag": "anime",
+      "length_seconds": 135.144,
+      "published_at": 1790917200000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 7,
+          "notes": 103,
+          "published_at": 1790917200000,
+          "available": true
+        },
+        "normal": {
+          "level": 12,
+          "notes": 144,
+          "published_at": 1790917200000,
+          "available": true
+        },
+        "hard": {
+          "level": 20,
+          "notes": 591,
+          "published_at": 1790917200000,
+          "available": true
+        },
+        "expert": {
+          "level": 26,
+          "notes": 778,
+          "published_at": 1790917200000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "777_kakumei_douchu"
+      ],
+      "url": "https://bestdori.com/info/songs/777"
     },
     {
       "id": "786",

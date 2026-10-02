@@ -186,7 +186,8 @@ def main():
         apply_verified_availability(songs, json.loads(observations.read_text(encoding='utf-8')))
     payload = {'server': 'cn', 'server_index': CN, 'fetched_at': now.isoformat(),
                'sources': [SONGS_URL, BANDS_URL],
-               'source_sha256': hashlib.sha256(raw).hexdigest(), 'songs': songs}
+               'source_sha256': hashlib.sha256(raw).hexdigest(),
+               'bands_source_sha256': hashlib.sha256(bands_raw).hexdigest(), 'songs': songs}
     interface_path = ROOT/'assets/interface.json'
     interface = update_interface(json.loads(interface_path.read_text(encoding='utf-8')), songs)
     out = ROOT/'agent/data/songs_cn.json'

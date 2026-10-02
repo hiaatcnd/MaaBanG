@@ -87,7 +87,7 @@ class MiningTests(unittest.TestCase):
     def test_ineligible_challenge_is_skipped_before_playing_next_challenge(self):
         f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
         f.mining=MiningOptions.parse({});f.report={'skipped':[]};f.image=np.zeros((720,1280,3))
-        for name in ('navigate_menu','click','select_stage_kind','swipe','wait','tap','choose_difficulty_exact','wait_ready','back'):
+        for name in ('navigate_menu','inherit_menu_fire','click','select_stage_kind','swipe','wait','tap','choose_difficulty_exact','wait_ready','back'):
             setattr(f,name,Mock())
         f.limited=Mock(return_value=False)
         f.challenge_cards=Mock(side_effect=[[(200,np.zeros((12,30)),0,90)],[(300,np.full((12,30),30),0,90)]])
@@ -433,6 +433,7 @@ class MiningTests(unittest.TestCase):
         flow.report = dict(attempted=0,completed_rounds=0,full_combos=[],skipped=[])
         flow.home = Mock()
         flow.navigate_menu = Mock()
+        flow.inherit_menu_fire = Mock()
         flow.open_page = Mock()
         flow.find_song = Mock()
         flow.select_song = Mock()
@@ -470,7 +471,8 @@ class MiningTests(unittest.TestCase):
         self.assertEqual(flow.perform.call_count,1)
         self.assertEqual(len(flow.report['full_combos']),1)
         flow.find_song.assert_not_called()
-        flow.navigate_menu.assert_not_called()
+        flow.navigate_menu.assert_called_once()  # Read saved fire once before scanning.
+        flow.inherit_menu_fire.assert_called_once()
         flow.select_song.assert_not_called()
 
     def test_existing_song_page_keeps_cursor_without_reentry(self):
@@ -653,7 +655,7 @@ class MiningTests(unittest.TestCase):
         flow.settle_results = Mock()
         flow.report['rounds'] = []
         row = flow.perform(ChartSelection.parse('306','easy'))
-        flow.configure_fire.assert_called_once_with(2)
+        flow.configure_fire.assert_not_called()
         self.assertEqual(flow.play_chart.call_args.args[3],2)
         self.assertEqual(row['fire'],2)
         self.assertEqual(flow.report['attempted'],1)

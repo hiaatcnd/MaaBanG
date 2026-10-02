@@ -129,7 +129,7 @@ class GestureRecovery:
         return expired or suppressed
 
 
-def first_anchor(chart):
+def first_anchor(chart, *, online=False):
     """Return an unjittered chart head, preferring a tap in an opening chord."""
     tempo = TempoMap(chart)
     heads = []
@@ -139,7 +139,7 @@ def first_anchor(chart):
         p = note.get('connections', [note])[0]
         color = ('pink' if p.get('flick') or note['type'] == 'Directional'
                  else 'green' if 'connections' in note
-                 else 'yellow' if p.get('skill') else 'cyan')
+                 else ('skill' if online else 'yellow') if p.get('skill') else 'cyan')
         heads.append((tempo.seconds(p['beat']), color != 'cyan', p['lane'], color))
     if not heads:
         raise ValueError('Empty chart')

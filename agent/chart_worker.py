@@ -77,6 +77,7 @@ def play(config_path):
     controller = None
     started = False
     lock = None
+    first_note_lock_frame = None
     last_start_frame = None
     start_trace = []
 
@@ -93,7 +94,7 @@ def play(config_path):
         chart = json.loads(raw)
         jitter, position = JITTER_PROFILES[cfg['jitter']]
         events = compile_chart(chart,seed=cfg['seed'],jitter_ms=jitter,position_jitter=position)
-        anchor_time, lane, color = first_anchor(chart)
+        anchor_time, lane, color = first_anchor(chart, online=online)
         report.update(seed=cfg['seed'],jitter_ms=jitter,position_jitter=position,
                       chart=cfg['chart'],anchor=[anchor_time,lane,color],
                       jitter_distribution='truncated_normal',jitter_sigma_divisor=3)
@@ -197,6 +198,7 @@ def play(config_path):
             fitted = lock.observe((before+after)/2-start,y)
             if fitted is not None:
                 report['lock'] = fitted
+                first_note_lock_frame = frame.copy()
                 origin = tracker.origin_from_anchor(start+fitted['crossing'],anchor_time)
                 report['initial_touch_lead_ms']=tracker.phase_reference*1000
                 break
@@ -313,6 +315,14 @@ def play(config_path):
             thread.join(timeout=3)
         if controller and started and report['status']=='error' and not observer_failed.is_set() and not online:
             controller.post_click(1240,50).wait()
+        # Defer encoding until all touches are released; diagnostics must not
+        # delay the first touch or prevent cleanup if writing the image fails.
+        if first_note_lock_frame is not None:
+            from PIL import Image
+            try:
+                Image.fromarray(first_note_lock_frame[:,:,::-1]).save(output/'first_note_lock.png')
+            except OSError as exc:
+                report['diagnostic_error']=str(exc)
         (output/'playback.json').write_text(json.dumps(report,ensure_ascii=False),encoding='utf8')
     return 0 if report['status']=='input_complete' else 1
 

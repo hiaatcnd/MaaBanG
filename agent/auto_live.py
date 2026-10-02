@@ -1,5 +1,6 @@
 """Run only the game's built-in auto mode, selecting unlocked songs by band."""
 import json
+from dataclasses import replace
 from pathlib import Path
 import re
 import time
@@ -36,7 +37,8 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
         has_selector=not online and not blank_selector
         if has_selector:
             for _ in range(4):
-                mode=normalized(self.text([175,620,145,60])).upper()
+                # FILM LIVE MV extends beyond the old x=320 crop on A to Z.
+                mode=normalized(self.text([175,620,285,60])).upper()
                 if mode=='OFF':
                     break
                 if not re.search(r'ON|MV|[23]D|演奏',mode):
@@ -49,14 +51,15 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
         if self.pink(self.image[637:663,487:513]):
             self.tap(500,650)
             self.snap()
-        if ((has_selector and normalized(self.text([175,620,145,60])).upper()!='OFF') or
+        if ((has_selector and normalized(self.text([175,620,285,60])).upper()!='OFF') or
                 self.pink(self.image[637:663,487:513])):
             raise FlowError('未确认 MV/3D 演奏和 Cut in 均已关闭')
 
     def __init__(self, context, options):
         super().__init__(context)
         self.options = options
-        self.report = {'status':'running', 'options':vars(options), 'rounds':[], 'completed_rounds':0}
+        self.report = {'status':'running', 'options':{k:v for k,v in vars(options).items() if k not in ('fire','fever')},
+                       'rounds':[], 'completed_rounds':0}
 
     def pause(self, seconds):
         deadline = time.monotonic() + seconds
@@ -155,7 +158,7 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
 
     def prepare_round(self):
         self.navigate_menu()
-        self.configure_fever(self.options.fever)
+        self.inherit_menu_fire()
         if self.options.mode=='free':
             self.open_page('LV_FreeEntry','LV_SongPage')
             difficulty=self.choose_song()
@@ -195,6 +198,46 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
         if not self.pink(self.image[124+77*amount:143+77*amount,993:1012]):
             raise FlowError('未确认指定火数的单选按钮')
         self.tap(640,641)
+
+    def selected_fire(self):
+        if not self.reco('LV_FireDialog'):
+            raise FlowError('未确认LIVE BOOST消费设定页')
+        selected = [amount for amount, y in enumerate((133,210,287,364,518))
+                    if self.pink(self.image[y-9:y+10,993:1012])]
+        if len(selected) != 1 or selected[0] > 3:
+            raise FlowError('无法确认0–3火档位，请先运行演出预先设置任务')
+        return selected[0]
+
+    def menu_fire(self, amount=None):
+        """Read the saved cost; only the standalone preset task supplies an amount."""
+        self.wait('LV_Menu')
+        self.require_clear_notification_overlay()
+        self.tap(1119,145)
+        self.wait('LV_FireDialog')
+        if amount is not None:
+            self.tap(1002,133+77*amount)
+            self.snap()
+        selected = self.selected_fire()
+        if amount is not None and selected != amount:
+            raise FlowError('火数设定未生效')
+        self.tap(640,641)
+        self.wait('LV_Menu')
+        return selected
+
+    def inherit_menu_fire(self):
+        # Read once per task; subsequent songs verify their spending preview.
+        if getattr(self, '_inherited_fire', None) is not None:
+            return self._inherited_fire
+        amount = self.menu_fire()
+        if hasattr(self, 'settings'):
+            self.settings = replace(self.settings, fire=amount)
+        else:
+            # Old saved tasks may still contain the removed lower-fire policy.
+            self.options = replace(self.options, fire=amount, shortage='stop')
+        self.report['inherited_fire'] = amount
+        self.report['options']['fire'] = amount
+        self._inherited_fire = amount
+        return amount
 
     def fire_preview(self):
         # The counter reflows for one/two digits. Split at the pink arrow,
@@ -344,9 +387,8 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
             self.report['rounds'].append(row)
             for index in range(1,self.options.songs_per_round+1):
                 self.wait_ready(index)
-                amount=fire_for_song(self.options.fire,self.fire_balance(),self.options.shortage)
+                amount=fire_for_song(self.options.fire,self.fire_balance(),'stop')
                 if amount is None: raise FlowError('开演前火数减少，停止并保留现场')
-                self.configure_fire(amount)
                 self.disable_mv()
                 before,balance=self.verify_start(index,difficulty,amount,self.options.songs_per_round-index+1)
                 song={'index':index,'fire':amount,'fire_before':balance,'auto_before':before,'status':'submitted'}

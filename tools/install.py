@@ -25,6 +25,11 @@ def build(version):
     release = ROOT / "install" / f"MaaBanG-{version}-win-x64"
     if release.exists():
         raise FileExistsError(f"Use a fresh output directory: {release}")
+    # Every release (including prereleases and CI previews) must fetch current
+    # CN choices, all-server recognition metadata and their generated UI lists.
+    # Never silently ship the previous snapshot when the refresh fails.
+    subprocess.run([sys.executable, str(ROOT / "tools/update_song_catalog.py")],
+                   cwd=ROOT, check=True)
     package = release / "app"
     package.mkdir(parents=True)
     for name, spec in manifest.items():
