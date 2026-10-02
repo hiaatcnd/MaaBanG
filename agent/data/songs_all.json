@@ -1,10 +1,11 @@
 {
-  "fetched_at": "2026-09-29T09:45:17.750744+00:00",
+  "fetched_at": "2026-10-02T12:18:25.142704+00:00",
   "sources": [
     "https://bestdori.com/api/songs/all.7.json",
     "https://bestdori.com/api/bands/all.1.json"
   ],
-  "source_sha256": "d61c55bfa80c87e4a92aaacac354bd3ac00645edd1f2dab6c9b4d8be0f7e1b49",
+  "source_sha256": "8a04a9a8a67d2b89dfca9ccbdf0127b4f8fa376943bbd299018737b4b20ee165",
+  "bands_source_sha256": "b7739d0139d3ffd29bd872b774336c6428f24b51536bf9c1171481df84f97ea6",
   "scope": "all_servers",
   "songs": [
     {

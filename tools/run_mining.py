@@ -13,7 +13,6 @@ def main():
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',default='127.0.0.1:16416')
     parser.add_argument('--max-rounds',default='')
-    parser.add_argument('--fire',type=int,choices=range(4),default=0)
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
     parser.add_argument('--practice',action='store_true')
     parser.add_argument('--unlock',action='store_true')
@@ -29,7 +28,7 @@ def main():
     values = dict(max_rounds=args.max_rounds,practice=args.practice,unlock=args.unlock,
                   stars=args.stars,stage=args.stage,stories=not args.no_stories,memories=not args.no_memories,
                   difficulties=args.difficulties)
-    values.update(fire=args.fire,shortage=args.shortage)
+    values.update(shortage=args.shortage)
     options = MiningOptions.parse(values)
     from maa.resource import Resource
     from maa.controller import AdbController

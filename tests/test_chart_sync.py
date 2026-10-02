@@ -9,6 +9,14 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_recorded_online_skill_head_uses_cyan_appearance(self):
+        from PIL import Image
+        frame=np.asarray(Image.open(Path(__file__).parent/
+            'fixtures/chart_sync/peak_online_skill.png').convert('RGB'))[:,:,::-1].copy()
+        self.assertIsNone(locate_note_y(frame,0,'yellow'))
+        self.assertEqual(locate_note_y(frame,0,'cyan'),307)
+        self.assertEqual(locate_note_y(frame,0,'skill'),307)
+
     def test_recorded_yellow_skill_head_locks_before_crossing(self):
         from PIL import Image
         root=Path(__file__).parent/'fixtures/chart_sync'
@@ -20,6 +28,7 @@ class ChartSyncTests(unittest.TestCase):
             if 'image' in row:
                 frame=np.asarray(Image.open(root/row['image']).convert('RGB'))[:,:,::-1].copy()
                 self.assertEqual(locate_note_y(frame,0,'yellow'),y)
+                self.assertEqual(locate_note_y(frame,0,'skill'),y)
                 self.assertIsNone(locate_note_y(frame,0,'cyan'))
             result=lock.observe(row['time'],y)
             if result:break
@@ -33,6 +42,25 @@ class ChartSyncTests(unittest.TestCase):
             self.assertIsNone(locate_note_y(frame,3,'yellow'))
         frame[390:395,600:680]=[50,245,255]
         self.assertEqual(locate_note_y(frame,3,'yellow'),390)
+
+    def test_online_skill_anchor_tracks_both_tap_appearances(self):
+        for color in ([50,245,255],[255,255,100]):
+            with self.subTest(color=color):
+                lock=FirstNoteLock(travel_scale=.245)
+                result=None
+                for y in (70,95,125,165,215,275,335):
+                    frame=np.zeros((720,1280,3),dtype=np.uint8)
+                    frame[y:y+5,625:655]=color
+                    observed=locate_note_y(frame,3,'skill')
+                    self.assertEqual(observed,y)
+                    result=lock.observe(2-.245*np.log(590/y),observed)
+                    if result:break
+                self.assertIsNotNone(result)
+                self.assertAlmostEqual(result['crossing'],2)
+        for color in ([255,255,255],[80,255,100],[253,230,254]):
+            frame=np.zeros((720,1280,3),dtype=np.uint8)
+            frame[390:395,600:680]=color
+            self.assertIsNone(locate_note_y(frame,3,'skill'))
 
     def test_startup_and_observed_notes_share_one_phase_reference(self):
         chart=[{'type':'BPM','beat':0,'bpm':60}]+[

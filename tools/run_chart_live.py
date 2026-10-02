@@ -24,8 +24,6 @@ def main():
         parser.add_argument(f'--song{i}',default='306')
         parser.add_argument(f'--difficulty{i}',default='expert')
     parser.add_argument('--jitter',choices=JITTER_PROFILES,default='small')
-    parser.add_argument('--fire',type=int,choices=range(4),default=1)
-    parser.add_argument('--fever',choices=['off','on'],default='off',help='使用Fever印章；无法开启时继续演出')
     parser.add_argument('--cp',type=int,choices=[200,400,800,1600],default=200)
     parser.add_argument('--cp-song',default='',help='挑战活动歌曲ID或完整歌名；留空沿用当前活动选曲')
     parser.add_argument('--coop-room',choices=COOP_ROOMS,default='free')
@@ -38,7 +36,7 @@ def main():
     args=parser.parse_args()
     if args.package and args.prepare_only:
         parser.error('--package tests the actual packaged task and cannot use --prepare-only')
-    values={key:getattr(args,key) for key in OPTION_NODES}
+    values={key:getattr(args,key) for key in OPTION_NODES if hasattr(args,key)}
     options=ChartOptions.parse(values)
     if args.prepare_only and options.mode in ('team','coop'):
         parser.error('--prepare-only is not supported for automatically starting online rooms')
@@ -66,7 +64,7 @@ def main():
                 if not selections:
                     print('Preparation stopped:',flow.report['status'],flush=True)
                     return True
-                flow.configure_stage()
+                flow.disable_mv()
                 if options.mode=='challenge':
                     balance=flow.verify_chart_start(1,selections[0],options.cp)
                     print(f'CP verified before start: {balance}, cost: {options.cp}',flush=True)

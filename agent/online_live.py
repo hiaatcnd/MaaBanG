@@ -140,7 +140,9 @@ class OnlineLiveFlow(ChartLiveFlow):
         raise FlowError('返回演出菜单未收敛')
 
     def prepare_settings(self):
-        self.state('准备演出设置')
+        if self.settings.mode!='coop' or not self.settings.coop_song:
+            return
+        self.state('检查协力选曲')
         self.navigate_menu()
         self.open_page('LV_FreeEntry','LV_SongPage')
         self.reset_inherited_song_filters()
@@ -150,10 +152,6 @@ class OnlineLiveFlow(ChartLiveFlow):
             requested=resolve_song(self.settings.coop_song)
             self.find_song(requested)
             self.save_frame('coop_song_prepared.png')
-        # The current unlocked selection is sufficient to access global settings.
-        self.tap(1070,648)
-        self.wait_ready()
-        self.configure_stage()
         self.navigate_menu()
 
     def selected_coop_room(self):
@@ -231,24 +229,14 @@ class OnlineLiveFlow(ChartLiveFlow):
         return True
 
     def configure_menu_fire(self):
-        self.wait('LV_Menu')
+        self.inherit_menu_fire()
         if not self.refill_fire(self.settings.fire):
             self.report['status']='insufficient_fire'
             return False
-        self.tap(1119,145)
-        self.wait('LV_FireDialog')
-        self.tap(1002,133+77*self.settings.fire)
-        self.snap()
-        y=133+77*self.settings.fire
-        if not self.pink(self.image[y-9:y+10,993:1012]):
-            raise FlowError('未确认联网演出火数')
-        self.tap(640,641)
-        self.wait('LV_Menu')
         return True
 
     def join_room(self):
         self.navigate_menu()
-        self.configure_fever(self.settings.fever)
         if not self.configure_menu_fire():
             return False
         self.open_page(self.entry_node,self.home_node)

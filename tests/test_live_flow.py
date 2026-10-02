@@ -73,13 +73,14 @@ class LiveFlowTests(unittest.TestCase):
             f.tap.assert_not_called(); f.configure_fire.assert_not_called()
             self.assertEqual(f.report['status'],status)
 
-    def test_lower_fire_uses_available_amount_including_zero(self):
+    def test_legacy_lower_fire_never_changes_saved_cost(self):
         for available in (0,1,2):
             f=self.flow(fire=3,shortage='lower',max_rounds='1')
             f.fire_balance=Mock(return_value=available)
-            f.run()
-            f.configure_fire.assert_called_once_with(available)
-            self.assertEqual(f.report['rounds'][0]['songs'][0]['fire'],available)
+            with self.assertRaises(FlowError):
+                f.run()
+            f.configure_fire.assert_not_called()
+            f.tap.assert_not_called()
 
     def test_uncertain_result_never_repeats_start(self):
         f=self.flow()
@@ -256,7 +257,7 @@ class LiveFlowTests(unittest.TestCase):
         root=Path(__file__).resolve().parents[1]
         interface=json.loads((root/'assets/interface.json').read_text(encoding='utf-8'))
         pipeline=json.loads((root/'assets/resource/pipeline/live.json').read_text(encoding='utf-8'))
-        names=('演出模式','演出歌曲','演出难度','每首消耗火数','火不足策略')
+        names=('演出模式','演出歌曲','演出难度')
         limit=interface['option']['最大演出次数']
         self.assertEqual(limit['inputs'][0]['default'],'')
         pattern=limit['inputs'][0]['verify']

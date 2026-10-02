@@ -1,0 +1,21 @@
+{
+    "LivePresets": {
+        "action": "Custom",
+        "custom_action": "LivePresets"
+    },
+    "LP_stage": {
+        "attach": {
+            "value": true
+        }
+    },
+    "LP_fever": {
+        "attach": {
+            "value": "off"
+        }
+    },
+    "LP_fire": {
+        "attach": {
+            "value": 1
+        }
+    }
+}

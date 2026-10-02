@@ -13,8 +13,10 @@ class ChartTimingTests(unittest.TestCase):
         chart=[{'type':'BPM','beat':0,'bpm':132},
                {'type':'Single','beat':12,'lane':0,'skill':True}]
         self.assertEqual(first_anchor(chart),(60/132*12,0,'yellow'))
+        self.assertEqual(first_anchor(chart,online=True),(60/132*12,0,'skill'))
         chart.append({'type':'Single','beat':12,'lane':4})
         self.assertEqual(first_anchor(chart),(60/132*12,4,'cyan'))
+        self.assertEqual(first_anchor(chart,online=True),(60/132*12,4,'cyan'))
 
     def test_normal_tails_are_resampled_instead_of_clipped(self):
         rng=Mock()

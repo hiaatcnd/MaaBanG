@@ -31,7 +31,7 @@ class ChartLiveFlow(LiveFlow):
         self.output = Path(output)
         self.output.mkdir(parents=True,exist_ok=True)
         self.store = ChartStore()
-        self.report = {'status':'running','options':asdict(options),'rounds':[],
+        self.report = {'status':'running','options':{k:v for k,v in asdict(options).items() if k not in ('fire','fever')},'rounds':[],
                        'completed_rounds':0,'refills':[]}
         self.selection = None
 
@@ -66,7 +66,7 @@ class ChartLiveFlow(LiveFlow):
 
     def prepare_round(self):
         self.navigate_menu()
-        self.configure_fever(self.settings.fever)
+        self.inherit_menu_fire()
         if self.settings.mode=='free':
             selections=self.settings.selections
             charts=[self.store.get(s) for s in selections]
@@ -93,84 +93,6 @@ class ChartLiveFlow(LiveFlow):
             self.tap(1125,640)
         self.wait_ready()
         return selections,charts
-
-    def settings_row(self, pattern, x=190, width=895):
-        for _ in range(10):
-            self.snap()
-            hit=self.hit_text([x,200,width,330],pattern)
-            if hit:
-                y=hit.box[1]+hit.box[3]//2+54
-                if y<522:
-                    return y
-            self.swipe(1090,490,350)
-        raise FlowError(f'未找到演出设置：{pattern}')
-
-    def set_number(self, roi, target, minus, plus, scale=1, limit=100):
-        for _ in range(limit):
-            self.snap()
-            text=normalized(self.text(roi)).replace('%','')
-            try:
-                current=round(float(text)*scale)
-            except ValueError:
-                raise FlowError(f'无法读取设置值：{text}')
-            if current==target:
-                return
-            self.tap(*(plus if current<target else minus))
-        raise FlowError('设置调整未收敛')
-
-    def configure_stage(self):
-        self.disable_mv()
-        self.tap(951,650)
-        self.tap(295,155)
-        # Restore scroll position, then adjust the decimal speed with bounded feedback.
-        for _ in range(3):
-            self.swipe(1090,230,530)
-        for _ in range(40):
-            self.snap()
-            value=normalized(self.text([365,288,110,55]))
-            try:
-                difference=980-round(float(value)*100)
-            except ValueError:
-                raise FlowError(f'无法读取音符速度：{value}')
-            if difference==0:
-                break
-            step=100 if abs(difference)>=100 else 10 if abs(difference)>=10 else 1
-            x=({100:635,10:574,1:513} if difference>0 else {100:206,10:267,1:328})[step]
-            self.tap(x,312)
-        else:
-            raise FlowError('无法将音符速度调整至 9.80')
-        self.tap(522,441)  # note size default 100%
-        self.snap()
-        if normalized(self.text([244,422,111,41]))!='100%':
-            raise FlowError('音符大小未恢复为 100%')
-        self.save_frame('settings_speed.png')
-        y=self.settings_row('判定调节',190,400)
-        self.set_number([244,y-24,110,46],0,(205,y),(391,y))
-        self.set_number([707,y-24,110,46],0,(668,y),(851,y))
-        y=self.settings_row('节奏图标的出现位置')
-        self.tap(645,y)
-        y=self.settings_row('镜像',795,290)
-        self.tap(917,y)  # mirror OFF
-        self.tap(610,y)  # color assistance OFF
-        self.snap()
-        if not all(self.pink(self.image[y-8:y+9,x-8:x+9]) for x in (917,610)):
-            raise FlowError('镜像或色觉辅助未关闭')
-        self.tap(527,155)
-        for _ in range(3):
-            self.swipe(1090,230,530)
-        self.tap(303,317)  # 3D effects OFF
-        self.tap(906,317)  # lightweight animation
-        self.snap()
-        if not self.pink(self.image[309:326,897:914]):
-            raise FlowError('轻量模式未选中')
-        self.tap(750,155)
-        for _ in range(3):
-            self.swipe(1090,230,530)
-        self.tap(997,225)  # default skin restores the calibrated cyan/green lane layout
-        self.tap(640,601)
-        self.wait_ready()
-        self.report['stage_settings']={'speed':9.8,'note_size':100,'mirror':False,
-                                      'color_assist':False,'light_mode':True,'skin':'default'}
 
     def read_integer(self, roi):
         text=normalized(self.text(roi))
@@ -421,12 +343,8 @@ class ChartLiveFlow(LiveFlow):
         return any(self.reco(n) for n in ('CU_HomeBand','LV_Menu','LV_TourHome','LV_TourSetup','LV_SongPage'))
 
     def run(self):
-        stage_configured=False
         while self.settings.max_rounds is None or self.report['completed_rounds']<self.settings.max_rounds:
             selections,charts=self.prepare_round()
-            if not stage_configured:
-                self.configure_stage()
-                stage_configured=True
             if not self.refill_fire(self.settings.fire*len(selections)):
                 self.report['status']='insufficient_fire'
                 self.navigate_menu()
@@ -440,7 +358,6 @@ class ChartLiveFlow(LiveFlow):
                 if not self.refill_fire(self.settings.fire):
                     self.report['status']='insufficient_fire'
                     return
-                self.configure_fire(self.settings.fire)
                 self.wait_ready(index)
                 song={'index':index,**asdict(selection),'fire':self.settings.fire}
                 row['songs'].append(song)

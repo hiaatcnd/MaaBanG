@@ -16,10 +16,9 @@ class MiningLiveFlow(ChartLiveFlow):
         super().__init__(context, ChartOptions.parse(dict(jitter='precise', fire=options.fire,
                                                          shortage=options.shortage)), output)
         self.mining = options
-        self.report['options'] = dict(jitter='precise',fire=options.fire,shortage=options.shortage)
-        self.report.update(mining_options={**asdict(options), 'stars': sorted(options.stars)},
+        self.report['options'] = dict(jitter='precise',shortage=options.shortage)
+        self.report.update(mining_options={**{k:v for k,v in asdict(options).items() if k!='fire'}, 'stars': sorted(options.stars)},
                            scanned=[], skipped=[], full_combos=[], attempted=0)
-        self.configured = False
         self.scan_initialized = False
         self.scan_difficulty_index = 0
 
@@ -171,14 +170,10 @@ class MiningLiveFlow(ChartLiveFlow):
 
     def perform(self, selection):
         _, metadata = self.store.get(selection)
-        if not self.configured:
-            self.configure_stage()
-            self.configured = True
         if not self.refill_fire(self.settings.fire):
             self.report['status'] = 'insufficient_fire'
             self.home()
             return None
-        self.configure_fire(self.settings.fire)
         self.wait_ready()
         row = {**asdict(selection), 'status':'preparing','fire':self.settings.fire}
         self.report['rounds'].append(row)
@@ -196,6 +191,8 @@ class MiningLiveFlow(ChartLiveFlow):
             self.report['status'] = 'no_difficulties_selected'
             self.home()
             return
+        self.navigate_menu()
+        self.inherit_menu_fire()
         seen = set()
         while not self.limited():
             pending = self.next_song(seen)
@@ -418,11 +415,6 @@ class ChallengeMiningFlow(MiningLiveFlow):
             raise FlowError('舞台挑战火数预览不符')
         return balance
 
-    def configure_stage(self):
-        # Challenge ready pages have no AUTO/MV controls; the settings dialog is shared.
-        # The parent checks the absent controls and leaves them untouched.
-        super().configure_stage()
-
     def selected_level(self):
         self.wait('MN_StageSelect')
         # Exclude the stars beneath the label; they otherwise merge with digits.
@@ -525,6 +517,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
 
     def run(self):
         self.navigate_menu()
+        self.inherit_menu_fire()
         self.click('MN_ChallengeEntry')
         self.select_stage_kind()
         for _ in range(5):

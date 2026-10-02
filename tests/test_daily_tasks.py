@@ -41,6 +41,41 @@ class DailyPolicyTests(unittest.TestCase):
 
 
 class DailyFlowTests(unittest.TestCase):
+    def test_real_five_star_reveal_without_share_button(self):
+        root=Path(__file__).resolve().parents[1]
+        if not (root/'assets/resource/model/ocr/rec.onnx').is_file():
+            self.skipTest('Local OCR models required')
+        from PIL import Image
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+        def read(name):
+            return np.asarray(Image.open(root/'tests/fixtures'/name).convert('RGB'))[:,:,::-1].copy()
+        frame=read('daily/five_star_reveal.png')
+        class Controller(CustomController):
+            def connect(self): return True
+            def request_uuid(self): return 'five-star-reveal-fixture'
+            def screencap(self): return frame
+        resource=Resource();self.assertTrue(resource.post_bundle(root/'assets/resource').wait().succeeded)
+        controller=Controller();self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker();tasker.bind(resource,controller)
+        checks=[]
+        class Check(CustomAction):
+            def run(self,context,argv):
+                flow=DailyFlow(context)
+                flow.image=frame
+                checks.extend([bool(flow.reco('DY_FiveStarReveal')),
+                               not bool(flow.reco('DY_MemberReveal'))])
+                for name in ('coop/ready.png','coop/group_result.png','notifications/costume.png'):
+                    flow.image=read(name)
+                    checks.append(not bool(flow.reco('DY_FiveStarReveal')))
+                return all(checks)
+        resource.register_custom_action('CheckFiveStar',Check())
+        self.assertTrue(tasker.post_task('CheckFiveStar',{'CheckFiveStar':{
+            'action':'Custom','custom_action':'CheckFiveStar'}}).wait().succeeded)
+        self.assertEqual(checks,[True]*5)
+
     def test_free_recruit_scroll_avoids_fixed_promotion(self):
         f=self.flow();f.click=Mock();f.snap=Mock()
         f.image=np.zeros((720,1280,3),dtype=np.uint8)
@@ -376,8 +411,14 @@ class DailyFlowTests(unittest.TestCase):
             f.finish_draw()
         self.assertEqual([c.args for c in f.tap.call_args_list],[(1067,647)]*2)
 
+    def test_five_star_reveal_without_share_button_advances_to_result(self):
+        f=self.recruit_scenes(['DY_FiveStarReveal','DY_RecruitResult','DY_FreeBanner'])
+        f.finish_draw()
+        self.assertEqual([c.args for c in f.tap.call_args_list],[(985,570),(1067,647)])
+        self.assertEqual(f.report['draw_attempts'],{'member':1,'result':1})
+
     def test_stuck_navigation_stops_after_three_attempts_without_resubmitting(self):
-        for node in ('DY_RecruitCut','DY_RecruitSkip','DY_MemberReveal',
+        for node in ('DY_RecruitCut','DY_RecruitSkip','DY_MemberReveal','DY_FiveStarReveal',
                      'DY_ObtainedHeader','DY_RecruitResult'):
             with self.subTest(node=node):
                 f=self.recruit_scenes([node]*4)

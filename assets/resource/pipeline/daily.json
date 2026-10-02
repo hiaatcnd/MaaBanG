@@ -278,6 +278,12 @@
         ],
         "threshold": 0.85
     },
+    "DY_FiveStarReveal": {
+        "recognition": "TemplateMatch",
+        "template": "daily/FiveStarReveal.png",
+        "roi": [735, 440, 390, 160],
+        "threshold": 0.85
+    },
     "DY_MemberReveal": {
         "recognition": "TemplateMatch",
         "template": "daily/MemberReveal.png",

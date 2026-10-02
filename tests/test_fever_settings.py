@@ -101,15 +101,17 @@ class FeverTests(unittest.TestCase):
         self.assertIn('无法', f.dismiss_fever_refusal())
         f.tap_hit.assert_called_once()
 
-    def test_options_default_off_and_ui_binds_both_tasks(self):
+    def test_options_default_off_and_ui_only_binds_preset_task(self):
         interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
+        preset=next(t for t in interface['task'] if t['entry']=='LivePresets')
+        self.assertIn('预设Fever印章',preset['option'])
+        self.assertEqual(interface['option']['预设Fever印章']['default_case'],'关')
         for entry, name, node, parser in [('ChartLive','谱面Fever印章','CL_fever',ChartOptions),
                                          ('AutoLive','演出Fever印章','LV_Fever',LiveOptions)]:
             self.assertEqual(parser.parse({}).fever,'off')
-            self.assertIn(name,next(t for t in interface['task'] if t['entry']==entry)['option'])
-            self.assertEqual(interface['option'][name]['default_case'],'关')
-            for case in interface['option'][name]['cases']:
-                value=case['pipeline_override'][node]['attach']['value']
+            self.assertNotIn(name,next(t for t in interface['task'] if t['entry']==entry)['option'])
+            for case in interface['option']['预设Fever印章']['cases']:
+                value=case['pipeline_override']['LP_fever']['attach']['value']
                 self.assertEqual(parser.parse({'fever':value}).fever,value)
             for invalid in (True, 1, None, 'auto'):
                 with self.assertRaises(ValueError): parser.parse({'fever':invalid})

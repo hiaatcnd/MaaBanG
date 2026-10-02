@@ -101,7 +101,8 @@ def update(interface):
         'description':'自由及联网演出成功结算一首计一次；巡演完整三首计一次。掉房不计次。留空持续运行，直到停止、火或道具不足。',
         'default':'','verify':'^$|^[1-9][0-9]{0,2}$','pattern_msg':'留空不限，或填写1–999'}],
         'pipeline_override':{OPTION_NODES['max_rounds']:{'attach':{'value':'{次数}'}}}}
-    return interface
+    from update_live_presets_interface import update as update_presets
+    return update_presets(interface)
 
 
 def main():

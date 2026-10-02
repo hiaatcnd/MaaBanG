@@ -67,7 +67,8 @@ def update(interface):
             option['label']=label
             for field in option.get('inputs',[]):
                 field['label']=label
-    return interface
+    from update_live_presets_interface import update as update_presets
+    return update_presets(interface)
 
 
 if __name__ == '__main__':

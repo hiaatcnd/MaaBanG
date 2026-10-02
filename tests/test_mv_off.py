@@ -31,6 +31,53 @@ class MvOffTests(unittest.TestCase):
         f=self.flow(['OFF','OFF'])
         f.disable_mv();f.tap.assert_not_called()
 
+    def test_real_3d_and_film_live_mv_labels_cycle_to_off(self):
+        from PIL import Image
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+        from live_policy import LiveOptions
+        root=Path(__file__).resolve().parents[1]
+        if not all((root/'assets/resource/model/ocr'/name).is_file() for name in ('det.onnx','rec.onnx','keys.txt')):
+            self.skipTest('Local OCR models are required for the screenshot integration test')
+        frames=[]
+        for name in ('3d','film_mv','off'):
+            frame=np.zeros((720,1280,3),dtype=np.uint8)
+            frame[610:690,100:710]=np.asarray(Image.open(root/f'tests/fixtures/live_presets/{name}.png'))[:,:,::-1]
+            frames.append(frame)
+        resource=Resource()
+        self.assertTrue(resource.post_bundle(root/'assets/resource').wait().succeeded)
+        class Screens(CustomController):
+            def connect(self):return True
+            def request_uuid(self):return 'mv-preset-regression'
+            def screencap(self):return frames[0]
+        controller=Screens()
+        self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker();tasker.bind(resource,controller)
+        case=self
+        observed={}
+        class Check(CustomAction):
+            def run(self,context,argv):
+                try:
+                    flow=LiveFlow(context,LiveOptions())
+                    index=[0]
+                    flow.snap=lambda:setattr(flow,'image',frames[index[0]])
+                    def tap(x,y):
+                        case.assertEqual((x,y),(145,650))
+                        index[0]+=1
+                    flow.tap=Mock(side_effect=tap)
+                    flow.disable_mv()
+                    case.assertEqual(flow.tap.call_count,2)
+                    observed['ok']=True
+                    return True
+                except Exception as exc:
+                    observed['error']=repr(exc)
+                    return False
+        resource.register_custom_action('MvFixture',Check())
+        job=tasker.post_task('MvFixture',{'MvFixture':{'action':'Custom','custom_action':'MvFixture'}}).wait()
+        self.assertTrue(job.succeeded,observed)
+
     def test_unknown_or_stuck_switch_blocks_start(self):
         for modes in ([''],['演奏']*4,['OFF','ON']):
             with self.subTest(modes=modes):
