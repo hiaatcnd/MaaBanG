@@ -8,7 +8,7 @@ from maa.custom_action import CustomAction
 
 from costume_unlock import CostumeFlow, FlowError, normalized
 from notifications import NotificationMixin
-from daily_policy import (EXCHANGE_CATEGORIES, integer,
+from daily_policy import (EXCHANGE_CATEGORIES, integer, mission_page,
                           remaining_draws, verify_exchange, verify_free_confirmation,
                           selected_exchange_categories, verify_event_free_confirmation)
 
@@ -130,7 +130,57 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         return np.mean(np.abs(self.image[100:710,35:235].astype(float)-before)) >= 1
 
     def claim_mission_category(self, category):
-        # The all-claim button covers the category, including its offscreen rows/pages.
+        self.wait("DY_MissionHeader")
+        page = self.mission_page()
+        # A category may remember its last page. Start at the first to cover all rewards.
+        while page and page[0] > 1:
+            page = self.switch_mission_page(page, -1)
+        for _ in range(100):
+            self.claim_mission_page(category)
+            if self.mission_page() != page:
+                raise FlowError(f"领取后任务页码发生变化：{category}")
+            current, total = page or (1, 1)
+            self.report.setdefault('mission_pages', []).append(
+                {'category': category, 'page': current, 'total': total})
+            print(f"[任务奖励] 已检查：{category} {current}/{total}", flush=True)
+            if current == total:
+                return
+            page = self.switch_mission_page(page, 1)
+        raise FlowError(f"任务分页遍历未收敛：{category}")
+
+    def mission_page(self):
+        self.require_clear_notification_overlay()
+        if not self.reco("DY_MissionNext"):
+            return None  # Single-page relationship cards have unrelated text here.
+        text = self.text([880, 160, 100, 35])
+        try:
+            return mission_page(text)
+        except ValueError as exc:
+            raise FlowError(str(exc)) from exc
+
+    def switch_mission_page(self, page, direction):
+        current, total = page
+        expected = (current + direction, total)
+        if direction not in (-1, 1) or not 1 <= expected[0] <= total:
+            raise FlowError("任务翻页超出范围")
+        self.require_clear_notification_overlay()
+        # Arrow colour alone is unreliable: even the disabled arrow matches the template.
+        self.tap(955 if direction > 0 else 898, 142)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            self.snap()
+            if self.reco("DY_MissionHeader"):
+                try:
+                    actual = self.mission_page()
+                except FlowError:
+                    actual = None  # Allow a short transition, without clicking again.
+                if actual == expected:
+                    return actual
+            time.sleep(.2)
+        raise FlowError(f"未确认任务翻页：{current}/{total} → {expected[0]}/{total}")
+
+    def claim_mission_page(self, category):
+        # All-claim only covers the currently displayed page of this category.
         for _ in range(100):
             self.wait("DY_MissionHeader")
             # Relationship cards push the shared claim button below the header.

@@ -7,13 +7,19 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'agent'))
-from daily_policy import (integer, remaining_draws, verify_exchange, verify_free_confirmation,
+from daily_policy import (integer, mission_page, remaining_draws, verify_exchange, verify_free_confirmation,
                           EXCHANGE_CATEGORIES, EXCHANGE_OPTION_NODES, selected_exchange_categories)
 from daily_tasks import DailyFlow
 from costume_unlock import CostumeFlow, FlowError
 
 
 class DailyPolicyTests(unittest.TestCase):
+    def test_mission_page_requires_a_valid_bounded_ratio(self):
+        self.assertEqual(mission_page(' ２ / ３ '), (2, 3))
+        for text in ('', '1', '0/3', '4/3', '1/0', '1/101', '1/3领取'):
+            with self.assertRaises(ValueError):
+                mission_page(text)
+
     def test_only_three_free_draws_and_strict_remaining(self):
         for text,value in [('剩余3回',3),('剩余 ２ 次',2),('剩余0回',0)]:
             self.assertEqual(remaining_draws(text),value)
@@ -41,6 +47,41 @@ class DailyPolicyTests(unittest.TestCase):
 
 
 class DailyFlowTests(unittest.TestCase):
+    def test_real_mission_page_counters_including_disabled_last_arrow(self):
+        root=Path(__file__).resolve().parents[1]
+        if not (root/'assets/resource/model/ocr/rec.onnx').is_file():
+            self.skipTest('Local OCR models required')
+        from PIL import Image
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+        frames=[]
+        for n in range(1,4):
+            frame=np.zeros((720,1280,3),dtype=np.uint8)
+            frame[115:193,875:980]=np.asarray(Image.open(
+                root/f'tests/fixtures/daily/mission_page_{n}.png').convert('RGB'))[:,:,::-1]
+            frames.append(frame)
+        class Controller(CustomController):
+            def connect(self): return True
+            def request_uuid(self): return 'mission-pages-fixtures'
+            def screencap(self): return frames[0]
+        resource=Resource();self.assertTrue(resource.post_bundle(root/'assets/resource').wait().succeeded)
+        controller=Controller();self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker();tasker.bind(resource,controller)
+        actual=[]
+        class Check(CustomAction):
+            def run(self,ctx,argv):
+                f=DailyFlow(ctx)
+                for frame in frames:
+                    f.image=frame
+                    actual.append(f.mission_page())
+                return True
+        resource.register_custom_action('MissionPages',Check())
+        self.assertTrue(tasker.post_task('MissionPages',{'MissionPages':{
+            'action':'Custom','custom_action':'MissionPages'}}).wait().succeeded)
+        self.assertEqual(actual,[(1,3),(2,3),(3,3)])
+
     def test_real_five_star_reveal_without_share_button(self):
         root=Path(__file__).resolve().parents[1]
         if not (root/'assets/resource/model/ocr/rec.onnx').is_file():
@@ -159,6 +200,75 @@ class DailyFlowTests(unittest.TestCase):
                          f.report['mission_tabs'])
         self.assertEqual(f.report['status'],'finished')
 
+    def test_missions_claim_later_pages_even_when_first_page_is_disabled(self):
+        f=self.flow(); f.mission_page=Mock(return_value=(1,3))
+        f.image=np.full((720,1280,3),128,dtype=np.uint8)
+        button=SimpleNamespace(box=[1100,150,100,25])
+        f.hit_text=Mock(return_value=button); f.tap_hit=Mock()
+        def switch(page,direction):
+            current=page[0]+direction
+            f.mission_page.return_value=(current,3)
+            f.image[:]=255 if current==3 else 128
+            return current,3
+        f.switch_mission_page=Mock(side_effect=switch)
+        f.finish_claim=Mock(side_effect=lambda _:f.image.fill(128))
+        f.claim_mission_category('多页任务')
+        f.tap_hit.assert_called_once_with(button)
+        self.assertEqual(f.report['claims'],['多页任务'])
+        self.assertEqual([p['page'] for p in f.report['mission_pages']],[1,2,3])
+        self.assertEqual(f.switch_mission_page.call_count,2)
+
+    def test_missions_rewind_remembered_page_before_claiming_all_pages(self):
+        f=self.flow(); f.mission_page=Mock(return_value=(3,3))
+        checked=[]
+        f.claim_mission_page=Mock(side_effect=lambda _:checked.append(f.mission_page()))
+        def switch(page,direction):
+            f.mission_page.return_value=(page[0]+direction,page[1])
+            return f.mission_page()
+        f.switch_mission_page=Mock(side_effect=switch)
+        f.claim_mission_category('任务')
+        self.assertEqual(checked,[(1,3),(2,3),(3,3)])
+        self.assertEqual([c.args[1] for c in f.switch_mission_page.call_args_list],[-1,-1,1,1])
+
+    def test_single_page_missions_do_not_navigate(self):
+        f=self.flow(); f.claim_mission_page=Mock(); f.switch_mission_page=Mock()
+        f.claim_mission_category('单页任务')
+        f.claim_mission_page.assert_called_once_with('单页任务')
+        f.switch_mission_page.assert_not_called()
+
+    def test_mission_page_missing_counter_with_arrow_is_not_single_page(self):
+        f=self.flow(); f.text=Mock(return_value=''); f.reco=Mock(return_value=True)
+        f.require_clear_notification_overlay=Mock()
+        with self.assertRaisesRegex(FlowError,'任务页码'):
+            DailyFlow.mission_page(f)
+        f.reco.return_value=None
+        self.assertIsNone(DailyFlow.mission_page(f))
+
+    def test_mission_switch_waits_for_expected_counter_without_reclicking(self):
+        f=self.flow(); f.snap=Mock(); f.reco=Mock(return_value=True)
+        f.require_clear_notification_overlay=Mock()
+        f.mission_page=Mock(side_effect=[FlowError('transition'),(1,3),(2,3)])
+        with patch('daily_tasks.time.sleep'):
+            self.assertEqual(f.switch_mission_page((1,3),1),(2,3))
+        f.tap.assert_called_once_with(955,142)
+
+    def test_mission_switch_unchanged_or_wrong_page_fails_without_reclicking(self):
+        for actual in ((1,3),(3,3),(2,4),None):
+            f=self.flow(); f.snap=Mock(); f.reco=Mock(return_value=True)
+            f.require_clear_notification_overlay=Mock()
+            f.mission_page=Mock(return_value=actual)
+            with patch('daily_tasks.time.monotonic',side_effect=[0,0,6]), patch('daily_tasks.time.sleep'):
+                with self.assertRaisesRegex(FlowError,'未确认任务翻页'):
+                    f.switch_mission_page((1,3),1)
+            f.tap.assert_called_once()
+
+    def test_mission_page_change_after_claim_is_not_silently_skipped(self):
+        f=self.flow(); f.mission_page=Mock(side_effect=[(1,3),(2,3)])
+        f.claim_mission_page=Mock(); f.switch_mission_page=Mock()
+        with self.assertRaisesRegex(FlowError,'领取后任务页码发生变化'):
+            f.claim_mission_category('任务')
+        f.switch_mission_page.assert_not_called()
+
     def test_missions_require_selected_tab_before_claiming(self):
         f=self.flow(); f.click=Mock(); f.claim_mission_category=Mock()
         f.scroll_mission_tabs=Mock(return_value=False)
@@ -208,6 +318,7 @@ class DailyFlowTests(unittest.TestCase):
         f.wait=Mock()
         f.select_free_recruit=Mock()
         f.recruit_events=Mock()
+        f.mission_page=Mock(return_value=None)
         f.hit_text=Mock(return_value=True)
         f.text=Mock(return_value='每日3次免费！演出招募')
         return f

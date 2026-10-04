@@ -1,0 +1,44 @@
+--- a/MFAAvalonia/Extensions/MaaFW/TaskLoader.cs
++++ b/MFAAvalonia/Extensions/MaaFW/TaskLoader.cs
+@@ -65,7 +65,32 @@
+             firstTask = false;
+         }
+ 
++        // Repair v0.6.3 queues once per instance, including queues that only
++        // remember the preset in CurrentTasks (normally interpreted as deleted).
++        // After migration, preserve subsequent user reordering and deletion.
++        const string livePresetsMigration = "MaaBanGLivePresetsFirstV1";
++        var presetTask = tasks.FirstOrDefault(t => t.Entry == "LivePresets");
++        var migrateLivePresets = presetTask != null
++            && !instanceConfig.GetValue(livePresetsMigration, false);
++        if (migrateLivePresets && !drags.Any(item => item.InterfaceItem?.Entry == "LivePresets"))
++        {
++            var clonedTask = presetTask!.Clone();
++            clonedTask.Option?.ForEach(option => SetDefaultOptionValue(maaInterface, option));
++            drags.Insert(0, new DragItemViewModel(clonedTask) { OwnerViewModel = taskQueueViewModel });
++        }
++
+         var (updateList, removeList) = SynchronizeTaskItems(ref currentTasks, drags, tasks);
++
++        if (migrateLivePresets)
++        {
++            var presetIndex = updateList.FindIndex(item => item.InterfaceItem?.Entry == "LivePresets");
++            if (presetIndex > 0)
++            {
++                var preset = updateList[presetIndex];
++                updateList.RemoveAt(presetIndex);
++                updateList.Insert(0, preset);
++            }
++        }
+ 
+         instanceConfig.SetValue(ConfigurationKeys.CurrentTasks, currentTasks);
+         
+@@ -81,6 +106,8 @@
+         {
+             instanceConfig.SetValue(ConfigurationKeys.TaskItems,
+                 updateList.Where(m => !m.IsResourceOptionItem).Select(m => m.InterfaceItem).ToList());
++            if (migrateLivePresets && updateList.Any(item => item.InterfaceItem?.Entry == "LivePresets"))
++                instanceConfig.SetValue(livePresetsMigration, true);
+         }
+ 
+         UpdateViewModels(updateList, tasks, tasksSource);
