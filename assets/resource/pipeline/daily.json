@@ -240,6 +240,16 @@
             125
         ]
     },
+    "DY_RecruitDetails": {
+        "recognition": "OCR",
+        "expected": "^招募详情$",
+        "roi": [250, 650, 150, 50]
+    },
+    "DY_EventFreeConfirm": {
+        "recognition": "OCR",
+        "expected": "不会消耗星石",
+        "roi": [370, 365, 540, 55]
+    },
     "DY_RecruitCut": {
         "recognition": "OCR",
         "expected": "TOUCH\\s*TO\\s*CUT",

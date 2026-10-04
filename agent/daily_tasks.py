@@ -10,7 +10,7 @@ from costume_unlock import CostumeFlow, FlowError, normalized
 from notifications import NotificationMixin
 from daily_policy import (EXCHANGE_CATEGORIES, integer,
                           remaining_draws, verify_exchange, verify_free_confirmation,
-                          selected_exchange_categories)
+                          selected_exchange_categories, verify_event_free_confirmation)
 
 
 class DailyFlow(NotificationMixin, CostumeFlow):
@@ -297,7 +297,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.wait("DY_FreeBanner")
         return remaining_draws(self.text([1110,596,108,36]))
 
-    def finish_draw(self):
+    def finish_draw(self, return_node="DY_FreeBanner"):
         deadline = time.monotonic()+120
         attempts = {}
         last_action = {}
@@ -311,7 +311,8 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             elif self.reco("DY_RecruitResult") and np.median(self.image[145:170,110:130]) > 220:
                 result_seen = True
                 stage, target = "result", (1067,647)
-            elif result_seen and self.reco("DY_FreeBanner"):
+            elif result_seen and self.reco(return_node):
+                self.require_clear_notification_overlay()
                 return
             elif hit := self.reco("DY_RecruitCut"):
                 # The ticket can cover SKIP. Cut it through its own visible prompt.
@@ -345,7 +346,77 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.tap(*target)
         raise FlowError("招募结果未确认，不重复提交招募")
 
+    def event_free_button(self):
+        self.require_clear_notification_overlay()
+        # Only the cost line inside recruitment buttons, never banner advertising.
+        for hit in self.ocr([880,652,375,42], "^免费$"):
+            x,y,w,h = hit.box
+            # Used-up offers retain the word underneath a dark disabled overlay.
+            if np.median(self.image[y:y+h,max(880,x-5):min(1255,x+w+5)]) > 220:
+                return hit
+        return None
+
+    def recruit_events(self):
+        self.home()
+        self.click("DY_RecruitEntry")
+        self.wait("DY_RecruitDetails")
+        # Selecting a tab centers it at y=218. Scroll back to the first pool.
+        for _ in range(30):
+            before = self.image[100:565,28:229].astype(float)
+            self.swipe(130,310,520)
+            time.sleep(.8)
+            self.wait("DY_RecruitDetails")
+            if np.mean(np.abs(self.image[100:565,28:229].astype(float)-before)) < 1:
+                break
+        else:
+            raise FlowError("招募列表未回到顶部")
+        visited = []
+        for index in range(60):
+            self.wait("DY_RecruitDetails")
+            self.require_clear_notification_overlay()
+            card = self.image[180:255,45:215].copy()
+            if any(np.mean(np.abs(card.astype(float)-old)) < 1 for old in visited):
+                raise FlowError("招募标签重复，停止遍历")
+            visited.append(card.astype(float))
+            self.report["recruit_tabs_checked"] = index+1
+            # The daily pool retains its remaining-count verification below.
+            if not self.reco("DY_FreeBanner"):
+                for _ in range(20):
+                    button = self.event_free_button()
+                    if not button:
+                        break
+                    self.tap_hit(button)
+                    self.wait("DY_EventFreeConfirm")
+                    confirmation = self.text([370,260,540,160])
+                    verify_event_free_confirmation(confirmation)
+                    # An identical offer must not be submitted a second time,
+                    # even if the server leaves the old button visible briefly.
+                    offers = self.report.setdefault("event_draws", [])
+                    if any(row["confirmation"] == normalized(confirmation) for row in offers):
+                        raise FlowError("活动免费招募未更新，不重复提交")
+                    row = {"confirmation": normalized(confirmation), "status": "submitted"}
+                    offers.append(row)
+                    self.report["draw_in_flight"] = True
+                    self.tap(770,476)
+                    self.finish_draw("DY_RecruitDetails")
+                    row["status"] = "success_confirmed"
+                    self.report["draw_in_flight"] = False
+                    self.report["draws"] += 1
+                    print("[免费招募] 已完成活动免费招募",flush=True)
+                else:
+                    raise FlowError("活动免费招募未收敛")
+            # Next card's blank margin; a fixed promotion below y=565 is excluded.
+            if np.mean(self.image[285:345,42:49].min(axis=2) > 235) < .9:
+                return
+            self.tap(130,318)
+            time.sleep(.5)
+        raise FlowError("招募列表遍历未收敛")
+
     def recruit(self):
+        self.recruit_events()
+        self.recruit_daily()
+
+    def recruit_daily(self):
         self.select_free_recruit()
         for _ in range(3):
             count = self.free_remaining()

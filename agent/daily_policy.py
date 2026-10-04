@@ -51,3 +51,14 @@ def verify_free_confirmation(text):
         raise ValueError("不是每日三次免费演出招募确认页")
     if any(word in text for word in ("消耗", "付费", "250", "2500")):
         raise ValueError("招募确认页含有收费信息")
+
+
+def verify_event_free_confirmation(text):
+    text = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
+    if not (re.search(r"免费(?:\d+|十)?(?:连|次)?招募", text)
+            and "进行招募" in text and "确认吗" in text
+            and "不会消耗星石" in text):
+        raise ValueError("未确认活动招募免费且不会消耗星石")
+    remainder = text.replace("不会消耗星石", "")
+    if any(word in remainder for word in ("消耗", "付费", "有偿", "花费", "使用", "星石", "招募券")):
+        raise ValueError("活动招募确认页含有收费或招募券信息")

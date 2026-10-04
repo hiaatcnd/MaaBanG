@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.6.3",
+    "version": "v0.6.4",
     "controller": [
         {
             "name": "安卓端",
@@ -59,7 +59,7 @@
         {
             "name": "每日免费招募",
             "entry": "DailyFreeRecruit",
-            "description": "仅执行每日3次免费演出招募的剩余可用次数，不使用星石或招募券，完成后返回主页。",
+            "description": "检查各招募页按钮中的“免费”，领取活动免费招募（含免费十连）及每日3次免费演出招募的剩余可用次数。不使用星石或招募券，完成后返回主页。",
             "default_check": false
         },
         {

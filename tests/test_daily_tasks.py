@@ -207,6 +207,7 @@ class DailyFlowTests(unittest.TestCase):
         f.tap=Mock()
         f.wait=Mock()
         f.select_free_recruit=Mock()
+        f.recruit_events=Mock()
         f.hit_text=Mock(return_value=True)
         f.text=Mock(return_value='每日3次免费！演出招募')
         return f
