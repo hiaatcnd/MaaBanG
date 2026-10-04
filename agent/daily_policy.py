@@ -28,6 +28,14 @@ def integer(text):
     return int(text)
 
 
+def mission_page(text):
+    text = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
+    match = re.fullmatch(r"(\d+)/(\d+)", text)
+    if not match or not 1 <= int(match[1]) <= int(match[2]) <= 100:
+        raise ValueError(f"无法可靠读取任务页码：{text!r}")
+    return int(match[1]), int(match[2])
+
+
 def remaining_draws(text):
     text = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
     match = re.fullmatch(r"剩余([0-3])(?:回|次)", text)
