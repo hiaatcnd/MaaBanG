@@ -29,15 +29,12 @@
 
 从 [Bestdori](https://bestdori.com/api/charts/306/easy.json) 获取原始 JSON 文件；必要时使用普通 User-Agent 与模拟器页 Referer。当前探针固定接受研究样本 SHA-256 `91294eebc4f51a1a7d596c2cf47388d12b2e8788080b81e1fda14880f3aa2a69`。哈希不符会拒绝开演，应先审查谱面变化，不能直接绕过验证。
 
-在仓库根目录运行，路径和实例编号必须对应同一个模拟器；工具会通过 MuMuManager 对照实例与 ADB 地址。输出目录必须尚不存在。
+在仓库根目录运行，工具通过 MaaFramework 查找与 ADB 地址精确匹配的截图增强配置；也可用 `--controller-config` 提供当前连接的配置 JSON（内容为控制器的 `config` 字段）。输出目录必须尚不存在。以下保留 MuMu 连接示例，工具不再要求 MuMu 专用参数。
 
 ```powershell
 uv run --project agent python -X utf8 tools/run_chart_probe.py `
   --adb "C:/Program Files/Netease/MuMu/nx_main/adb.exe" `
   --address "127.0.0.1:16416" `
-  --mumu-path "C:/Program Files/Netease/MuMu" `
-  --mumu-lib "C:/Program Files/Netease/MuMu/nx_device/15.0/shell/sdk/external_renderer_ipc.dll" `
-  --mumu-index 1 `
   --chart "debug/chart_research/306_easy.json" `
   --output "debug/chart_research/new-baseline" `
   --execute-zero-fire

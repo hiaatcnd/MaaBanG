@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 import sys
 import time
-import subprocess
 import threading
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,9 +16,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adb', required=True)
     parser.add_argument('--address', required=True)
-    parser.add_argument('--mumu-path', required=True)
-    parser.add_argument('--mumu-lib', required=True)
-    parser.add_argument('--mumu-index', type=int, required=True)
+    parser.add_argument('--controller-config', type=Path,
+                        help='Optional MaaFramework connection config JSON; otherwise discover the exact ADB address')
     parser.add_argument('--chart', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True, help='New output directory')
     parser.add_argument('--offset-ms', type=float, default=0)
@@ -56,13 +54,6 @@ def main():
     expected = selected['sha256']
     if hashlib.sha256(raw).hexdigest() != expected:
         parser.error('Chart snapshot does not match the reviewed manifest')
-    manager = Path(args.mumu_path)/'nx_main'/'MuMuManager.exe'
-    devices = json.loads(subprocess.run([str(manager), 'info', '-v', 'all'],
-                         check=True, capture_output=True, encoding='utf-8', timeout=15).stdout)
-    device = devices.get(str(args.mumu_index), {})
-    address = f"{device.get('adb_host_ip')}:{device.get('adb_port')}"
-    if not device.get('is_android_started') or address != args.address:
-        parser.error('MuMu screenshot instance and ADB input address must match')
     from chart_timing import compile_chart, first_anchor
     chart = json.loads(raw)
     events = compile_chart(chart, seed=args.seed, jitter_ms=args.jitter_ms,
@@ -78,17 +69,18 @@ def main():
     from maa.resource import Resource
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
+    from maa.define import MaaAdbScreencapMethodEnum, MaaAdbInputMethodEnum
     from maa.custom_action import CustomAction
     from auto_live import LiveFlow
     from live_policy import LiveOptions
     from chart_sync import locate_note_y, FirstNoteLock, stage_state, ChartPhaseTracker, SlewedClock
 
     Toolkit.init_option(args.output)
-    cfg = {'extras': {'mumu': {
-        'enable': True, 'path': args.mumu_path, 'lib': args.mumu_lib,
-        'index': args.mumu_index, 'app_package': 'com.bilibili.star.bili'}}}
-    controller = AdbController(args.adb, args.address, screencap_methods=64,
-                               input_methods=4, config=cfg)
+    from playback_controller import controller_config
+    config=json.loads(args.controller_config.read_text(encoding='utf8')) if args.controller_config else {}
+    _,_,cfg=controller_config({'type':'adb','adb_path':args.adb,'adb_serial':args.address,'config':config})
+    controller = AdbController(args.adb, args.address, screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                               input_methods=MaaAdbInputMethodEnum.Maatouch, config=cfg)
     controller.set_screenshot_target_short_side(720)
     if not controller.post_connection().wait().succeeded:
         raise RuntimeError('Controller connection failed')
@@ -96,8 +88,8 @@ def main():
     observer_thread = None
     observer_stop = threading.Event()
     if args.observe_seconds or args.continuous_sync:
-        observer = AdbController(args.adb, args.address, screencap_methods=64,
-                                 input_methods=1, config=cfg)
+        observer = AdbController(args.adb, args.address, screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                                 input_methods=MaaAdbInputMethodEnum.AdbShell, config=cfg)
         observer.set_screenshot_target_short_side(720)
         if not observer.post_connection().wait().succeeded:
             raise RuntimeError('Diagnostic controller connection failed')
