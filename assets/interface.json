@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.6.7",
+    "version": "v0.6.8",
     "controller": [
         {
             "name": "安卓端",
@@ -11220,6 +11220,48 @@
                     }
                 },
                 {
+                    "name": "HONEY",
+                    "label": "HONEY · Roselia",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "HONEY"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "金曜日のおはよう",
+                    "label": "金曜日のおはよう · Pastel＊Palettes",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "金曜日のおはよう"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "許婚っきゅん",
+                    "label": "許婚っきゅん · Hello, Happy World！",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "許婚っきゅん"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "label": "ときめきエクスペリエンス！ (月岛麻里奈ver.) · 月岛麻里奈",
                     "option": [
@@ -22394,6 +22436,48 @@
                     "label": "革命道中 · RAISE A SUILEN"
                 },
                 {
+                    "name": "HONEY",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "778"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "HONEY · Roselia"
+                },
+                {
+                    "name": "金曜日のおはよう",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "779"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "金曜日のおはよう · Pastel＊Palettes"
+                },
+                {
+                    "name": "許婚っきゅん",
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "780"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "許婚っきゅん · Hello, Happy World！"
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "pipeline_override": {
                         "CL_song1": {
@@ -33019,6 +33103,48 @@
                         "谱面第2首难度_easy_normal_hard_expert"
                     ],
                     "label": "革命道中 · RAISE A SUILEN"
+                },
+                {
+                    "name": "HONEY",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "778"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "HONEY · Roselia"
+                },
+                {
+                    "name": "金曜日のおはよう",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "779"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "金曜日のおはよう · Pastel＊Palettes"
+                },
+                {
+                    "name": "許婚っきゅん",
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "780"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "許婚っきゅん · Hello, Happy World！"
                 },
                 {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
@@ -43648,6 +43774,48 @@
                     "label": "革命道中 · RAISE A SUILEN"
                 },
                 {
+                    "name": "HONEY",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "778"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "HONEY · Roselia"
+                },
+                {
+                    "name": "金曜日のおはよう",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "779"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "金曜日のおはよう · Pastel＊Palettes"
+                },
+                {
+                    "name": "許婚っきゅん",
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "780"
+                            }
+                        }
+                    },
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "label": "許婚っきゅん · Hello, Happy World！"
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "pipeline_override": {
                         "CL_song3": {
@@ -52054,6 +52222,39 @@
                     "label": "革命道中 · RAISE A SUILEN"
                 },
                 {
+                    "name": "HONEY",
+                    "pipeline_override": {
+                        "CL_cp_song": {
+                            "attach": {
+                                "value": "778"
+                            }
+                        }
+                    },
+                    "label": "HONEY · Roselia"
+                },
+                {
+                    "name": "金曜日のおはよう",
+                    "pipeline_override": {
+                        "CL_cp_song": {
+                            "attach": {
+                                "value": "779"
+                            }
+                        }
+                    },
+                    "label": "金曜日のおはよう · Pastel＊Palettes"
+                },
+                {
+                    "name": "許婚っきゅん",
+                    "pipeline_override": {
+                        "CL_cp_song": {
+                            "attach": {
+                                "value": "780"
+                            }
+                        }
+                    },
+                    "label": "許婚っきゅん · Hello, Happy World！"
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "pipeline_override": {
                         "CL_cp_song": {
@@ -60287,6 +60488,39 @@
                         }
                     },
                     "label": "革命道中 · RAISE A SUILEN"
+                },
+                {
+                    "name": "HONEY",
+                    "pipeline_override": {
+                        "CL_coop_song": {
+                            "attach": {
+                                "value": "778"
+                            }
+                        }
+                    },
+                    "label": "HONEY · Roselia"
+                },
+                {
+                    "name": "金曜日のおはよう",
+                    "pipeline_override": {
+                        "CL_coop_song": {
+                            "attach": {
+                                "value": "779"
+                            }
+                        }
+                    },
+                    "label": "金曜日のおはよう · Pastel＊Palettes"
+                },
+                {
+                    "name": "許婚っきゅん",
+                    "pipeline_override": {
+                        "CL_coop_song": {
+                            "attach": {
+                                "value": "780"
+                            }
+                        }
+                    },
+                    "label": "許婚っきゅん · Hello, Happy World！"
                 },
                 {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",

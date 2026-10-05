@@ -13,6 +13,22 @@ from mining_policy import (parse_level, can_practice, material_rois, member_card
                            member_signature, same_member_portrait)
 
 
+def member_filter_box(image):
+    """Bounds of the large, already recognized member-filter panel."""
+    white=(image.min(axis=2)>245)&(np.ptp(image,axis=2)<10)
+    columns=np.flatnonzero(white.sum(axis=0)>400)
+    if not len(columns):
+        raise FlowError('无法定位成员筛选弹窗')
+    left,right=int(columns[0]),int(columns[-1])+1
+    rows=np.flatnonzero(white[:,left:right].mean(axis=1)>.75)
+    if not len(rows):
+        raise FlowError('无法定位成员筛选弹窗')
+    top,bottom=int(rows[0]),int(rows[-1])+1
+    if not (100<=left<=230 and 820<=right-left<=1050 and 500<=bottom-top<=670):
+        raise FlowError('成员筛选弹窗尺寸异常')
+    return [left,top,right-left,bottom-top]
+
+
 class StoryMiningFlow(DailyFlow):
     def __init__(self, context, options, output):
         super().__init__(context)
@@ -34,57 +50,82 @@ class StoryMiningFlow(DailyFlow):
     def filter_unread(self, memory):
         self.tap(1015,130)
         self.wait('MN_MemberFilter')
+        box=member_filter_box(self.image)
+        self.member_filter_box=box
+        left,top,width,height=box
+        dx=left-205
+        scroll_x=left+width-30
+        roi=[left+25,top+100,width-50,height-230]
         for _ in range(8):
-            self.swipe(1010,200,500)
+            self.swipe(scroll_x,top+160,top+400)
         self.snap()
         # The global toggle selects all checkboxes if any were deselected.
         # If all were selected, it clears them; inspect and toggle back once.
-        self.tap(950,117)
+        toggle=self.hit_text([left,top,width,100],'^全选[/／]取消全选$')
+        label=self.hit_text(roi,'^种类$|^属性$')
+        if not toggle or not label:
+            raise FlowError('未定位成员筛选全选按钮和属性行')
+        attribute_y=label.box[1]+label.box[3]//2+54
+        self.tap_hit(toggle)
         self.snap()
-        if not self.checkbox(260,282):
-            self.tap(950,117)
+        if not self.checkbox(260+dx,attribute_y):
+            self.tap_hit(toggle)
         self.snap()
-        if not all(self.checkbox(x,282) for x in (260,459,658,857)):
+        if not all(self.checkbox(x+dx,attribute_y) for x in (260,459,658,857)):
             raise FlowError('未确认培养筛选已全选所有属性')
         self.filter_member_stars(memory)
-        for _ in range(12):
+        for _ in range(20):
             self.snap()
-            hit = self.hit_text([700,170,260,330],'^回忆小故事$')
-            if hit and hit.box[1] < 475:
-                y = hit.box[1]+hit.box[3]//2+7
-                self.tap(683 if memory else 472,y)
+            section=self.hit_text(roi,'^限制条件$')
+            if section:
+                cy=section.box[1]+section.box[3]//2
+                cx=left+width-60
+                vertical=self.image[cy-7:cy+8,cx-1:cx+2].astype(float)
+                if np.mean((vertical[:,:,2]>190)&(vertical[:,:,2]-vertical[:,:,1]>45))>.6:
+                    self.tap(cx,cy)
+                    continue
+            hit = self.hit_text([left+25,top+100,180,height-230],'^小故事$')
+            if hit and hit.box[1] < top+height-200:
+                y = hit.box[1]+hit.box[3]//2+54
+                self.tap((683 if memory else 472)+dx,y)
                 self.snap()
-                if not self.checkbox(683 if memory else 472,y,radio=True):
+                if not self.checkbox((683 if memory else 472)+dx,y,radio=True):
                     raise FlowError('未读故事筛选未选中')
                 for _ in range(6):
                     self.snap()
-                    animation = self.hit_text([240,170,175,345],'^动画$')
+                    animation = self.hit_text(roi,'^动画$')
                     if animation:
                         ay = animation.box[1]+animation.box[3]//2+54
-                        if ay < 510:
-                            self.tap(261,ay)
+                        if ay < top+height-140:
+                            self.tap(261+dx,ay)
                             self.snap()
-                            if not self.checkbox(261,ay,radio=True):
+                            if not self.checkbox(261+dx,ay,radio=True):
                                 raise FlowError('成员动画筛选未恢复全部')
                             break
-                    self.swipe(1010,490,370)
+                    self.swipe(scroll_x,top+height-170,top+height-290)
                 else:
                     raise FlowError('未定位成员动画筛选')
-                self.tap(770,582)
+                confirm=self.hit_text([left,top+height-110,width,100],'^确定$')
+                if not confirm:
+                    raise FlowError('未定位成员筛选确认按钮')
+                self.tap_hit(confirm)
                 self.wait('MN_Members')
                 return
-            self.swipe(1010,495,300)
+            self.swipe(scroll_x,top+height-170,top+height-365)
         raise FlowError('未定位小故事未读筛选')
 
     def filter_member_stars(self, memory):
         # Game order is five to one stars, independent of practice/unlock.
         slots=((5,261),(4,419),(3,578),(2,736),(1,895))
+        left,top,width,height=getattr(self,'member_filter_box',(205,75,870,570))
+        dx=left-205
+        slots=tuple((stars,x+dx) for stars,x in slots)
         for _ in range(6):
             self.snap()
-            label=self.hit_text([235,170,180,340],'^稀有度$')
+            label=self.hit_text([left+25,top+100,180,height-230],'^稀有度$')
             if label:
                 y=label.box[1]+label.box[3]//2+54
-                if 195<=y<=485:
+                if top+120<=y<=top+height-140:
                     for stars,x in slots:
                         if self.checkbox(x,y)!=(stars in self.mining.stars):
                             self.tap(x,y)
@@ -95,7 +136,7 @@ class StoryMiningFlow(DailyFlow):
                     self.report.setdefault('filters',[]).append(
                         {'memory':memory,'stars':sorted(self.mining.stars)})
                     return
-            self.swipe(1010,490,300)
+            self.swipe(left+width-30,top+height-170,top+height-360)
         raise FlowError('未定位成员星级筛选')
 
     def checkbox(self, x, y, radio=False):
@@ -311,6 +352,10 @@ class StoryMiningFlow(DailyFlow):
             elif self.reco('MN_MemberDetail') and entered:
                 # A second reward dialog follows the stat increase. Require the
                 # unobstructed detail page to persist beyond the transition.
+                if dialog_box(getattr(self,'image',None)) is not None:
+                    detail_since = None
+                    time.sleep(.4)
+                    continue
                 if detail_since is None:
                     detail_since = time.monotonic()
                 if time.monotonic()-detail_since < 1.5:

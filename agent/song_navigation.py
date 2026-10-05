@@ -61,7 +61,10 @@ class SongNavigationMixin:
             self.swipe(1200,550,290)
         else:
             raise FlowError('未定位乐曲等级筛选滑块')
-        for _ in range(10):
+        corrections = [0, 0]
+        last_values = None
+        last_index = None
+        for _ in range(20):
             if _:
                 self.snap()
             values=[]
@@ -88,7 +91,19 @@ class SongNavigationMixin:
             # then clamps to it instead of overshooting a single-level range.
             index=1 if not upper_ok and maximum>=values[0] else 0
             delta=(minimum,maximum)[index]-values[index]
-            target=int(round(np.clip(handles[index]+delta*15.2+(5 if delta>0 else -5),772,1152)))
+            # A short drag can be swallowed by the game's touch slop. Use
+            # observed values to enlarge a stalled correction, never repeat
+            # the identical ineffective gesture indefinitely.
+            if index==last_index and values==last_values:
+                corrections[index] += 8 if delta>0 else -8
+            else:
+                corrections[index] = 0
+            target=int(round(np.clip(handles[index]+delta*15.2+(5 if delta>0 else -5)+corrections[index],772,1152)))
+            if (minimum,maximum)[index] in (5,30):
+                # Carry the drag beyond the rail end so touch slop cannot
+                # leave the endpoint one level short. OCR still confirms it.
+                target=735 if (minimum,maximum)[index]==5 else 1185
+            last_values,last_index=values,index
             self.report['level_filter_steps'][-1].update(handles=handles,index=index,x=target)
             self.check_stop()
             try:

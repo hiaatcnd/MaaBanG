@@ -466,10 +466,16 @@ class ChallengeMiningFlow(MiningLiveFlow):
 
     def verify_chart_start(self, index, selection, amount):
         self.wait_ready()
-        if not self.title_matches(self.text([220,541,600,38]),selection.song):
+        # The auto-live counter starts at x=798, beside the title.
+        if not self.title_matches(self.text([220,541,570,38]),selection.song):
             raise FlowError('舞台挑战歌曲与谱面不符')
         if normalized(self.text([110,560,110,35])).lower() != selection.difficulty:
             raise FlowError('舞台挑战难度与谱面不符')
+        if self.reco('LV_AutoOn'):
+            self.tap(883,580)
+            self.wait_ready()
+        if not self.reco('LV_AutoOff'):
+            raise FlowError('未确认舞台挑战的游戏内置自动已关闭')
         before, after = self.fire_preview()
         self.pause(.15)
         self.snap()
@@ -646,6 +652,8 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 row['stage_level'] = level
                 row['stage_kind'] = self.mining.stage
                 row['next_unlocked'] = self.advance_level(level)
+            if self.limited():
+                break
             self.back()
             self.wait('MN_ChallengeSelect')
         self.report['status'] = 'max_rounds_reached'

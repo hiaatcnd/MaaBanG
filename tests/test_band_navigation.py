@@ -47,10 +47,10 @@ class BandNavigationTests(unittest.TestCase):
         flow.select_band('roselia')
         self.assertEqual(actions,[])
 
-    def test_target_above_scrolls_up_once_then_stops(self):
+    def test_target_above_recenters_visible_band_before_scroll_fallback(self):
         flow,actions=self.make_flow(['raise_a_suilen','mygo'],'poppin_party')
         flow.select_band('poppin_party')
-        self.assertEqual(actions,[('swipe',350,570),('tap',)])
+        self.assertEqual(actions,[('tap',),('swipe',350,570)])
 
     def test_stationary_boundary_reverses_without_twelve_retries(self):
         flow,actions=self.make_flow([],'poppin_party',reveal_after=2,stationary=True)
