@@ -13,6 +13,12 @@ def fever_option(value):
     return value
 
 
+def favorites_option(value):
+    if not isinstance(value, bool):
+        raise ValueError('从收藏选择必须为开或关')
+    return value
+
+
 def number(value, name, maximum):
     if isinstance(value, bool):
         raise ValueError(f"{name}必须为整数")
@@ -32,6 +38,7 @@ class LiveOptions:
     max_rounds: int | None = None
     song_id: str | None = None
     fever: str = 'off'
+    from_favorites: bool = False
 
     @classmethod
     def parse(cls, data):
@@ -56,7 +63,8 @@ class LiveOptions:
         if max_rounds == 0:
             raise ValueError("最大演出次数请留空或填写 1–999")
         return cls(mode, catalog_song['title'], difficulty, fire, shortage, max_rounds, catalog_song['id'],
-                   fever_option(data.get('fever', 'off')))
+                   fever_option(data.get('fever', 'off')),
+                   favorites_option(data.get('from_favorites', False)))
 
     @property
     def songs_per_round(self):

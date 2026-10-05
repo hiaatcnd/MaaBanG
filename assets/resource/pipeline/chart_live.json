@@ -87,5 +87,10 @@
         "attach": {
             "value": "expert"
         }
+    },
+    "CL_from_favorites": {
+        "attach": {
+            "value": false
+        }
     }
 }

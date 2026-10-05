@@ -44,13 +44,16 @@ def update(interface):
             'description':'读取当前课题固定歌曲；所选难度不存在时停止，不替换难度。',
             'cases':[choice(name.upper(),f'difficulty{slot}',name) for name in DIFFICULTIES]}
     selectors=[f'谱面第{i}首歌曲' for i in range(1,4)]
+    options['谱面从收藏选择']={'type':'select','label':'从收藏选择','default_case':'关',
+        'description':'开启后在游戏内“所有收藏”中按乐队和等级筛选查找；请先收藏目标歌曲。刚进入选歌页时已选中目标歌曲则直接使用，不再筛选。',
+        'cases':[choice(label,'from_favorites',value) for label,value in [('关',False),('开',True)]]}
     fire_options=['谱面每首火数','谱面火不足策略']
     options['谱面演出模式']={'type':'select','label':'演出模式','cases':[
-        choice('自由演出','mode','free',[selectors[0],*fire_options]),
-        choice('自由巡演（三首自选）','mode','tour_free',selectors+fire_options),
+        choice('自由演出','mode','free',[selectors[0],'谱面从收藏选择',*fire_options]),
+        choice('自由巡演（三首自选）','mode','tour_free',selectors+['谱面从收藏选择']+fire_options),
         choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)]+fire_options),
         choice('团队演出','mode','team',['谱面联网难度',*fire_options]),
-        choice('协力演出','mode','coop',['谱面协力房间类别','谱面协力房间','谱面协力歌曲','谱面联网难度',*fire_options]),
+        choice('协力演出','mode','coop',['谱面协力房间类别','谱面协力房间','谱面协力歌曲','谱面从收藏选择','谱面联网难度',*fire_options]),
         choice('挑战演出（消耗CP）','mode','challenge',['谱面挑战歌曲','谱面挑战难度','谱面每首CP'])]}
     for option,label,key,default,description in (
         ('谱面挑战歌曲','活动歌曲','cp_song','沿用当前活动歌曲',

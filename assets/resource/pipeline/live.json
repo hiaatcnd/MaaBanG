@@ -340,6 +340,11 @@
             "value": "free"
         }
     },
+    "LV_FromFavorites": {
+        "attach": {
+            "value": false
+        }
+    },
     "LV_Song": {
         "recognition": "DirectHit",
         "attach": {

@@ -152,7 +152,12 @@ def update_interface(interface, catalog):
                       'pipeline_override': {'LV_Song': {'attach': {'value': song_key(song, songs)}}}})
     options['演出歌曲'].update(cases=cases, default_case='SAVIOR OF SONG',
         label='演出歌曲',
-        description='从已解锁歌曲选择，无需收藏；进入游戏后按所属乐队筛选查找。难度候选随歌曲变化，同名歌曲按乐队区分。')
+        description='从已解锁歌曲选择；可开启“从收藏选择”加快查找。当前已选中目标歌曲时直接使用。难度候选随歌曲变化，同名歌曲按乐队区分。')
+    options['演出从收藏选择']={
+        'type':'select','label':'从收藏选择','default_case':'关',
+        'description':'开启后在游戏内“所有收藏”中按乐队和等级筛选查找；请先收藏目标歌曲。刚进入选歌页时已选中目标歌曲则直接使用，不再筛选。',
+        'cases':[{'name':label,'pipeline_override':{'LV_FromFavorites':{'attach':{'value':value}}}}
+                 for label,value in [('关',False),('开',True)]]}
     for key in list(options):
         if key.startswith('清火筛选_'):
             del options[key]
@@ -161,6 +166,11 @@ def update_interface(interface, catalog):
             task['description']=task['description'].replace('从收藏选择歌曲','从全部已解锁歌曲按乐队筛选选歌，无需收藏')
             task['option'] = ['演出歌曲' if name in ('演出歌曲','清火筛选_乐队') else name
                               for name in task['option'] if name != '演出难度']
+            if '演出从收藏选择' not in task['option']:
+                task['option'].insert(task['option'].index('演出歌曲')+1,'演出从收藏选择')
+            task['description']=task['description'].replace(
+                '从全部已解锁歌曲按乐队筛选选歌，无需收藏',
+                '默认从全部已解锁歌曲按乐队筛选选歌，也可开启“从收藏选择”加快查找')
     return interface
 
 
