@@ -95,7 +95,14 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 return
             button = self.hit_text([975,105,225,63], "一键领取")
             if not button:
-                raise FlowError("礼物列表中找不到一键领取")
+                # The fixed header appears before the list finishes sliding in.
+                deadline = time.monotonic()+8
+                while not button and time.monotonic()<deadline:
+                    time.sleep(.25)
+                    self.snap()
+                    button = self.hit_text([975,105,225,63], "一键领取")
+                if not button:
+                    raise FlowError("礼物列表中找不到一键领取")
             self.tap_hit(button)
             self.finish_claim("DY_GiftHeader")
             self.report["claims"].append("gifts")
@@ -352,6 +359,9 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         attempts = {}
         last_action = {}
         result_seen = False
+        previous_stage = None
+        previous_member = None
+        consecutive = 0
         while time.monotonic() < deadline:
             self.snap()
             if self.dismiss_notifications():
@@ -369,30 +379,36 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 stage = "cut"
                 x, y, w, h = hit.box
                 target = (x+w//2, y+h//2)
+            elif (self.reco("DY_MemberReveal") or self.reco("DY_FiveStarReveal")
+                  or self.reco("DY_FullscreenMemberReveal")):
+                # Full-screen reveals can omit the bottom-left Share button.
+                # Require a recognized reveal and bound retries per member;
+                # never repeat the draw submission.
+                stage, target = "member", (985,570)
             elif hit := self.reco("DY_RecruitSkip"):
                 stage = "skip"
                 x, y, w, h = hit.box
                 target = (x+w//2, y+h//2)
-            elif self.reco("DY_MemberReveal") or self.reco("DY_FiveStarReveal"):
-                # The full-screen five-star reveal has no bottom-left Share
-                # button. Advance only its recognized star strip, with the
-                # same bounded member-stage retries and submission guard.
-                stage, target = "member", (985,570)
             else:
                 time.sleep(0.4)
                 continue
             self.report["draw_stage"] = stage
+            member = normalized(self.text([580,270,670,435])) if stage == 'member' else None
+            if stage != previous_stage or (member and member != previous_member):
+                consecutive = 0
+            previous_stage, previous_member = stage, member
             now = time.monotonic()
             # Re-recognize each time; retry only navigation, never the draw submission.
             if now-last_action.get(stage, float("-inf")) < 3:
                 time.sleep(0.4)
                 continue
-            if attempts.get(stage, 0) >= 3:
+            if consecutive >= 3:
                 raise FlowError(f"招募阶段 {stage} 点击 3 次后仍未推进，不重复提交招募")
+            consecutive += 1
             attempts[stage] = attempts.get(stage, 0)+1
             last_action[stage] = now
             self.report["draw_attempts"] = dict(attempts)
-            print(f"[免费招募] {stage}：第 {attempts[stage]}/3 次推进",flush=True)
+            print(f"[免费招募] {stage}：本画面第 {consecutive}/3 次推进",flush=True)
             self.tap(*target)
         raise FlowError("招募结果未确认，不重复提交招募")
 

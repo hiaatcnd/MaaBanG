@@ -159,8 +159,17 @@ class CostumeFlow:
                         return
                     time.sleep(0.15)
                 raise FlowError(f"未确认选中乐队 {band}")
-            visible = [i for i, name in enumerate(bands) if self.reco("CU_Band_"+name)]
+            visible_hits = [(i,self.reco("CU_Band_"+name)) for i,name in enumerate(bands)]
+            visible_hits = [(i,hit) for i,hit in visible_hits if hit]
+            visible = [i for i,_ in visible_hits]
             if visible:
+                # Select the nearest visible band to recenter the carousel.
+                # Dragging below its last card can start on empty background.
+                index,near = min(visible_hits,key=lambda item:abs(item[0]-target))
+                if not self.reco("CU_Band_"+bands[index],roi=[25,170,265,100]):
+                    x,y,w,h=near.box
+                    self.tap(x+w//2,y+h//2)
+                    continue
                 direction = (350,570) if target < min(visible) else (570,350)
             if direction in blocked:
                 direction = direction[::-1]
@@ -363,7 +372,7 @@ class CostumeFlow:
                 self.wait("CU_UnlockButton")
                 self.snap()
                 color = normalized(self.text([755, 607, 151, 42]))
-                if color != "默认配色":
+                if color not in ("默认配色", "默认服装"):
                     raise FlowError(f"选中服装不是默认配色：{color}")
                 name = self.text([756, 539, 435, 43])
                 if not name:
