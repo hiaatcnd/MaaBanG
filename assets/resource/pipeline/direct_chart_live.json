@@ -1,0 +1,21 @@
+{
+    "DirectChartLive": {
+        "action": "Custom",
+        "custom_action": "DirectChartLive"
+    },
+    "DL_song1": {
+        "attach": {
+            "value": "306"
+        }
+    },
+    "DL_difficulty1": {
+        "attach": {
+            "value": "expert"
+        }
+    },
+    "DL_jitter": {
+        "attach": {
+            "value": "small"
+        }
+    }
+}

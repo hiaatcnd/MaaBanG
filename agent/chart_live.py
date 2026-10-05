@@ -233,7 +233,9 @@ class ChartLiveFlow(LiveFlow):
                         pass
                     raise FlowError(f'演奏进程准备失败{("："+detail) if detail else ""}，详见 {destination}/worker.log')
                 self.pause(.1)
-            row['cp_before' if self.settings.mode=='challenge' else 'fire_before']=self.verify_chart_start(index,selection,amount)
+            balance=self.verify_chart_start(index,selection,amount)
+            if balance is not None:
+                row['cp_before' if self.settings.mode=='challenge' else 'fire_before']=balance
             row['status']='submitted'
             self.save_frame(f'ready_attempt{self.report["attempts"]}.png' if online else
                             f'ready_{self.report["completed_rounds"]+1}_{index}.png')
@@ -381,25 +383,31 @@ class ChartLiveFlow(LiveFlow):
 
 
 class ChartLive(CustomAction):
+    option_defaults = OPTION_DEFAULTS
+    option_nodes = OPTION_NODES
+    report_directory = 'chart_live'
+
+    def create_flow(self, context, values, destination):
+        options=ChartOptions.parse(values)
+        if options.mode in ('team','coop'):
+            from online_live import OnlineLiveFlow
+            return OnlineLiveFlow(context,options,destination)
+        if options.mode == 'challenge':
+            from cp_live import CPLiveFlow
+            return CPLiveFlow(context,options,destination)
+        return ChartLiveFlow(context,options,destination)
+
     def run(self, context, argv):
-        destination=Path('debug/chart_live')/time.strftime('%Y%m%d-%H%M%S')
+        destination=Path('debug')/self.report_directory/time.strftime('%Y%m%d-%H%M%S')
         destination.mkdir(parents=True,exist_ok=True)
         flow=None
         report={'status':'error'}
         try:
             values={}
-            for key,node in OPTION_NODES.items():
+            for key,node in self.option_nodes.items():
                 data=context.get_node_data(node)
-                values[key]=(data or {}).get('attach',{}).get('value',OPTION_DEFAULTS[key])
-            options=ChartOptions.parse(values)
-            if options.mode in ('team','coop'):
-                from online_live import OnlineLiveFlow
-                flow=OnlineLiveFlow(context,options,destination)
-            elif options.mode == 'challenge':
-                from cp_live import CPLiveFlow
-                flow=CPLiveFlow(context,options,destination)
-            else:
-                flow=ChartLiveFlow(context,options,destination)
+                values[key]=(data or {}).get('attach',{}).get('value',self.option_defaults[key])
+            flow=self.create_flow(context,values,destination)
             report=flow.report
             flow.run()
             return True

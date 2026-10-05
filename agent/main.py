@@ -22,12 +22,14 @@ def main():
     import daily_tasks
     from auto_live import AutoLive
     from chart_live import ChartLive
+    from direct_chart_live import DirectChartLive
     from live_presets import LivePresets
     import mining
 
     AgentServer.custom_action("UnlockDefault3DCostumes")(costume_unlock.UnlockDefault3DCostumes)
     AgentServer.custom_action("AutoLive")(AutoLive)
     AgentServer.custom_action("ChartLive")(ChartLive)
+    AgentServer.custom_action("DirectChartLive")(DirectChartLive)
     AgentServer.custom_action("LivePresets")(LivePresets)
     for name in ("MineFullCombo", "MineStories", "MineChallenges"):
         AgentServer.custom_action(name)(getattr(mining, name))

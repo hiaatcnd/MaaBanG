@@ -105,7 +105,8 @@ def update(interface):
         'default':'','verify':'^$|^[1-9][0-9]{0,2}$','pattern_msg':'留空不限，或填写1–999'}],
         'pipeline_override':{OPTION_NODES['max_rounds']:{'attach':{'value':'{次数}'}}}}
     from update_live_presets_interface import update as update_presets
-    return update_presets(interface)
+    from update_direct_chart_interface import update as update_direct
+    return update_presets(update_direct(interface))
 
 
 def main():
@@ -115,6 +116,8 @@ def main():
     nodes={'ChartLive':{'action':'Custom','custom_action':'ChartLive'}}
     nodes.update({OPTION_NODES[key]:{'attach':{'value':value}} for key,value in OPTION_DEFAULTS.items()})
     (ROOT/'assets/resource/pipeline/chart_live.json').write_text(json.dumps(nodes,ensure_ascii=False,indent=4)+'\n',encoding='utf8')
+    from update_direct_chart_interface import write_pipeline
+    write_pipeline()
     print(f'Generated ChartLive options for {len(BY_ID)} songs')
 
 
