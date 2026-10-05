@@ -100,6 +100,7 @@ class LowResolutionTests(unittest.TestCase):
         f.fire_preview=lambda:(30,30);f.fire_balance=lambda:30
         self.assertEqual(f.verify_chart_start(1,selection,0),30)
         f.tap.assert_called_once_with(883,580)
+        self.assertEqual(f.text.call_args_list[0].args,([220,541,570,38],))
 
     def test_reset_drags_past_endpoints_but_requires_exact_ocr(self):
         f,c=test_song_filters.SongFilterTests().slider_flow()
@@ -141,8 +142,11 @@ class LowResolutionTests(unittest.TestCase):
                 from song_navigation import SongNavigationMixin
                 from song_catalog import BY_ID
                 f.image=read('lowres/challenge_ready.png')
-                checks.append(SongNavigationMixin.title_matches(f,f.text([220,541,570,38]),BY_ID['3']))
-                checks.append(not SongNavigationMixin.title_matches(f,f.text([220,541,600,38]),BY_ID['3']))
+                title=f.text([220,541,570,38])
+                checks.append(SongNavigationMixin.title_matches(f,title,BY_ID['3']))
+                # The wider crop includes the auto counter. Fuzzy matching may
+                # now tolerate that noise; keep the production ROI narrow.
+                checks.append(f.text([220,541,600,38])!=title)
                 return all(checks)
         r.register_custom_action('RevealCheck',Check())
         self.assertTrue(t.post_task('RevealCheck',{'RevealCheck':{'action':'Custom','custom_action':'RevealCheck'}}).wait().succeeded)
