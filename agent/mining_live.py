@@ -111,15 +111,20 @@ class MiningLiveFlow(ChartLiveFlow):
         return self.mining.max_rounds is not None and self.report['attempted'] >= self.mining.max_rounds
 
     def result_modals(self):
+        # A reward confirmation can cover the achievement list while its title
+        # and Close button remain readable. Drain the frontmost dialogs first.
+        if super().result_modals():
+            return True
         if self.report['rounds'] and self.hit_text([940,430,280,55],r'FULL\s*COMBO|ALL\s*PERFECT'):
             self.report['rounds'][-1]['full_combo_confirmed']=True
         # The JP song title can make OCR read the Chinese 一 as a long vowel ー.
         if self.hit_text([175,48,875,54],r'达成(?:报酬|奖励)[一ー—-]览'):
+            self.require_clear_notification_overlay()
             hit = self.hit_text([510,580,260,80],'^关闭$')
             if hit:
                 self.tap_hit(hit)
                 return True
-        return super().result_modals()
+        return False
 
     def song_stars(self, song):
         if not self.selected_song_matches(song):
@@ -146,15 +151,18 @@ class MiningLiveFlow(ChartLiveFlow):
         self.wait('LV_SongPage')
         if not from_top:
             return
+        self.scroll_songs_to_top()
+
+    def scroll_songs_to_top(self):
         previous = None
-        for _ in range(250):
+        for _ in range(1200):
             self.snap()
-            area = self.image[105:703,201:565].astype(float)
+            area = self.image[300:398,200:575].astype(float)
             if previous is not None and np.mean(np.abs(area-previous)) < 1:
                 return
             previous = area
-            self.swipe(385,220,650)
-        raise FlowError('歌曲列表未能滚动到顶部')
+            self.step_song_list(False)
+        raise FlowError('歌曲列表未能点选到第一首')
 
     def next_song(self, seen):
         while self.scan_difficulty_index<len(self.mining.difficulties):
@@ -168,11 +176,26 @@ class MiningLiveFlow(ChartLiveFlow):
     def scan_pending_song(self, seen):
         difficulty=self.mining.difficulties[self.scan_difficulty_index]
         if not self.scan_initialized:
-            # A new difficulty has its own candidate list; scan it from the top.
-            self.open_all_songs(from_top=True)
+            # The filter already supplies eligible songs. Keep its selection.
+            self.open_all_songs(from_top=False)
             self.scan_initialized=True
         else:
             self.ensure_song_page()
+        self.wait('LV_SongPage')
+        title=self.text([210,332,356,32])
+        matches=[song for song in BY_ID.values() if self.title_matches(title,song)]
+        selected=[song for song in matches if self.selected_song_matches(song)]
+        if len(selected)==1:
+            song=selected[0]
+            if (song['id'],difficulty) not in seen:
+                selection=ChartSelection.parse(song['id'],difficulty)
+                seen.add((song['id'],difficulty))
+                self.report['scanned'].append({'song_id':song['id'],'difficulty':difficulty,
+                                               'source':'filter_selection'})
+                return [selection]
+        # Only scan for another candidate when the current song cannot be used
+        # (for example, it has already exhausted its three attempts).
+        self.scroll_songs_to_top()
         previous = None
         for _ in range(1200):
             self.wait('LV_SongPage')
@@ -206,12 +229,11 @@ class MiningLiveFlow(ChartLiveFlow):
                     return pending
                 previous = None
                 continue
-            area = self.image[105:703,201:565].astype(float)
+            area = self.image[300:398,200:575].astype(float)
             if previous is not None and np.mean(np.abs(area-previous)) < 1:
                 return []
             previous = area
-            # Keep overlapping rows visible instead of flinging past unread titles.
-            self.swipe(385,520,360)
+            self.step_song_list(True)
         raise FlowError('歌曲扫描达到保护上限，未确认扫描完成')
 
     def perform(self, selection):
@@ -252,12 +274,8 @@ class MiningLiveFlow(ChartLiveFlow):
                         break
                     self.ensure_song_page()
                     if not self.selected_song_matches(selection.song):
-                        self.find_song(selection.song)
-                        self.clear_song_level_filter(selection.song)
-                        self.scan_initialized=False
-                    if self.song_stars(selection.song)[selection.difficulty] == 'full_combo':
                         break
-                    # next_song already selected and verified this song with all levels visible.
+                    # Play the filter's current song without searching or changing filters.
                     self.choose_difficulty_exact(selection.difficulty)
                     self.tap(1070,648)
                     self.wait_ready()
@@ -272,9 +290,8 @@ class MiningLiveFlow(ChartLiveFlow):
                         break
                     self.ensure_song_page()
                     if not self.selected_song_matches(selection.song):
-                        self.find_song(selection.song)
-                        self.clear_song_level_filter(selection.song)
-                        self.scan_initialized=False
+                        row['star_after']='selection_changed'
+                        break
                     state = self.song_stars(selection.song)[selection.difficulty]
                     row['star_after'] = state
                     if state == 'full_combo':

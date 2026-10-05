@@ -58,6 +58,40 @@ class SongFilterTests(unittest.TestCase):
         c.post_touch_up.assert_called_once()
         self.assertNotIn('song_filters',f.report)
 
+    def test_oscillating_upper_bound_can_settle_in_outward_margin(self):
+        f,c=self.slider_flow()
+        f.text=Mock(side_effect=['5','30','5','23','5','25','23','25'])
+        f.filter_expert_level(24)
+        self.assertEqual([row['index'] for row in f.report['level_filter_steps'][:-1]],
+                         [1,1,0])
+        self.assertEqual(c.post_touch_down.call_count,3)
+        self.assertEqual(f.report['song_filters'],[
+            {'verified_range':[23,25],'target_range':[24,24],'tolerance':1}])
+
+    def test_tolerance_never_excludes_target_or_accepts_broad_range(self):
+        for bounds in ([23,23],[25,25],[22,25],[23,26]):
+            with self.subTest(bounds=bounds):
+                f,c=self.slider_flow()
+                f.text=Mock(side_effect=[*map(str,bounds),'24','24'])
+                f.filter_expert_level(24)
+                self.assertEqual(c.post_touch_down.call_count,1)
+                self.assertEqual(f.report['song_filters'],[{'verified_range':[24,24]}])
+
+    def test_tolerance_is_clamped_at_game_level_limits(self):
+        for target,bounds in ((5,[5,6]),(30,[29,30])):
+            f,c=self.slider_flow()
+            f.text=Mock(side_effect=list(map(str,bounds)))
+            f.filter_expert_level(target)
+            c.post_touch_down.assert_not_called()
+            self.assertEqual(f.report['song_filters'][0]['verified_range'],bounds)
+
+    def test_clearing_level_filter_still_requires_full_range(self):
+        f,c=self.slider_flow()
+        f.text=Mock(side_effect=['6','29','5','29','5','30'])
+        f.set_song_level_range(5,30)
+        self.assertEqual(c.post_touch_down.call_count,2)
+        self.assertEqual(f.report['song_filters'],[{'verified_range':[5,30]}])
+
     def test_user_selects_songs_directly_without_filter_options(self):
         data=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf-8'))
         self.assertFalse(any(key.startswith(('清火筛选_','谱面筛选')) for key in data['option']))
