@@ -223,7 +223,12 @@ class ChartLiveFlow(LiveFlow):
                 if online:
                     self.monitor_online_worker(destination)
                 if process.poll() is not None or time.monotonic()>deadline:
-                    raise FlowError(f'演奏进程准备失败，详见 {destination}/worker.log')
+                    detail=''
+                    try:
+                        detail=json.loads((destination/'playback.json').read_text(encoding='utf8')).get('error','')
+                    except (OSError,ValueError):
+                        pass
+                    raise FlowError(f'演奏进程准备失败{("："+detail) if detail else ""}，详见 {destination}/worker.log')
                 self.pause(.1)
             row['cp_before' if self.settings.mode=='challenge' else 'fire_before']=self.verify_chart_start(index,selection,amount)
             row['status']='submitted'

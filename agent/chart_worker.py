@@ -2,7 +2,6 @@
 import hashlib
 import json
 from pathlib import Path
-import subprocess
 import sys
 import threading
 import time
@@ -14,6 +13,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 
 from chart_policy import JITTER_PROFILES
 from chart_timing import compile_chart, first_anchor, GestureRecovery
+from playback_controller import controller_config
 
 
 def start_authorized_stage(controller, mode):
@@ -25,37 +25,13 @@ def start_authorized_stage(controller, mode):
         raise RuntimeError('开演输入未确认，不重试')
 
 
-def controller_config(info):
-    if info.get('type') != 'adb':
-        raise ValueError('谱面演出目前需要 MuMu 安卓模拟器')
-    adb, address = info['adb_path'], info['adb_serial']
-    config = info.get('config', {})
-    mumu = config.get('extras', {}).get('mumu', {})
-    root = Path(mumu.get('path', Path(adb).parent.parent))
-    manager = root/'nx_main/MuMuManager.exe'
-    result = subprocess.run([str(manager),'info','-v','all'], capture_output=True,
-                            check=True, encoding='utf8', timeout=15,
-                            creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-    devices = json.loads(result.stdout)
-    matching = [(key, value) for key,value in devices.items()
-                if value.get('is_android_started') and
-                f"{value.get('adb_host_ip')}:{value.get('adb_port')}" == address]
-    if len(matching) != 1:
-        raise ValueError('未能将当前连接地址匹配到唯一 MuMu 实例')
-    index, _ = matching[0]
-    lib = Path(mumu.get('lib', root/'nx_device/15.0/shell/sdk/external_renderer_ipc.dll'))
-    if not lib.is_file():
-        raise ValueError('未找到 MuMu 快速截图组件；当前版本支持 MuMu 12/安卓15')
-    return adb, address, {'extras':{'mumu':{'enable':True,'path':str(root),
-            'lib':str(lib),'index':int(index),'app_package':'com.bilibili.star.bili'}}}
-
-
 def play(config_path):
     from maa.controller import AdbController
     from maa.custom_action import CustomAction
     from maa.resource import Resource
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
+    from maa.define import MaaAdbScreencapMethodEnum, MaaAdbInputMethodEnum
     from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTracker, SlewedClock
     import chart_sync
     import numpy as np
@@ -99,12 +75,14 @@ def play(config_path):
                       chart=cfg['chart'],anchor=[anchor_time,lane,color],
                       jitter_distribution='truncated_normal',jitter_sigma_divisor=3)
         adb,address,settings = controller_config(cfg['controller'])
-        controller = AdbController(adb,address,screencap_methods=64,input_methods=4,config=settings)
-        observer = AdbController(adb,address,screencap_methods=64,input_methods=1,config=settings)
+        controller = AdbController(adb,address,screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                                   input_methods=MaaAdbInputMethodEnum.Maatouch,config=settings)
+        observer = AdbController(adb,address,screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                                 input_methods=MaaAdbInputMethodEnum.AdbShell,config=settings)
         for c in (controller,observer):
             c.set_screenshot_target_short_side(720)
             if not c.post_connection().wait().succeeded or not c.post_screencap().wait().succeeded:
-                raise RuntimeError('MuMu 演奏控制器连接失败')
+                raise RuntimeError('演奏控制器连接或增强截图失败，请检查当前设备的截图增强和 MaaTouch 支持')
             if c.cached_image.shape != (720,1280,3):
                 raise RuntimeError('演奏画面比例必须为 16:9')
         # Only recognize actual interruption dialogs. Skill effects can recolor the

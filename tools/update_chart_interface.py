@@ -20,7 +20,7 @@ def choice(label,key,value,options=None):
 def update(interface):
     interface['task']=[t for t in interface['task'] if t['entry']!='ChartLive']
     interface['task'].insert(0,{'name':'Maa代打演出','entry':'ChartLive','default_check':False,
-        'description':'根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。当前版本需MuMu安卓15、16:9横屏（支持2560×1440，内部自动缩放）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。',
+        'description':'根据乐谱自动操作，保留随机偏差，允许偶发漏键。支持中国服已开放歌曲和难度；歌曲需已解锁。支持自由演出、自由巡演及课题巡演。自动调整速度为9.80、默认演出皮肤、轻量模式并关闭镜像。需要框架截图增强和MaaTouch多点触控，16:9横屏（内部自动缩放至1280×720）。首次使用曲目需联网下载谱面。巡演三首计一次；道具补火仅在你选择启用时执行，不使用星石。',
         'option':['谱面演出模式','谱面Fever印章','谱面随机偏差','谱面最大演出次数']})
     options=interface['option']
     for key in list(options):

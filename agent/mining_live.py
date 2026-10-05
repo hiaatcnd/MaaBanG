@@ -27,25 +27,71 @@ class MiningLiveFlow(ChartLiveFlow):
         self.tap(1165,44)
         for _ in range(3):
             self.swipe(1200,200,550)
+        self.wait_filter_stable()
         x,y=dict(easy=(711,493),normal=(892,493),hard=(1073,493),
                  expert=(711,540),special=(892,540))[difficulty]
         self.tap(x,y)
-        self.snap()
+        self.wait_filter_stable()
         if not self.pink(self.image[y-8:y+9,x-8:x+9]):
             raise FlowError('未确认挖矿筛选难度')
         for _ in range(5):
-            self.snap()
-            hit=self.hit_text([725,90,135,500],r'未\s*FULL')
-            if hit:
-                y=hit.box[1]+hit.box[3]//2
-                self.tap(711,y)
-                self.snap()
-                if not self.pink(self.image[y-8:y+9,703:720]):
-                    raise FlowError('未确认未 FULL COMBO 筛选')
+            if self.select_pending_filter():
                 self.report.setdefault('pending_filters',[]).append(difficulty)
                 return
             self.swipe(1200,550,280)
         raise FlowError('未找到未 FULL COMBO 筛选')
+
+    @staticmethod
+    def filter_frame_matches(before, after):
+        # Ignore the animated song list behind the panel and the scroll bar.
+        delta=np.abs(before[95:600,690:1240].astype(np.int16)-
+                     after[95:600,690:1240].astype(np.int16)).max(axis=2)
+        return np.mean(delta>12)<.002
+
+    def wait_filter_stable(self, timeout=6):
+        deadline=time.monotonic()+timeout
+        self.snap()
+        previous=self.image.copy()
+        stable_since=None
+        while time.monotonic()<deadline:
+            self.pause(.2)
+            self.snap()
+            now=time.monotonic()
+            if self.filter_frame_matches(previous,self.image):
+                if stable_since is None:
+                    stable_since=now
+                elif now-stable_since>=.4:
+                    return
+            else:
+                stable_since=None
+            previous=self.image.copy()
+        raise FlowError('乐曲筛选滚动未稳定，停止以避免误选')
+
+    def select_pending_filter(self):
+        """Read the label again after scrolling/OCR and verify its own radio."""
+        taps=0
+        for _ in range(8):
+            self.wait_filter_stable()
+            before=self.image.copy()
+            hit=self.hit_text([725,90,135,500],r'未\s*FULL')
+            # OCR may take long enough for an inertial scroll to move a row.
+            self.snap()
+            if not self.filter_frame_matches(before,self.image):
+                continue
+            if not hit:
+                if taps:
+                    continue
+                return False
+            y=hit.box[1]+hit.box[3]//2
+            if self.pink(self.image[y-8:y+9,703:720]):
+                return True
+            if taps>=3:
+                break
+            self.tap(711,y)
+            taps+=1
+            # Never validate a stale coordinate: next iteration locates 未FULL
+            # again, so selecting the adjacent SS radio cannot count as success.
+        raise FlowError('未确认未 FULL COMBO 筛选')
 
     def ensure_song_page(self):
         self.snap()
