@@ -462,7 +462,7 @@ class MiningTests(unittest.TestCase):
         flow = self.flow(5)
         selection = ChartSelection.parse('306','easy')
         flow.next_song = Mock(side_effect=[[selection],[]])
-        flow.song_stars = Mock(side_effect=[{'easy':'unplayed'},{'easy':'full_combo'}])
+        flow.song_stars = Mock(return_value={'easy':'full_combo'})
         def perform(_):
             flow.report['attempted'] += 1
             return {}
@@ -514,7 +514,7 @@ class MiningTests(unittest.TestCase):
             return {'full_combo_confirmed':True}
         flow.perform=Mock(side_effect=perform)
         flow.run()
-        flow.song_stars.assert_called_once()
+        flow.song_stars.assert_not_called()
         flow.find_song.assert_not_called()
         self.assertEqual(flow.report['full_combos'],[{'song_id':'306','difficulty':'easy'}])
 
@@ -524,12 +524,101 @@ class MiningTests(unittest.TestCase):
         flow.mining=MiningOptions.parse({'difficulties':['easy','normal']})
         flow.scan_difficulty_index=1;flow.scan_initialized=True
         flow.wait=Mock();flow.pause=Mock();flow.snap=Mock();flow.tap_hit=Mock()
+        flow.text=Mock(return_value='target')
         flow.ocr=Mock(return_value=[SimpleNamespace(text='target')])
         flow.title_matches=lambda text,song:song['id']=='306'
         flow.song_stars=Mock(return_value={'easy':'full_combo','normal':'unplayed'})
         flow.report.update(scanned=[],skipped=[])
         pending=flow.scan_pending_song({('306','easy')})
         self.assertEqual(pending,[ChartSelection.parse('306','normal')])
+        flow.tap_hit.assert_not_called()
+        flow.song_stars.assert_not_called()
+
+    def test_filter_selection_is_played_without_scrolling_or_clicking_a_song(self):
+        flow=self.flow()
+        flow.scan_difficulty_index=0;flow.scan_initialized=False
+        flow.open_all_songs=Mock();flow.wait=Mock()
+        flow.text=Mock(return_value='target')
+        flow.title_matches=lambda text,song:song['id']=='306'
+        flow.ocr=Mock();flow.tap_hit=Mock();flow.swipe=Mock();flow.song_stars=Mock()
+        flow.scroll_songs_to_top=Mock()
+        flow.report['scanned']=[]
+        seen=set()
+        self.assertEqual(flow.scan_pending_song(seen),[ChartSelection.parse('306','easy')])
+        flow.open_all_songs.assert_called_once_with(from_top=False)
+        flow.ocr.assert_not_called();flow.tap_hit.assert_not_called()
+        flow.swipe.assert_not_called();flow.song_stars.assert_not_called()
+        flow.scroll_songs_to_top.assert_not_called()
+        self.assertEqual(seen,{('306','easy')})
+
+    def test_processed_current_song_falls_back_to_remaining_filtered_candidates(self):
+        flow=self.flow()
+        flow.scan_difficulty_index=0;flow.scan_initialized=True
+        flow.wait=Mock();flow.pause=Mock();flow.snap=Mock();flow.tap_hit=Mock()
+        flow.scroll_songs_to_top=Mock()
+        flow.text=Mock(return_value='306')
+        flow.title_matches=lambda text,song:text==song['id']
+        hit=SimpleNamespace(text='1')
+        flow.ocr=Mock(return_value=[hit])
+        flow.song_stars=Mock(return_value={'easy':'clear'})
+        flow.report['scanned']=[]
+        seen={('306','easy')}
+        self.assertEqual(flow.scan_pending_song(seen),[ChartSelection.parse('1','easy')])
+        flow.scroll_songs_to_top.assert_called_once()
+        flow.tap_hit.assert_called_once_with(hit)
+        self.assertEqual(seen,{('306','easy'),('1','easy')})
+
+    def test_mining_returns_to_first_song_by_clicking_previous_card(self):
+        flow=self.flow()
+        flow.image=np.zeros((720,1280,3),dtype=np.uint8)
+        flow.snap=Mock();flow.wait=Mock();flow.swipe=Mock()
+        flow.scroll_songs_to_top()
+        flow.tap.assert_called_once_with(380,270)
+        flow.swipe.assert_not_called()
+
+    def test_mining_scan_advances_by_clicking_next_card_and_stops_at_end(self):
+        flow=self.flow()
+        flow.scan_difficulty_index=0;flow.scan_initialized=True
+        flow.image=np.zeros((720,1280,3),dtype=np.uint8)
+        flow.wait=Mock();flow.text=Mock(return_value='unrecognized')
+        flow.ocr=Mock(return_value=[]);flow.scroll_songs_to_top=Mock();flow.swipe=Mock()
+        self.assertEqual(flow.scan_pending_song(set()),[])
+        flow.tap.assert_called_once_with(380,428)
+        flow.swipe.assert_not_called()
+
+    def test_changed_song_after_result_continues_without_searching_original(self):
+        flow=self.flow(5)
+        first=ChartSelection.parse('306','easy')
+        second=ChartSelection.parse('1','easy')
+        flow.next_song=Mock(side_effect=[[first],[second],[]])
+        flow.selected_song_matches=Mock(side_effect=[True,False,True])
+        flow.clear_song_level_filter=Mock();flow.song_stars=Mock()
+        rows=[{}, {'full_combo_confirmed':True}]
+        def perform(selection):
+            row=rows[flow.report['attempted']]
+            flow.report['attempted']+=1
+            return row
+        flow.perform=Mock(side_effect=perform)
+        flow.run()
+        self.assertEqual([call.args[0] for call in flow.perform.call_args_list],[first,second])
+        self.assertEqual(rows[0]['star_after'],'selection_changed')
+        flow.find_song.assert_not_called();flow.clear_song_level_filter.assert_not_called()
+        flow.song_stars.assert_not_called()
+
+    def test_three_failed_attempts_skip_song_and_continue(self):
+        flow=self.flow(5)
+        selection=ChartSelection.parse('306','easy')
+        flow.next_song=Mock(side_effect=[[selection],[]])
+        flow.song_stars=Mock(return_value={'easy':'clear'})
+        def perform(_):
+            flow.report['attempted']+=1
+            return {}
+        flow.perform=Mock(side_effect=perform)
+        flow.run()
+        self.assertEqual(flow.perform.call_count,3)
+        self.assertEqual(flow.report['skipped'],[
+            {'song_id':'306','difficulty':'easy','reason':'three_attempts_without_fc'}])
+        flow.find_song.assert_not_called()
 
     def test_interface_generation_is_idempotent(self):
         interface = json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))

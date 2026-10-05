@@ -71,7 +71,7 @@ class CoopTests(unittest.TestCase):
             flow.image=np.zeros((720,1280,3),dtype=np.uint8)
             button=object();flow.hit_text=Mock(side_effect=lambda roi,pattern:button if pattern in ('^确定$','^不指定歌曲$') else None);flow.tap_hit=Mock()
             flow.submit_coop_song();flow.submit_coop_song()
-            flow.find_filtered_song.assert_called_once_with(BY_ID['361'],max_swipes=8,forward_first=True,quick=True)
+            flow.find_filtered_song.assert_called_once_with(BY_ID['361'],max_steps=8,forward_first=True,quick=True)
             flow.all_songs.assert_called_once_with(BY_ID['361'],quick=True)
             flow.tap_hit.assert_called_once_with(button)
             self.assertEqual(flow.current_attempt['submitted_song'],'361')

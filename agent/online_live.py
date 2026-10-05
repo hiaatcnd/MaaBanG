@@ -216,7 +216,7 @@ class OnlineLiveFlow(ChartLiveFlow):
             # Cooperative live has separate saved filters, including level and
             # Favorites. Rebuild them here using short taps for the countdown.
             self.all_songs(song,quick=True)
-            self.find_filtered_song(song,max_swipes=8,forward_first=True,quick=True)
+            self.find_filtered_song(song,max_steps=8,forward_first=True,quick=True)
             if not self.reco('OL_CoopSongPage') or not self.selected_song_matches(song):
                 raise FlowError('协力提交前未确认所选歌曲')
             button=self.hit_text([950,605,250,80],'^确定$')

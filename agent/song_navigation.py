@@ -44,9 +44,9 @@ class SongNavigationMixin:
         self._inherited_filters_cleared=True
 
     def filter_expert_level(self,level):
-        self.set_song_level_range(level,level)
+        self.set_song_level_range(level,level,tolerance=1)
 
-    def set_song_level_range(self,minimum,maximum):
+    def set_song_level_range(self,minimum,maximum,tolerance=0):
         for _ in range(5):
             self.snap()
             hit=self.hit_text([690,90,400,475],'^乐曲等级$')
@@ -71,15 +71,22 @@ class SongNavigationMixin:
                     raise FlowError(f'无法读取乐曲等级范围：{text}')
                 values.append(int(text))
             self.report.setdefault('level_filter_steps',[]).append({'range':values,'target':[minimum,maximum],'y':y})
-            if values==[minimum,maximum]:
-                self.report.setdefault('song_filters',[]).append({'verified_range':values})
-                return
             if not 5<=values[0]<=values[1]<=30 or not 5<=minimum<=maximum<=30:
                 raise FlowError('乐曲等级范围超出当前游戏筛选范围')
+            # Level filtering only narrows the search. Accept a small outward
+            # margin, but never hide the target level or accept a broad range.
+            lower_ok=max(5,minimum-tolerance)<=values[0]<=minimum
+            upper_ok=maximum<=values[1]<=min(30,maximum+tolerance)
+            if lower_ok and upper_ok:
+                row={'verified_range':values}
+                if values!=[minimum,maximum]:
+                    row.update(target_range=[minimum,maximum],tolerance=tolerance)
+                self.report.setdefault('song_filters',[]).append(row)
+                return
             handles=level_slider_handles(self.image,y)
             # Narrow the upper bound first when possible. The lower handle
             # then clamps to it instead of overshooting a single-level range.
-            index=1 if values[1]!=maximum and maximum>=values[0] else 0
+            index=1 if not upper_ok and maximum>=values[0] else 0
             delta=(minimum,maximum)[index]-values[index]
             target=int(round(np.clip(handles[index]+delta*15.2+(5 if delta>0 else -5),772,1152)))
             self.report['level_filter_steps'][-1].update(handles=handles,index=index,x=target)
@@ -191,17 +198,29 @@ class SongNavigationMixin:
         self.all_songs(song)
         self.find_filtered_song(song)
 
-    def find_filtered_song(self,song,max_swipes=250,forward_first=False,quick=False):
+    def step_song_list(self,forward,quick=False):
+        """Select an adjacent card and let the carousel center it itself."""
+        # The selected card occupies y=300..394; adjacent cards stay outside it.
+        x,y=380,428 if forward else 270
+        if quick:
+            self.quick_tap(x,y)
+            self.pause(.35)
+        else:
+            self.tap(x,y)
+        self.wait('LV_SongPage')
+
+    def find_filtered_song(self,song,max_steps=1200,forward_first=False,quick=False):
         """Search an already configured list without rebuilding its filters."""
         if self.selected_song_matches(song):
             return
-        directions=((650,200),(230,650)) if forward_first else ((230,650),(650,200))
-        for start,end in directions:
+        directions=(True,False) if forward_first else (False,True)
+        for forward in directions:
             previous=None
-            for _ in range(max_swipes):
+            for _ in range(max_steps):
                 hits=self.ocr([201,105,365,590])
                 self.report.setdefault('song_search',[]).append(
-                    {'target':song['id'],'direction':[start,end],'visible':[hit.text for hit in hits]})
+                    {'target':song['id'],'direction':'next' if forward else 'previous',
+                     'visible':[hit.text for hit in hits]})
                 for hit in hits:
                     if not self.title_matches(hit.text,song):
                         continue
@@ -209,10 +228,9 @@ class SongNavigationMixin:
                     self.wait('LV_SongPage')
                     if self.selected_song_matches(song):
                         return
-                area=self.image[105:703,201:565].astype(float)
-                if previous is not None and np.mean(np.abs(area-previous))<.1:
+                area=self.image[300:398,200:575].astype(float)
+                if previous is not None and np.mean(np.abs(area-previous))<1:
                     break
                 previous=area
-                (self.quick_swipe if quick else self.swipe)(385,start,end)
-                self.wait('LV_SongPage')
+                self.step_song_list(forward,quick=quick)
         raise FlowError(f"未找到或未解锁歌曲：{song['title']}；已按乐队筛选全部歌曲")
