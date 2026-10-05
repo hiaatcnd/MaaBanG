@@ -1,7 +1,7 @@
 {
   "server": "cn",
   "server_index": 3,
-  "fetched_at": "2026-10-02T12:18:25.142704+00:00",
+  "fetched_at": "2026-10-05T18:30:29.304858+00:00",
   "sources": [
     "https://bestdori.com/api/songs/all.7.json",
     "https://bestdori.com/api/bands/all.1.json"
@@ -37462,6 +37462,153 @@
         "777_kakumei_douchu"
       ],
       "url": "https://bestdori.com/info/songs/777"
+    },
+    {
+      "id": "778",
+      "title": "HONEY",
+      "aliases": [
+        "HONEY"
+      ],
+      "band_id": 5,
+      "band": "Roselia",
+      "band_aliases": [
+        "Roselia"
+      ],
+      "tag": "anime",
+      "length_seconds": 126.648,
+      "published_at": 1791003600000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 6,
+          "notes": 91,
+          "published_at": 1791003600000,
+          "available": true
+        },
+        "normal": {
+          "level": 11,
+          "notes": 140,
+          "published_at": 1791003600000,
+          "available": true
+        },
+        "hard": {
+          "level": 20,
+          "notes": 462,
+          "published_at": 1791003600000,
+          "available": true
+        },
+        "expert": {
+          "level": 25,
+          "notes": 619,
+          "published_at": 1791003600000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "778_honey"
+      ],
+      "url": "https://bestdori.com/info/songs/778"
+    },
+    {
+      "id": "779",
+      "title": "金曜日のおはよう",
+      "aliases": [
+        "金曜日のおはよう",
+        "Friday's Good Morning"
+      ],
+      "band_id": 4,
+      "band": "Pastel＊Palettes",
+      "band_aliases": [
+        "Pastel＊Palettes"
+      ],
+      "tag": "anime",
+      "length_seconds": 112.872,
+      "published_at": 1791090000000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 7,
+          "notes": 109,
+          "published_at": 1791090000000,
+          "available": true
+        },
+        "normal": {
+          "level": 12,
+          "notes": 171,
+          "published_at": 1791090000000,
+          "available": true
+        },
+        "hard": {
+          "level": 20,
+          "notes": 429,
+          "published_at": 1791090000000,
+          "available": true
+        },
+        "expert": {
+          "level": 25,
+          "notes": 611,
+          "published_at": 1791090000000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "779_kinyoubi_no_ohayou"
+      ],
+      "url": "https://bestdori.com/info/songs/779"
+    },
+    {
+      "id": "780",
+      "title": "許婚っきゅん",
+      "aliases": [
+        "許婚っきゅん",
+        "Iinazukkyun "
+      ],
+      "band_id": 3,
+      "band": "Hello, Happy World！",
+      "band_aliases": [
+        "ハロー、ハッピーワールド！",
+        "Hello, Happy World!",
+        "Hello，Happy World！",
+        "Hello, Happy World！",
+        "헬로 해피월드!"
+      ],
+      "tag": "anime",
+      "length_seconds": 118.416,
+      "published_at": 1791176400000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 7,
+          "notes": 132,
+          "published_at": 1791176400000,
+          "available": true
+        },
+        "normal": {
+          "level": 13,
+          "notes": 282,
+          "published_at": 1791176400000,
+          "available": true
+        },
+        "hard": {
+          "level": 20,
+          "notes": 500,
+          "published_at": 1791176400000,
+          "available": true
+        },
+        "expert": {
+          "level": 25,
+          "notes": 777,
+          "published_at": 1791176400000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "780_iinazuke"
+      ],
+      "url": "https://bestdori.com/info/songs/780"
     },
     {
       "id": "786",
