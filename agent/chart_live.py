@@ -40,16 +40,19 @@ class ChartLiveFlow(LiveFlow):
         Image.fromarray(self.image[:,:,::-1]).save(self.output/name)
 
     def choose_difficulty_exact(self, requested, centers=(714,826,939,1051,1185), y=540):
-        self.tap(centers[DIFFICULTIES.index(requested)],y)
-        self.snap()
+        if self.selected_difficulty(centers,y)!=requested:
+            self.tap(centers[DIFFICULTIES.index(requested)],y)
+            self.snap()
         if self.selected_difficulty(centers,y) != requested:
             raise FlowError(f'无法选择 {requested.upper()}；不自动替换为其他难度')
 
     def select_song(self, selection):
-        self.find_song(selection.song)
-        if selection.difficulty!='expert':
+        level_filtered=self.find_song(selection.song,difficulty=selection.difficulty)
+        if level_filtered and selection.difficulty!='expert':
             self.clear_song_level_filter(selection.song)
         self.choose_difficulty_exact(selection.difficulty)
+        if not self.selected_song_matches(selection.song):
+            raise FlowError('切换难度后选中歌曲发生变化')
         self.tap(1070,648)
 
     def fixed_selections(self):

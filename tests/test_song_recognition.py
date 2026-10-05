@@ -12,6 +12,37 @@ from song_navigation import SongNavigationMixin, title_key
 
 
 class SongRecognitionTests(unittest.TestCase):
+    def test_free_selection_accepts_recorded_720p_ocr_without_new_alias(self):
+        title='かほーんっと極楽☆湯～とぴあ！'
+        song=BY_ID['773']
+        self.assertNotIn(title_key(title),{title_key(v) for v in recognition_titles(song)})
+        flow=SongNavigationMixin()
+        flow.text=lambda roi:title
+        self.assertTrue(flow.selected_song_matches(song))
+        self.assertFalse(flow.title_matches(title,BY_ID['306']))
+
+    def test_free_selection_resolves_globally_and_rejects_ambiguous_typos(self):
+        from unittest.mock import patch
+        songs={str(i):{'id':str(i),'title':title,'aliases':[], 'band':str(i),'band_aliases':[]}
+               for i,title in enumerate(('Melody dawn','Melody down','Wonderful Melody'))}
+        flow=SongNavigationMixin()
+        with patch('online_policy.RECOGNITION_BY_ID',songs):
+            for title in ('Melody d0wn','Wonderful Melo','random unknown song'):
+                for song in songs.values():
+                    self.assertFalse(flow.title_matches(title,song),(title,song['id']))
+            self.assertTrue(flow.title_matches('Wonderfu1 Melody',songs['2']))
+            self.assertFalse(flow.title_matches('Wonderfu1 Melody',songs['0']))
+            self.assertFalse(flow.title_matches('Melody dawn',songs['1']))
+
+    def test_exact_duplicate_titles_still_require_selected_band(self):
+        from unittest.mock import patch
+        flow=SongNavigationMixin()
+        song={'id':'duplicate','title':'same title','aliases':[],'band_aliases':['Band A']}
+        with patch('song_navigation.needs_band_check',return_value=True):
+            for band,expected in (('Band A',True),('Band B',False)):
+                flow.text=lambda roi: 'same title' if roi[0]==210 else band
+                self.assertEqual(flow.selected_song_matches(song),expected)
+
     def test_all_server_only_song_matches_offline_with_all_its_names(self):
         from unittest.mock import patch
         song=next(s for sid,s in RECOGNITION_BY_ID.items()

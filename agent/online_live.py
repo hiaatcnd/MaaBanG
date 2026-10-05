@@ -145,7 +145,6 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.state('检查协力选曲')
         self.navigate_menu()
         self.open_page('LV_FreeEntry','LV_SongPage')
-        self.reset_inherited_song_filters()
         if self.settings.mode=='coop' and self.settings.coop_song:
             # Check that the song is unlocked before entering a timed room.
             # Cooperative live keeps its own selection and filter state.
@@ -213,10 +212,8 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.save_frame('coop_song_page.png')
         if self.settings.coop_song:
             song=resolve_song(self.settings.coop_song)
-            # Cooperative live has separate saved filters, including level and
-            # Favorites. Rebuild them here using short taps for the countdown.
-            self.all_songs(song,quick=True)
-            self.find_filtered_song(song,max_steps=8,forward_first=True,quick=True)
+            # Check the current song before changing the room's saved filters.
+            self.find_song(song,max_steps=8,forward_first=True,quick=True)
             if not self.reco('OL_CoopSongPage') or not self.selected_song_matches(song):
                 raise FlowError('协力提交前未确认所选歌曲')
             button=self.hit_text([950,605,250,80],'^确定$')

@@ -1,7 +1,7 @@
 """User-facing chart live configuration, independent of the built-in auto quota."""
 from dataclasses import dataclass
 
-from live_policy import DIFFICULTIES, number, fever_option
+from live_policy import DIFFICULTIES, number, fever_option, favorites_option
 from song_catalog import RECOGNITION_BY_ID, resolve_song, available_difficulties
 
 # Truncated normal timing and position jitter (sigma = bound/3), without clipping.
@@ -61,6 +61,7 @@ class ChartOptions:
     coop_room_group: str = 'normal'
     coop_song: str = ''
     fever: str = 'off'
+    from_favorites: bool = False
 
     @classmethod
     def parse(cls, data):
@@ -100,7 +101,8 @@ class ChartOptions:
                 coop_song = resolve_song(coop_song)['id']
         return cls(mode, selections, difficulties, jitter, fire, shortage, rounds,
                    cp, str(data.get('cp_song', '')).strip(), coop_room, coop_room_group, coop_song,
-                   fever_option(data.get('fever', 'off')))
+                   fever_option(data.get('fever', 'off')),
+                   favorites_option(data.get('from_favorites', False)))
 
     @property
     def songs_per_round(self):
@@ -108,7 +110,7 @@ class ChartOptions:
 
 
 OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='', cp=200, cp_song='', fever='off',
-                       coop_room='free', coop_room_group='normal', coop_song='',
+                       coop_room='free', coop_room_group='normal', coop_song='', from_favorites=False,
                        **{f'song{i}':'306' for i in range(1,4)},
                        **{f'difficulty{i}':'expert' for i in range(1,4)})
 OPTION_NODES = {key: 'CL_'+key for key in OPTION_DEFAULTS}

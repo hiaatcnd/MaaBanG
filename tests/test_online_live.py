@@ -59,7 +59,7 @@ class OnlinePolicyTests(unittest.TestCase):
         team=next(c for c in cases if c['name']=='团队演出')
         self.assertEqual(team['option'],['谱面联网难度','谱面火不足策略'])
         coop=next(c for c in cases if c['name']=='协力演出')
-        self.assertEqual(coop['option'],['谱面协力房间类别','谱面协力房间','谱面协力歌曲',*team['option']])
+        self.assertEqual(coop['option'],['谱面协力房间类别','谱面协力房间','谱面协力歌曲','谱面从收藏选择',*team['option']])
 
     def test_prefetch_covers_expert_and_only_available_special(self):
         catalog={'1':{'id':'1','difficulties':{'expert':{'available':True},'special':{'available':True}}},

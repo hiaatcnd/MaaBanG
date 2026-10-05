@@ -2,6 +2,7 @@
 import numpy as np
 from costume_unlock import FlowError, normalized
 from song_catalog import needs_band_check, recognition_titles
+from live_policy import DIFFICULTIES
 
 BAND_BUTTONS={1:(877,208),2:(1000,208),4:(1120,208),5:(754,284),3:(877,284),
               21:(1000,284),18:(1120,284),45:(754,360)}
@@ -47,7 +48,8 @@ class SongNavigationMixin:
         self.set_song_level_range(level,level,tolerance=1)
 
     def set_song_level_range(self,minimum,maximum,tolerance=0):
-        for _ in range(5):
+        reset_scroll = False
+        for _ in range(6):
             self.snap()
             hit=self.hit_text([690,90,400,475],'^乐曲等级$')
             if hit and hit.box[1]+hit.box[3]<450:
@@ -58,12 +60,18 @@ class SongNavigationMixin:
                 if len(rows):
                     y=top+int(np.median(rows))
                     break
+            if not hit and not reset_scroll:
+                # The panel remembers its scroll position. If the level row is
+                # above the viewport, scrolling farther down never finds it.
+                self.swipe(1200,200,550)
+                self.swipe(1200,200,550)
+                reset_scroll = True
+                continue
             self.swipe(1200,550,290)
         else:
             raise FlowError('未定位乐曲等级筛选滑块')
         corrections = [0, 0]
-        last_values = None
-        last_index = None
+        last_values = last_index = None
         for _ in range(20):
             if _:
                 self.snap()
@@ -91,17 +99,18 @@ class SongNavigationMixin:
             # then clamps to it instead of overshooting a single-level range.
             index=1 if not upper_ok and maximum>=values[0] else 0
             delta=(minimum,maximum)[index]-values[index]
-            # A short drag can be swallowed by the game's touch slop. Use
-            # observed values to enlarge a stalled correction, never repeat
-            # the identical ineffective gesture indefinitely.
+            # Short drags can be swallowed by the game's touch slop. Increase
+            # a stalled correction instead of repeating an ineffective gesture.
             if index==last_index and values==last_values:
                 corrections[index] += 8 if delta>0 else -8
             else:
                 corrections[index] = 0
-            target=int(round(np.clip(handles[index]+delta*15.2+(5 if delta>0 else -5)+corrections[index],772,1152)))
+            # Corrections near 6/29 also need room past the nominal rail ends;
+            # clamping to 772/1152 would make every stalled retry identical.
+            target=int(round(np.clip(handles[index]+delta*15.2+(5 if delta>0 else -5)+corrections[index],735,1185)))
             if (minimum,maximum)[index] in (5,30):
-                # Carry the drag beyond the rail end so touch slop cannot
-                # leave the endpoint one level short. OCR still confirms it.
+                # Drag beyond the rail; stopping at its nominal end can leave
+                # the selected range at 6 or 29. OCR still verifies the result.
                 target=735 if (minimum,maximum)[index]==5 else 1185
             last_values,last_index=values,index
             self.report['level_filter_steps'][-1].update(handles=handles,index=index,x=target)
@@ -136,7 +145,16 @@ class SongNavigationMixin:
             raise FlowError('解除等级筛选后选中歌曲发生变化')
 
     def title_matches(self,text,song):
-        return title_key(text) in {title_key(v) for v in recognition_titles(song)}
+        if title_key(text) in {title_key(v) for v in recognition_titles(song)}:
+            return True
+        # Resolve against the whole recognition catalog, not just the requested
+        # song, so a near tie or a better match cannot select the wrong chart.
+        # Import at call time: online_policy also uses this module's title_key.
+        from online_policy import final_song
+        try:
+            return final_song(text)['id'] == song['id']
+        except ValueError:
+            return False
 
     def selected_song_matches(self,song):
         if not self.title_matches(self.text([210,332,356,32]),song):
@@ -147,7 +165,7 @@ class SongNavigationMixin:
 
     def all_songs_category(self,quick=False):
         """Leave the separate Favorites list; its 'All' only means all favorites."""
-        for _ in range(5):
+        for _ in range(8):
             hit=self.hit_text([0,106,180,75],'^所有$')
             if hit:
                 if quick:
@@ -163,25 +181,35 @@ class SongNavigationMixin:
             if self.hit_text([0,630,115,75],'^范围$'):
                 self.tap(590,55)
             else:
-                (self.quick_swipe if quick else self.swipe)(155,210,650)
+                # Gaps between category rows do not accept a drag. Start on a
+                # visible label so a partially scrolled sidebar still moves.
+                anchor=self.hit_text([0,180,180,300],'.+')
+                y=anchor.box[1]+anchor.box[3]//2 if anchor else 300
+                (self.quick_swipe if quick else self.swipe)(90,y,650)
             self.wait('LV_SongPage')
         raise FlowError('无法找到全部歌曲分类')
 
-    def all_songs(self,song,quick=False):
+    def all_songs(self,song,quick=False,from_favorites=False):
         def tap(x,y):
             if quick:
                 self.quick_tap(x,y)
                 self.pause(.25)
             else:
                 self.tap(x,y)
-        self.all_songs_category(quick=quick)
+        if from_favorites:
+            self.favorites_category(quick=quick)
+        else:
+            self.all_songs_category(quick=quick)
         tap(1116,55)
         self.snap()
         if not self.hit_text([690,20,350,50],'乐曲筛选'):
             raise FlowError('未打开歌曲筛选')
         for _ in range(4):
-            if self.hit_text([690,110,170,65],'^乐队$'):
+            header=self.hit_text([690,90,170,85],'^乐队$')
+            if header and 130<=header.box[1]<=155:
                 break
+            # A partially scrolled panel can already show the band heading,
+            # while all button coordinates are still shifted upward.
             self.swipe(1200,200,550)
             self.snap()
         else:
@@ -205,13 +233,58 @@ class SongNavigationMixin:
         tap(963,652)
         self.wait('LV_SongPage')
 
-    def find_song(self,song):
-        self.reset_inherited_song_filters()
+    def favorites_category(self,quick=False):
+        """Choose All under the verified Favorites heading, across all folders."""
+        def tap_hit(hit):
+            if quick:
+                x,y,w,h=hit.box
+                self.quick_tap(x+w//2,y+h//2)
+                self.pause(.25)
+            else:
+                self.tap_hit(hit)
+        for _ in range(8):
+            self.wait('LV_SongPage')
+            header=self.hit_text([0,103,187,605],'^收藏$')
+            if header:
+                y,h=header.box[1],header.box[3]
+                if not self.pink(self.image[y:y+h,150:183]):
+                    tap_hit(header)
+                self.wait('LV_SongPage')
+                header=self.hit_text([0,103,187,605],'^收藏$')
+                if not header or not self.pink(self.image[header.box[1]:header.box[1]+header.box[3],150:183]):
+                    raise FlowError('未确认收藏分类已选中')
+                y=header.box[1]+header.box[3]
+                # The selected entry displays a star before its label.
+                all_hit=self.hit_text([0,y,187,min(100,720-y)],'^[★☆⭐*]?\\s*所有$')
+                if not all_hit:
+                    raise FlowError('收藏分类中未找到所有收藏')
+                tap_hit(all_hit)
+                self.wait('LV_SongPage')
+                return
+            if self.hit_text([0,630,115,75],'^范围$'):
+                self.tap(590,55)
+            else:
+                (self.quick_swipe if quick else self.swipe)(90,620,245)
+        raise FlowError('未找到收藏分类')
+
+    def find_song(self,song,quick=False,max_steps=1200,forward_first=False,difficulty=None):
+        """Return whether this search applied an EXPERT level filter."""
         self.wait('LV_SongPage')
+        if difficulty is not None:
+            # Check the current song only after requesting the intended difficulty:
+            # the game's persistent filters may change which song is visible.
+            centers=(714,826,939,1051,1185)
+            if self.selected_difficulty(centers,540)!=difficulty:
+                self.tap(centers[DIFFICULTIES.index(difficulty)],540)
+                self.wait('LV_SongPage')
         if self.selected_song_matches(song):
-            return
-        self.all_songs(song)
-        self.find_filtered_song(song)
+            return False
+        settings=getattr(self,'settings',getattr(self,'options',None))
+        favorites=getattr(settings,'from_favorites',False)
+        self.all_songs(song,quick=quick,from_favorites=favorites)
+        self.find_filtered_song(song,max_steps=max_steps,forward_first=forward_first,
+                                quick=quick,from_favorites=favorites)
+        return True
 
     def step_song_list(self,forward,quick=False):
         """Select an adjacent card and let the carousel center it itself."""
@@ -224,7 +297,7 @@ class SongNavigationMixin:
             self.tap(x,y)
         self.wait('LV_SongPage')
 
-    def find_filtered_song(self,song,max_steps=1200,forward_first=False,quick=False):
+    def find_filtered_song(self,song,max_steps=1200,forward_first=False,quick=False,from_favorites=False):
         """Search an already configured list without rebuilding its filters."""
         if self.selected_song_matches(song):
             return
@@ -248,4 +321,5 @@ class SongNavigationMixin:
                     break
                 previous=area
                 self.step_song_list(forward,quick=quick)
-        raise FlowError(f"未找到或未解锁歌曲：{song['title']}；已按乐队筛选全部歌曲")
+        scope='请确认目标歌曲已收藏并解锁' if from_favorites else '已按乐队筛选全部歌曲'
+        raise FlowError(f"未找到或未解锁歌曲：{song['title']}；{scope}")

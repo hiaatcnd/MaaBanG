@@ -122,9 +122,11 @@ class SongCatalogTests(unittest.TestCase):
         f=LiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),options)
         f.wait=Mock(); f.tap=Mock(); f.all_songs=Mock(); f.tap_hit=Mock()
         f.reset_inherited_song_filters=Mock()
+        f.selected_difficulty=Mock(return_value='expert')
         wrong=SimpleNamespace(text=options.song); correct=SimpleNamespace(text=options.song)
         f.ocr=Mock(return_value=[wrong,correct])
-        f.text=Mock(side_effect=['not selected','not selected',options.song,'wrong band',options.song,BY_ID['676']['band']])
+        f.text=Mock(side_effect=['not selected','not selected',options.song,'wrong band',
+                                 options.song,BY_ID['676']['band'],options.song,BY_ID['676']['band']])
         f.choose_difficulty=Mock(return_value='expert')
         self.assertEqual(f.choose_song(),'expert')
         self.assertEqual(f.tap_hit.call_count,2)

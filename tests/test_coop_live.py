@@ -71,8 +71,8 @@ class CoopTests(unittest.TestCase):
             flow.image=np.zeros((720,1280,3),dtype=np.uint8)
             button=object();flow.hit_text=Mock(side_effect=lambda roi,pattern:button if pattern in ('^确定$','^不指定歌曲$') else None);flow.tap_hit=Mock()
             flow.submit_coop_song();flow.submit_coop_song()
-            flow.find_filtered_song.assert_called_once_with(BY_ID['361'],max_steps=8,forward_first=True,quick=True)
-            flow.all_songs.assert_called_once_with(BY_ID['361'],quick=True)
+            flow.find_filtered_song.assert_not_called()
+            flow.all_songs.assert_not_called()
             flow.tap_hit.assert_called_once_with(button)
             self.assertEqual(flow.current_attempt['submitted_song'],'361')
 
@@ -187,6 +187,8 @@ class CoopTests(unittest.TestCase):
         from maa.tasker import Tasker
         frames={name:np.asarray(Image.open(ROOT/f'tests/fixtures/coop/{name}.png').convert('RGB'))[:,:,::-1].copy()
                 for name in ('ready','song','shuffle','group_result','achievement','title_punctuation','song_transition','loading')}
+        frames['favorites_selected']=np.asarray(Image.open(
+            ROOT/'tests/fixtures/song/favorites_all_selected.png').convert('RGB'))[:,:,::-1].copy()
         current=[frames['ready']]
         class Controller(CustomController):
             def connect(self): return True
@@ -241,6 +243,18 @@ class CoopTests(unittest.TestCase):
                         with case.assertRaisesRegex(RuntimeError,'scroll categories'):
                             flow.all_songs_category()
                         flow.tap_hit.assert_not_called()
+                        # Favorites selection must use All below its heading.
+                        flow.tap_hit=Mock()
+                        flow.favorites_category()
+                        case.assertEqual(flow.tap_hit.call_count,1)
+                        case.assertEqual(flow.tap_hit.call_args.args[0].text,'所有')
+                        case.assertGreater(flow.tap_hit.call_args.args[0].box[1],175)
+                        current[0]=frames['favorites_selected'];flow.snap()
+                        flow.tap_hit.reset_mock()
+                        flow.favorites_category()
+                        case.assertEqual(flow.tap_hit.call_count,1)
+                        case.assertIn('所有',flow.tap_hit.call_args.args[0].text)
+                        case.assertGreater(flow.tap_hit.call_args.args[0].box[1],400)
                         current[0]=frames['achievement'];flow.snap()
                         flow.tap_hit=Mock(side_effect=lambda hit:current.__setitem__(0,frames['ready']))
                         case.assertTrue(flow.dismiss_notifications())

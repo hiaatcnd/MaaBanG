@@ -17,7 +17,7 @@ from live_policy import (LiveOptions, DIFFICULTIES, parse_auto_remaining,
                          fire_for_song, round_stop_reason)
 
 OPTION_NODES = {key: 'LV_' + suffix for key, suffix in (
-    ('mode','Mode'), ('song','Song'), ('difficulty','Difficulty'),
+    ('mode','Mode'), ('song','Song'), ('difficulty','Difficulty'), ('from_favorites','FromFavorites'),
     ('fire','Fire'), ('shortage','Shortage'), ('max_rounds','MaxRounds'), ('fever','Fever'))}
 
 
@@ -134,8 +134,9 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
     def choose_difficulty(self):
         centers=(714,826,939,1051,1185)
         requested=self.options.difficulty
-        self.tap(centers[DIFFICULTIES.index(requested)],540)
-        self.snap()
+        if self.selected_difficulty(centers,540)!=requested:
+            self.tap(centers[DIFFICULTIES.index(requested)],540)
+            self.snap()
         actual=self.selected_difficulty(centers,540)
         if actual != requested and requested=='special':
             self.tap(1051,540)
@@ -149,10 +150,12 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
 
     def choose_song(self):
         song=resolve_song(self.options.song_id or self.options.song)
-        self.find_song(song)
-        if self.options.difficulty!='expert':
+        level_filtered=self.find_song(song,difficulty=self.options.difficulty)
+        if level_filtered and self.options.difficulty!='expert':
             self.clear_song_level_filter(song)
         actual=self.choose_difficulty()
+        if not self.selected_song_matches(song):
+            raise FlowError('切换难度后选中歌曲发生变化')
         self.tap(1070,648)
         return actual
 

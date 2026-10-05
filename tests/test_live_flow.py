@@ -216,6 +216,7 @@ class LiveFlowTests(unittest.TestCase):
     def test_song_search_uses_shared_unlocked_catalog_selection(self):
         f=self.flow(song='EXIST',difficulty='special')
         f.find_song=Mock()
+        f.selected_song_matches=Mock(return_value=True)
         f.choose_difficulty=Mock(return_value='expert')
         self.assertEqual(f.choose_song(),'expert')
         self.assertEqual(f.find_song.call_args.args[0]['title'],'EXIST')
