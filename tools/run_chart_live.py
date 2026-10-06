@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',required=True)
     parser.add_argument('--mode',choices=['free','tour_free','tour_fixed','team','coop','challenge'],default='free')
+    parser.add_argument('--direct',action='store_true',help='从最后准备页直接按指定谱面打一首，不选歌或识别曲名')
     for i in range(1,4):
         parser.add_argument(f'--song{i}',default='306')
         parser.add_argument(f'--difficulty{i}',default='expert')
@@ -34,6 +35,11 @@ def main():
     parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--package',type=Path,help='Packaged app directory; use its embedded Agent over IPC')
     args=parser.parse_args()
+    task_name='DirectChartLive' if args.direct else 'ChartLive'
+    if args.direct:
+        from direct_chart_live import OPTION_NODES
+        if args.mode!='free':
+            parser.error('--direct uses the current prepared page; omit --mode')
     if args.package and args.prepare_only:
         parser.error('--package tests the actual packaged task and cannot use --prepare-only')
     values={key:getattr(args,key) for key in OPTION_NODES if hasattr(args,key)}
@@ -46,6 +52,7 @@ def main():
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
     from chart_live import ChartLive, ChartLiveFlow
+    from direct_chart_live import DirectChartLive, DirectChartLiveFlow
     Toolkit.init_option('debug/chart_live_cli')
     controller=AdbController(args.adb,args.address)
     controller.set_screenshot_target_short_side(720)
@@ -57,7 +64,7 @@ def main():
         def run(self,context,argv):
             import traceback
             from cp_live import CPLiveFlow
-            flow_type=CPLiveFlow if options.mode=='challenge' else ChartLiveFlow
+            flow_type=DirectChartLiveFlow if args.direct else CPLiveFlow if options.mode=='challenge' else ChartLiveFlow
             flow=flow_type(context,options,Path('debug/chart_live_prepare')/time.strftime('%Y%m%d-%H%M%S'))
             try:
                 selections,charts=flow.prepare_round()
@@ -84,11 +91,12 @@ def main():
         process=subprocess.Popen([str(package/'python/python.exe'),str(package/'agent/main.py'),client.identifier],
                                  cwd=package,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         assert client.connect()
-        assert 'ChartLive' in client.custom_action_list
+        assert task_name in client.custom_action_list
     else:
-        resource.register_custom_action('ChartLive',Prepare() if args.prepare_only else ChartLive())
+        resource.register_custom_action(task_name,Prepare() if args.prepare_only else
+                                        DirectChartLive() if args.direct else ChartLive())
     overrides={OPTION_NODES[key]:{'attach':{'value':value}} for key,value in values.items()}
-    job=tasker.post_task('ChartLive',overrides)
+    job=tasker.post_task(task_name,overrides)
     try:
         while not job.done:
             time.sleep(.2)
