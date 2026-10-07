@@ -1,4 +1,5 @@
 """Explicit metadata refresh task; never interacts with the game controller."""
+from task_logging import log, failure
 from pathlib import Path
 
 from maa.custom_action import CustomAction
@@ -14,18 +15,17 @@ class UpdateSongCatalog(CustomAction):
         if not interface.is_file():
             interface = agent.parent/'assets/interface.json'
         try:
-            print('[更新歌曲列表] 正在下载歌曲和乐队资料……', flush=True)
+            log('[更新歌曲列表] 正在下载歌曲和乐队资料……')
             catalog, recognition = refresh_catalog(
                 agent/'data', interface,
                 check_stop=lambda: self.check_stop(context))
             from song_catalog import reload_catalog
             reload_catalog()
-            print(f'[更新歌曲列表] 更新成功：国服可选 {len(playable(catalog["songs"]))} 首，'
-                  f'识别资料 {len(recognition["songs"])} 首。歌曲列表已动态加载。',
-                  flush=True)
+            log(f'[更新歌曲列表] 更新成功：国服可选 {len(playable(catalog["songs"]))} 首，'
+                  f'识别资料 {len(recognition["songs"])} 首。歌曲列表已动态加载。', level='success')
             return True
         except Exception as exc:
-            print(f'[更新歌曲列表] 更新未完成：{exc}', flush=True)
+            failure('更新歌曲列表', exc, context)
             return False
 
     @staticmethod

@@ -1,4 +1,5 @@
 """Event challenge lives: a separate CP budget, never LIVE BOOST or refills."""
+from task_logging import log
 from dataclasses import asdict
 import re
 import time
@@ -97,6 +98,7 @@ class CPLiveFlow(ChartLiveFlow):
             raise FlowError('开演前CP消耗未确认：'+text)
 
     def prepare_round(self):
+        log('[活动挑战演出] 正在检查 CP、选择歌曲并读取谱面')
         self.navigate_menu()
         self.open_page('CP_Entry','CP_Select')
         balance=self.stable_integer([1200,133,67,34])
@@ -184,6 +186,7 @@ class CPLiveFlow(ChartLiveFlow):
                 raise FlowError('结算后CP扣除数与设置不符，不重新开演')
             row['status']='finished'
             self.report['completed_rounds']+=1
+            log(f'[活动挑战演出] 第 {self.report["completed_rounds"]} 轮完成，剩余 CP {after}')
         self.report['status']='max_rounds_reached'
         self.navigate_menu()
         self.home()

@@ -1,4 +1,5 @@
 """Chart-driven live task: selection, settings, item refill, playback and tours."""
+from task_logging import log, finish, failure
 from dataclasses import asdict
 import json
 from pathlib import Path
@@ -47,6 +48,7 @@ class ChartLiveFlow(LiveFlow):
             raise FlowError(f'无法选择 {requested.upper()}；不自动替换为其他难度')
 
     def select_song(self, selection):
+        log(f'[谱面演出] 正在选择 {selection.song["title"]} / {selection.difficulty.upper()}')
         level_filtered=self.find_song(selection.song,difficulty=selection.difficulty)
         if level_filtered and selection.difficulty!='expert':
             self.clear_song_level_filter(selection.song)
@@ -68,6 +70,7 @@ class ChartLiveFlow(LiveFlow):
         return tuple(result)
 
     def prepare_round(self):
+        log(f'[谱面演出] 准备第 {self.report["completed_rounds"]+1} 轮，正在读取谱面并选曲')
         self.navigate_menu()
         self.inherit_menu_fire()
         if self.settings.mode=='free':
@@ -204,6 +207,7 @@ class ChartLiveFlow(LiveFlow):
         return balance
 
     def play_chart(self, index, selection, metadata, amount, row):
+        log(f'[谱面演出] {selection.song["title"]} / {selection.difficulty.upper()}：正在准备演奏进程')
         online=self.settings.mode in ('team','coop')
         if not online:
             self.wait_ready(index)
@@ -240,10 +244,15 @@ class ChartLiveFlow(LiveFlow):
             self.save_frame(f'ready_attempt{self.report["attempts"]}.png' if online else
                             f'ready_{self.report["completed_rounds"]+1}_{index}.png')
             (destination/'start').write_text('start')
+            log('[谱面演出] 已发送开演指令，等待谱面输入完成')
             if online:
                 self.submit_online_ready(selection)
             deadline=time.monotonic()+metadata['duration']+(270 if online else 90)
+            next_progress=time.monotonic()+30
             while process.poll() is None:
+                if time.monotonic()>=next_progress:
+                    log('[谱面演出] 演奏进程仍在运行，等待谱面输入完成')
+                    next_progress=time.monotonic()+30
                 self.check_stop()
                 if online:
                     self.monitor_online_worker(destination)
@@ -258,6 +267,7 @@ class ChartLiveFlow(LiveFlow):
                 if online:
                     self.handle_online_playback_error(playback)
                 raise FlowError(playback.get('error','演奏进程失败'))
+            log('[谱面演出] 谱面输入已完成')
         finally:
             if process.poll() is None:
                 (destination/'stop').write_text('stop')
@@ -276,6 +286,7 @@ class ChartLiveFlow(LiveFlow):
         return self.dismiss_daily_reward()
 
     def await_chart_result(self, index, row):
+        log(f'[谱面演出] 第 {index} 首输入结束，正在等待结果确认')
         deadline=time.monotonic()+90
         while time.monotonic()<deadline:
             self.pause(1)
@@ -318,6 +329,7 @@ class ChartLiveFlow(LiveFlow):
         raise FlowError('未确认演出结果，不重新开演')
 
     def settle_results(self):
+        log('[谱面演出] 正在处理结算与奖励')
         deadline=time.monotonic()+180
         page=0
         while time.monotonic()<deadline:
@@ -371,13 +383,14 @@ class ChartLiveFlow(LiveFlow):
                 self.wait_ready(index)
                 song={'index':index,**asdict(selection),'fire':self.settings.fire}
                 row['songs'].append(song)
-                print(f'[Maa代打演出] 第 {self.report["completed_rounds"]+1} 轮 / 第 {index} 首：'
-                      f'{selection.song["title"]} {selection.difficulty.upper()}',flush=True)
+                log(f'[Maa代打演出] 第 {self.report["completed_rounds"]+1} 轮 / 第 {index} 首：'
+                      f'{selection.song["title"]} {selection.difficulty.upper()}')
                 self.play_chart(index,selection,metadata,self.settings.fire,song)
                 self.await_chart_result(index,song)
             self.settle_results()
             row['status']='finished'
             self.report['completed_rounds']+=1
+            log(f'[谱面演出] 第 {self.report["completed_rounds"]} 轮结算完成')
         self.report['status']='max_rounds_reached'
         self.home()
 
@@ -398,6 +411,8 @@ class ChartLive(CustomAction):
         return ChartLiveFlow(context,options,destination)
 
     def run(self, context, argv):
+        label = getattr(self, 'task_label', 'Maa代打演出')
+        log(f'[{label}] 开始执行')
         destination=Path('debug')/self.report_directory/time.strftime('%Y%m%d-%H%M%S')
         destination.mkdir(parents=True,exist_ok=True)
         flow=None
@@ -410,10 +425,11 @@ class ChartLive(CustomAction):
             flow=self.create_flow(context,values,destination)
             report=flow.report
             flow.run()
+            finish(label, flow.report)
             return True
         except Exception as exc:
             report.update(status='error',error=str(exc))
-            print(f'[Maa代打演出] 已停止：{exc}',flush=True)
+            failure(label, exc, context)
             return False
         finally:
             (destination/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf8')

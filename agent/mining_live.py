@@ -1,4 +1,5 @@
 """Free-live FC mining and stage challenge progression."""
+from task_logging import log
 from dataclasses import asdict
 import time
 import re
@@ -165,6 +166,7 @@ class MiningLiveFlow(ChartLiveFlow):
         raise FlowError('歌曲列表未能点选到第一首')
 
     def next_song(self, seen):
+        log('[挖矿 FC] 正在筛选并扫描未 FC 谱面')
         while self.scan_difficulty_index<len(self.mining.difficulties):
             pending=self.scan_pending_song(seen)
             if pending:
@@ -246,8 +248,8 @@ class MiningLiveFlow(ChartLiveFlow):
         row = {**asdict(selection), 'status':'preparing','fire':self.settings.fire}
         self.report['rounds'].append(row)
         self.report['attempted'] += 1
-        print(f'[挖矿] 第 {self.report["attempted"]} 次：{selection.song["title"]} '
-              f'{selection.difficulty.upper()}，{self.settings.fire} 火',flush=True)
+        log(f'[挖矿] 第 {self.report["attempted"]} 次：{selection.song["title"]} '
+              f'{selection.difficulty.upper()}，{self.settings.fire} 火')
         self.play_chart(1, selection, metadata, self.settings.fire, row)
         self.await_chart_result(1,row)
         self.settle_results()
@@ -285,6 +287,7 @@ class MiningLiveFlow(ChartLiveFlow):
                     if row.get('full_combo_confirmed'):
                         row['star_after']='full_combo'
                         self.report['full_combos'].append(asdict(selection))
+                        log(f'[挖矿 FC] {selection.song["title"]} / {selection.difficulty.upper()}：FC 已确认', level='success')
                         # Completed songs disappear from the filtered list. Keep its
                         # cursor and let the next scan read the remaining candidates.
                         break
@@ -296,11 +299,13 @@ class MiningLiveFlow(ChartLiveFlow):
                     row['star_after'] = state
                     if state == 'full_combo':
                         self.report['full_combos'].append(asdict(selection))
+                        log(f'[挖矿 FC] {selection.song["title"]} / {selection.difficulty.upper()}：FC 已确认', level='success')
                         break
                     if state == 'unknown':
                         raise FlowError('结算后无法确认星星颜色')
                 else:
                     self.report['skipped'].append({**asdict(selection),'reason':'three_attempts_without_fc'})
+                    log(f'[挖矿 FC] {selection.song["title"]}：三次尝试仍未 FC，跳过', level='warn')
         self.report['status'] = 'max_rounds_reached'
         self.home()
 
@@ -560,6 +565,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 return
             if self.reco('CU_HomeBand') or self.reco('LV_Menu'):
                 self.navigate_menu()
+                log('[挖矿挑战] 正在进入舞台挑战并扫描目标关卡')
                 self.click('MN_ChallengeEntry')
                 self.restore_challenge()
                 return
@@ -587,6 +593,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
     def run(self):
         self.navigate_menu()
         self.inherit_menu_fire()
+        log('[挖矿挑战] 正在进入舞台挑战并扫描目标关卡')
         self.click('MN_ChallengeEntry')
         self.select_stage_kind()
         for _ in range(5):
@@ -628,6 +635,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 if level is None:
                     break
                 attempted_levels.add(level)
+                log(f'[挖矿挑战] 正在准备第 {level} 关')
                 title = self.text([460,124,480,44])
                 songs = [s for s in BY_ID.values() if self.title_matches(title,s)]
                 if len(songs) != 1:
@@ -641,7 +649,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
                     self.report['skipped'].append({**asdict(selection), 'stage_level':level,
                                                   'stage_kind':self.mining.stage,
                                                   'reason':'insufficient_eligible_members'})
-                    print(f'[挖矿挑战] {selection.song["title"]}：符合条件的成员不足，跳过该挑战',flush=True)
+                    log(f'[挖矿挑战] {selection.song["title"]}：符合条件的成员不足，跳过该挑战')
                     self.back()
                     self.wait('MN_StageSelect')
                     break
@@ -652,6 +660,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 row['stage_level'] = level
                 row['stage_kind'] = self.mining.stage
                 row['next_unlocked'] = self.advance_level(level)
+                log(f'[挖矿挑战] 第 {level} 关结算已确认')
             if self.limited():
                 break
             self.back()

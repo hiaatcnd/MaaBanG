@@ -1,4 +1,5 @@
 """Run only the game's built-in auto mode, selecting unlocked songs by band."""
+from task_logging import log, finish, failure
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -143,12 +144,13 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
             self.snap()
             actual=self.selected_difficulty(centers,540)
             if actual=='expert':
-                print('[自动演出] 所选歌曲无可用 SPECIAL，使用 EXPERT',flush=True)
+                log('[自动演出] 所选歌曲无可用 SPECIAL，使用 EXPERT')
         if actual != requested and not (requested=='special' and actual=='expert'):
             raise FlowError(f'难度选择未确认：{requested} / {actual}')
         return actual
 
     def choose_song(self):
+        log(f'[自动演出] 正在选择 {self.options.song} / {self.options.difficulty.upper()}')
         song=resolve_song(self.options.song_id or self.options.song)
         level_filtered=self.find_song(song,difficulty=self.options.difficulty)
         if level_filtered and self.options.difficulty!='expert':
@@ -160,6 +162,7 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
         return actual
 
     def prepare_round(self):
+        log(f'[自动演出] 准备第 {self.report["completed_rounds"]+1} 轮，正在选曲并检查演出条件')
         self.navigate_menu()
         self.inherit_menu_fire()
         if self.options.mode=='free':
@@ -306,9 +309,13 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
 
     def wait_song(self, index):
         deadline=time.monotonic()+600
+        next_progress=time.monotonic()+30
         # The game plays the notes. Poll at ten-second intervals without touching the stage.
         while time.monotonic()<deadline:
             self.pause(10)
+            if time.monotonic()>=next_progress:
+                log(f'[自动演出] 第 {index} 首仍在等待演出结束')
+                next_progress=time.monotonic()+30
             self.snap()
             if self.dismiss_daily_reward():
                 continue
@@ -320,6 +327,7 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
         raise FlowError('演出超过10分钟仍未确认结束，保留现场，不重新开演')
 
     def settle_results(self):
+        log('[自动演出] 正在处理结算与奖励')
         deadline=time.monotonic()+180
         while time.monotonic()<deadline:
             self.snap()
@@ -396,10 +404,11 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
                 before,balance=self.verify_start(index,difficulty,amount,self.options.songs_per_round-index+1)
                 song={'index':index,'fire':amount,'fire_before':balance,'auto_before':before,'status':'submitted'}
                 row['songs'].append(song)
-                print(f'[自动演出] 第 {self.report["completed_rounds"]+1} 轮，第 {index} 首，{amount} 火，自动剩余 {before}',flush=True)
+                log(f'[自动演出] 第 {self.report["completed_rounds"]+1} 轮，第 {index} 首，{amount} 火，自动剩余 {before}')
                 self.tap(1127,626)  # Exactly one start submission; never retry an uncertain spend.
                 self.wait_song(index)
                 song['status']='result_confirmed'
+                log(f'[自动演出] 第 {index} 首结果已确认')
                 if index<self.options.songs_per_round:
                     after=self.remaining()
                     if after!=before-1: raise FlowError('自动次数未按预期减少，不继续下一首')
@@ -407,11 +416,13 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
             self.settle_results()
             row['status']='finished'
             self.report['completed_rounds']+=1
-            print(f'[自动演出] 第 {self.report["completed_rounds"]} 轮完成',flush=True)
+            log(f'[自动演出] 第 {self.report["completed_rounds"]} 轮完成')
 
 
 class AutoLive(CustomAction):
     def run(self, context, argv):
+        label = getattr(self, 'task_label', '周回自动演出')
+        log(f'[{label}] 开始执行')
         output=Path('debug/auto_live'); output.mkdir(parents=True,exist_ok=True)
         report={'status':'error'}
         flow=None
@@ -425,10 +436,11 @@ class AutoLive(CustomAction):
             flow=LiveFlow(context,LiveOptions.parse(values))
             report=flow.report
             flow.run()
+            finish(label, flow.report)
             return True
         except Exception as exc:
             report.update(status='error',error=str(exc))
-            print(f'[自动演出] 停止：{exc}',flush=True)
+            failure(label, exc, context)
             return False
         finally:
             stamp=time.strftime('%Y%m%d-%H%M%S')

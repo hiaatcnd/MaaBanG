@@ -1,4 +1,5 @@
 """Home rewards, Michelle collections and the daily free recruitment."""
+from task_logging import log, finish, failure
 import json
 from pathlib import Path
 import time
@@ -85,6 +86,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         raise FlowError("领取结果未确认或未返回列表，不重复领取")
 
     def gifts(self):
+        log('[主页礼物] 正在打开礼物箱')
         self.home()
         self.click("DY_GiftEntry")
         for _ in range(100):
@@ -106,6 +108,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.tap_hit(button)
             self.finish_claim("DY_GiftHeader")
             self.report["claims"].append("gifts")
+            log(f'[主页礼物] 已确认领取第 {len(self.report["claims"])} 批礼物')
         raise FlowError("礼物领取未收敛，请检查容量限制")
 
     def mission_tabs(self):
@@ -149,7 +152,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             current, total = page or (1, 1)
             self.report.setdefault('mission_pages', []).append(
                 {'category': category, 'page': current, 'total': total})
-            print(f"[任务奖励] 已检查：{category} {current}/{total}", flush=True)
+            log(f"[任务奖励] 已检查：{category} {current}/{total}")
             if current == total:
                 return
             page = self.switch_mission_page(page, 1)
@@ -195,9 +198,11 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             if not button:
                 if self.hit_text([950,580,282,76], "^创建邀请码$|^输入邀请码$"):
                     self.report.setdefault('skipped_missions',[]).append({'category':category,'reason':'invitation_not_linked'})
+                    log(f'[任务奖励] {category}：未建立邀请关系，跳过')
                     return  # No existing invitation relationship, hence no rewards to claim.
                 if self.hit_text([600,365,350,65], '^此任务已被锁定$'):
                     self.report.setdefault('skipped_missions',[]).append({'category':category,'reason':'locked'})
+                    log(f'[任务奖励] {category}：任务未解锁，跳过')
                     return
                 raise FlowError(f"任务分类没有已支持的领取按钮：{category}")
             x,y,w,h = button.box
@@ -208,9 +213,11 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.tap_hit(button)
             self.finish_claim("DY_MissionHeader")
             self.report["claims"].append(category)
+            log(f"[任务奖励] {category}：本批奖励领取已确认")
         raise FlowError(f"任务奖励领取未收敛：{category}")
 
     def missions(self):
+        log('[任务奖励] 正在打开任务列表，从第一页检查各分类')
         self.home()
         self.click("DY_MissionEntry")
         self.wait("DY_MissionHeader")
@@ -226,7 +233,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             pending = next(((name,point) for name,point in tabs if name not in visited),None)
             if pending:
                 name,point = pending
-                print(f"[任务奖励] 检查：{name}",flush=True)
+                log(f"[任务奖励] 检查：{name}")
                 self.tap(*point)
                 self.wait("DY_MissionHeader")
                 selected = normalized(''.join(hit.text for hit in sorted(
@@ -242,6 +249,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         raise FlowError('任务标签遍历未收敛')
 
     def open_exchange(self):
+        log('[贴纸交换] 正在打开米歇尔交换所')
         self.home()
         self.click("DY_MenuButton")
         self.click("DY_MenuExchange")
@@ -250,7 +258,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.wait("DY_MichelleHeader")
 
     def select_exchange_category(self, category):
-        print(f"[贴纸交换] 检查：{category}",flush=True)
+        log(f"[贴纸交换] 检查：{category}")
         self.wait("DY_MichelleHeader")
         x = dict(zip(EXCHANGE_CATEGORIES, (574,704,834,964,1094)))[category]
         self.tap(x,190)
@@ -296,7 +304,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         if self.stable_integer([390,112,76,34]) != after:
             raise FlowError("成功弹窗后贴纸余额未与预期一致")
         row["status"] = "success_confirmed"
-        print(f"[贴纸交换] {category}：{name}，消耗 {cost} 贴纸",flush=True)
+        log(f"[贴纸交换] {category}：{name}，消耗 {cost} 贴纸")
         return True
 
     def exchange(self, categories=None):
@@ -408,7 +416,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             attempts[stage] = attempts.get(stage, 0)+1
             last_action[stage] = now
             self.report["draw_attempts"] = dict(attempts)
-            print(f"[免费招募] {stage}：本画面第 {consecutive}/3 次推进",flush=True)
+            log(f"[免费招募] {stage}：本画面第 {consecutive}/3 次推进")
             self.tap(*target)
         raise FlowError("招募结果未确认，不重复提交招募")
 
@@ -423,6 +431,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         return None
 
     def recruit_events(self):
+        log('[免费招募] 正在检查活动免费招募')
         self.home()
         self.click("DY_RecruitEntry")
         self.wait("DY_RecruitDetails")
@@ -468,7 +477,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                     row["status"] = "success_confirmed"
                     self.report["draw_in_flight"] = False
                     self.report["draws"] += 1
-                    print("[免费招募] 已完成活动免费招募",flush=True)
+                    log("[免费招募] 已完成活动免费招募")
                 else:
                     raise FlowError("活动免费招募未收敛")
             # Next card's blank margin; a fixed promotion below y=565 is excluded.
@@ -483,9 +492,11 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.recruit_daily()
 
     def recruit_daily(self):
+        log('[免费招募] 正在检查每日免费招募及剩余次数')
         self.select_free_recruit()
         for _ in range(3):
             count = self.free_remaining()
+            log(f"[免费招募] 每日免费剩余 {count} 次")
             if count == 0:
                 break
             if not self.hit_text([1176,652,77,39], "^免费$"):
@@ -502,7 +513,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 raise FlowError("免费招募剩余次数未减少，不重复提交")
             self.report["draw_in_flight"] = False
             self.report["draws"] += 1
-            print(f"[免费招募] 已完成一次，剩余 {count-1} 次",flush=True)
+            log(f"[免费招募] 已完成一次，剩余 {count-1} 次")
         self.report["status"] = "finished"
         self.home()
 
@@ -511,15 +522,19 @@ class DailyAction(CustomAction):
     operation = ""
 
     def run(self, context, argv):
+        label = {'gifts':'领取主页礼物', 'missions':'领取任务奖励',
+                 'exchange':'米歇尔贴纸交换', 'recruit':'每日免费招募'}[self.operation]
+        log(f'[{label}] 开始执行')
         flow = DailyFlow(context)
         output = Path("debug/daily")
         output.mkdir(parents=True,exist_ok=True)
         try:
             getattr(flow,self.operation)()
+            finish(label, flow.report)
             return True
         except Exception as exc:
             flow.report.update(status="error",error=str(exc))
-            print(f"[日常任务] {self.operation} 停止：{exc}",flush=True)
+            failure(label, exc, context)
             return False
         finally:
             stamp = time.strftime("%Y%m%d-%H%M%S")

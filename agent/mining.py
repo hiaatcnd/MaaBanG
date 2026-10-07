@@ -1,4 +1,5 @@
 """Mining custom actions and report persistence."""
+from task_logging import log, finish, failure
 import json
 import time
 from pathlib import Path
@@ -9,9 +10,11 @@ from mining_stories import StoryMiningFlow
 
 
 class MiningAction(CustomAction):
+    task_label = "挖矿：自由演出 Full Combo"
     flow_type = MiningLiveFlow
 
     def run(self, context, argv):
+        log(f'[{self.task_label}] 开始执行')
         output = Path('debug/mining')/(self.__class__.__name__+'-'+time.strftime('%Y%m%d-%H%M%S'))
         output.mkdir(parents=True,exist_ok=True)
         report = {'status':'error'}
@@ -39,10 +42,11 @@ class MiningAction(CustomAction):
             flow = self.flow_type(context,MiningOptions.parse(values),output)
             report = flow.report
             flow.run()
+            finish(self.task_label, report)
             return True
         except Exception as exc:
             report.update(status='error',error=str(exc))
-            print(f'[挖矿] 已停止：{exc}',flush=True)
+            failure(self.task_label, exc, context)
             return False
         finally:
             (output/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf8')
@@ -55,8 +59,10 @@ class MineFullCombo(MiningAction):
 
 
 class MineStories(MiningAction):
+    task_label = "挖矿：成员小故事"
     flow_type = StoryMiningFlow
 
 
 class MineChallenges(MiningAction):
+    task_label = "挖矿：舞台挑战"
     flow_type = ChallengeMiningFlow

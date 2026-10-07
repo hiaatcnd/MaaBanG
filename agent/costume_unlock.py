@@ -1,4 +1,5 @@
 """MaaFramework custom action for per-character default 3D costume targets."""
+from task_logging import log, finish, failure, status_text
 import json
 import re
 import time
@@ -277,7 +278,7 @@ class CostumeFlow:
         self.count_is_lower_bound = count >= self.target
         self.return_from_costumes(character, allow_list=True)
         self.reopen_rating_character(character)
-        print(f"[服装解锁] {character}：服装 {clothes} + 发型/饰品 {hair} = {count}",flush=True)
+        log(f"[服装解锁] {character}：服装 {clothes} + 发型/饰品 {hair} = {count}")
         return count
 
     def count_owned_grid(self, limit):
@@ -412,7 +413,7 @@ class CostumeFlow:
                     raise FlowError("解锁结果未知，停止以避免重复消耗")
                 updated = current + 1
                 purchase.update(status="success_confirmed", before=current, after=updated)
-                print(f"[服装解锁] {character}：已解锁，剩余 {max(0,self.target-updated)} 件",flush=True)
+                log(f"[服装解锁] {character}：已解锁，剩余 {max(0,self.target-updated)} 件")
                 return updated
             self.snap()
             area = self.image[224:512, 648:1226].copy()
@@ -445,6 +446,7 @@ class CostumeFlow:
             self.report["status"] = "target_reached"
             self.return_home()
             return
+        log(f'[服装解锁] 目标 {self.target} 件；' + ('仅检查模式' if self.inspect_only else '执行解锁模式'))
         self.rating_select()
         for band, members in self.roster:
             if self.selected_members is not None and not self.selected_members.intersection(members):
@@ -461,14 +463,14 @@ class CostumeFlow:
                 if count is None:
                     self.report["characters"].append({"band": band, "character": character,
                         "before": None, "after": None, "status": "collection_completed"})
-                    print(f"[服装解锁] {character}：收集任务全部完成，直接跳过",flush=True)
+                    log(f"[服装解锁] {character}：收集任务全部完成，直接跳过")
                     self.rating_select()
                     self.select_band(band)
                     continue
                 row = {"band": band, "character": character, "before": count, "after": count,
                        "count_is_lower_bound": self.count_is_lower_bound}
                 self.report["characters"].append(row)
-                print(f"[服装解锁] {character}: {count}/{self.target}", flush=True)
+                log(f"[服装解锁] {character}: {count}/{self.target}")
                 while count < self.target:
                     result = self.unlock_one(character, count)
                     if isinstance(result, int):
@@ -477,6 +479,7 @@ class CostumeFlow:
                         row["after_basis"] = "initial_progress_plus_success_dialogs"
                     else:
                         row["status"] = result
+                        log(f"[服装解锁] {character}：{status_text(result)}")
                         if result == "collection_completed":
                             row["after"] = None
                         if result.startswith("insufficient_"):
@@ -496,6 +499,8 @@ class CostumeFlow:
 
 class UnlockDefault3DCostumes(CustomAction):
     def run(self, context, argv):
+        label = getattr(self, 'task_label', '解锁3D演出服装')
+        log(f'[{label}] 开始执行')
         flow = None
         output = Path("debug/costume_unlock")
         output.mkdir(parents=True, exist_ok=True)
@@ -513,9 +518,10 @@ class UnlockDefault3DCostumes(CustomAction):
             flow = CostumeFlow(context, params.get("target", 0), inspect_only=options["attach"]["inspect_only"],
                                scope=scope, selection=selection)
             flow.run()
+            finish(label, flow.report)
             return True
         except Exception as exc:
-            print(f"[服装解锁] 停止：{exc}", flush=True)
+            failure(label, exc, context)
             if flow:
                 flow.report.update(status="error", error=str(exc))
             return False

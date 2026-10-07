@@ -1,4 +1,5 @@
 """Set the optional event Fever stamp switch before entering a live."""
+from task_logging import log
 import re
 
 from costume_unlock import FlowError, normalized
@@ -43,7 +44,9 @@ class FeverSettingsMixin:
         row = {'requested': requested, 'enabled': actual, 'reason': reason}
         self.report.setdefault('fever_settings', []).append(row)
         if reason:
-            print(f'[Fever印章] {reason}，本次不使用印章，继续演出', flush=True)
+            log(f'[Fever印章] {reason}，本次不使用印章', level='warn')
+        else:
+            log('[Fever印章] 当前设置：' + ('开启' if actual else '关闭'))
         return actual
 
     def configure_fever(self, requested):
