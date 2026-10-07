@@ -217,6 +217,7 @@ class ChartLiveFlow(LiveFlow):
         destination.mkdir()
         config={'controller':self.controller.info,'chart':metadata,
                 'jitter':self.settings.jitter,'seed':secrets.randbits(32),
+                'avoid_full_combo':self.settings.avoid_full_combo,
                 'start_mode':'online' if online else 'click'}
         (destination/'config.json').write_text(json.dumps(config),encoding='utf8')
         worker_log=(destination/'worker.log').open('w',encoding='utf8')

@@ -69,9 +69,12 @@ def play(config_path):
             raise ValueError('开演前谱面校验失败')
         chart = json.loads(raw)
         jitter, position = JITTER_PROFILES[cfg['jitter']]
-        events = compile_chart(chart,seed=cfg['seed'],jitter_ms=jitter,position_jitter=position)
+        avoid_full_combo = cfg.get('avoid_full_combo', False)
+        events = compile_chart(chart,seed=cfg['seed'],jitter_ms=jitter,position_jitter=position,
+                               avoid_full_combo=avoid_full_combo)
         anchor_time, lane, color = first_anchor(chart, online=online)
         report.update(seed=cfg['seed'],jitter_ms=jitter,position_jitter=position,
+                      avoid_full_combo=avoid_full_combo,
                       chart=cfg['chart'],anchor=[anchor_time,lane,color],
                       jitter_distribution='truncated_normal',jitter_sigma_divisor=3)
         adb,address,settings = controller_config(cfg['controller'])
@@ -275,6 +278,16 @@ def play(config_path):
                 report['recoveries'][-1]['resume_late_ms']=(sent-target)*1000
             if event.action=='up':
                 active.discard(event.contact)
+        # Keep observing through the original chart end even if the omitted
+        # final tap/flick leaves no remaining input before the result wait.
+        if avoid_full_combo:
+            while True:
+                stopped()
+                now = time.perf_counter()
+                remaining = origin+cfg['chart']['duration']+clock.advance(now)-now
+                if remaining <= 0:
+                    break
+                time.sleep(min(remaining,.05))
         report['status']='input_complete'
     except Exception as exc:
         report.update(status='error',error=str(exc))

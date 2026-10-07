@@ -25,6 +25,7 @@ def main():
         parser.add_argument(f'--song{i}',default='306')
         parser.add_argument(f'--difficulty{i}',default='expert')
     parser.add_argument('--jitter',choices=JITTER_PROFILES,default='small')
+    parser.add_argument('--avoid-full-combo',action='store_true',help='跳过最后一个非长条音符，长条和滑条完整演奏')
     parser.add_argument('--cp',type=int,choices=[200,400,800,1600],default=200)
     parser.add_argument('--cp-song',default='',help='挑战活动歌曲ID或完整歌名；留空沿用当前活动选曲')
     parser.add_argument('--coop-room',choices=COOP_ROOMS,default='free')
@@ -38,6 +39,8 @@ def main():
     task_name='DirectChartLive' if args.direct else 'ChartLive'
     if args.direct:
         from direct_chart_live import OPTION_NODES
+        if args.avoid_full_combo:
+            parser.error('--avoid-full-combo is supported by Maa代打演出 only')
         if args.mode!='free':
             parser.error('--direct uses the current prepared page; omit --mode')
     if args.package and args.prepare_only:

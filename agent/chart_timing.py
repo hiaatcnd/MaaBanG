@@ -173,7 +173,7 @@ def bounded_normal(rng, bound):
 
 def compile_chart(chart, *, seed=0, jitter_ms=0., position_jitter=0.,
                   tap_duration=.025, move_interval=.008, flick_duration=.056,
-                  max_contacts=10, slide_motion_delay=0.):
+                  max_contacts=10, slide_motion_delay=0., avoid_full_combo=False):
     """Experimental full gestures; a seed reproduces bounded per-gesture jitter.
 
     Hidden points shape the path without producing extra touch downs. Knots use
@@ -181,7 +181,12 @@ def compile_chart(chart, *, seed=0, jitter_ms=0., position_jitter=0.,
     motion and release, preserving head timing. One random timing offset is
     shared by heads in a chord and by the whole corresponding gesture.
     Game judgment accuracy still requires device calibration and result checks.
+    Avoiding Full Combo omits the last standalone tap/flick by chart time.
+    Holds and slides, including their flick tails, are always preserved. Ties
+    prefer the first chart record. Jitter and contacts of other gestures stay intact.
     """
+    if not isinstance(avoid_full_combo, bool):
+        raise ValueError('Invalid avoid_full_combo option')
     if not (math.isfinite(jitter_ms) and 0 <= jitter_ms <= 180 and
             math.isfinite(position_jitter) and 0 <= position_jitter <= 22 and
             math.isfinite(tap_duration) and 0 < tap_duration <= .1 and
@@ -193,6 +198,7 @@ def compile_chart(chart, *, seed=0, jitter_ms=0., position_jitter=0.,
     tempo = TempoMap(chart)
     rng = random.Random(seed)
     shifts, gestures = {}, []
+    omitted_path, final_judgment = None, (float('-inf'), float('-inf'))
     for note in chart:
         kind = note['type']
         if kind in ('BPM', 'System'):
@@ -253,15 +259,22 @@ def compile_chart(chart, *, seed=0, jitter_ms=0., position_jitter=0.,
         else:
             end = last + (tap_duration if len(knots) == 1 else .008)
         path.append((end, 3, path[-1][2], 'up', path[-1][4]))
+        judgment = (knots[-1][0], first)
+        if avoid_full_combo and kind in ('Single', 'Directional') and judgment > final_judgment:
+            final_judgment, omitted_path = judgment, path
         gestures.append((path[0][0]+shift, end+shift, dx, dy, shift, path))
     if not gestures:
         raise ValueError('Empty chart')
+    if avoid_full_combo and omitted_path is None:
+        raise ValueError('谱面没有可跳过的非长条音符，无法避免 Full Combo')
     available, events = [float('-inf')]*max_contacts, []
     for start, end, dx, dy, shift, path in sorted(gestures):
         contact = next((i for i, t in enumerate(available) if t < start-1e-9), None)
         if contact is None:
             raise ValueError('Insufficient contacts')
         available[contact] = end
+        if path is omitted_path:
+            continue
         events.extend(GestureEvent(t+shift, priority, contact, lane, action, y+dy, dx)
                       for t, priority, lane, action, y in path)
     return sorted(events)

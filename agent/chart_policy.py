@@ -62,6 +62,7 @@ class ChartOptions:
     coop_song: str = ''
     fever: str = 'off'
     from_favorites: bool = False
+    avoid_full_combo: bool = False
 
     @classmethod
     def parse(cls, data):
@@ -69,6 +70,9 @@ class ChartOptions:
         if mode not in ('free', 'tour_free', 'tour_fixed', 'team', 'coop', 'challenge'):
             raise ValueError('未知谱面演出模式')
         jitter = data.get('jitter', 'small')
+        avoid_full_combo = data.get('avoid_full_combo', False)
+        if not isinstance(avoid_full_combo, bool):
+            raise ValueError('避免 Full Combo 必须为开或关')
         if jitter not in JITTER_PROFILES:
             raise ValueError('请选择非零随机偏差档位')
         challenge = mode == 'challenge'
@@ -102,7 +106,7 @@ class ChartOptions:
         return cls(mode, selections, difficulties, jitter, fire, shortage, rounds,
                    cp, str(data.get('cp_song', '')).strip(), coop_room, coop_room_group, coop_song,
                    fever_option(data.get('fever', 'off')),
-                   favorites_option(data.get('from_favorites', False)))
+                   favorites_option(data.get('from_favorites', False)), avoid_full_combo)
 
     @property
     def songs_per_round(self):
@@ -111,6 +115,7 @@ class ChartOptions:
 
 OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='', cp=200, cp_song='', fever='off',
                        coop_room='free', coop_room_group='normal', coop_song='', from_favorites=False,
+                       avoid_full_combo=False,
                        **{f'song{i}':'306' for i in range(1,4)},
                        **{f'difficulty{i}':'expert' for i in range(1,4)})
 OPTION_NODES = {key: 'CL_'+key for key in OPTION_DEFAULTS}
