@@ -29,7 +29,7 @@ def update(interface):
     interface['task']=[t for t in interface['task'] if t['entry']!='DirectChartLive']
     index=next(i for i,t in enumerate(interface['task']) if t['entry']=='ChartLive')+1
     interface['task'].insert(index,dict(name='指定谱面直接演出',entry='DirectChartLive',default_check=False,
-        description='先在游戏中选好歌曲和难度，停在点击“演出开始”即可打歌的最后准备页，再在本任务指定同一首歌和难度。下载并校验对应谱面后直接开演，不识别歌曲、不选歌、不修改设置、不补火，每次只打一首并停在结算页。请提前应用代打推荐设定，关闭游戏内置自动、MV及3D演出。消耗沿用当前页面设置。需要截图增强与MaaTouch，16:9横屏。',
+        description='先在游戏中选好歌曲和难度，停在点击“演出开始”即可打歌的最后准备页，再在本任务指定同一首歌和难度。下载并校验对应谱面后直接开演，不识别歌曲、不选歌、不修改设置、不补火，每次只打一首，谱面输入完成即结束任务，不等待或操作结算页。请提前应用代打推荐设定，关闭游戏内置自动、MV及3D演出。消耗沿用当前页面设置。需要截图增强与MaaTouch，16:9横屏。',
         option=[mapping['谱面第1首歌曲'],mapping['谱面随机偏差']]))
     return interface
 

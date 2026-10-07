@@ -1,6 +1,7 @@
 import sys
 import os
 from pathlib import Path
+from task_logging import failure
 
 def main():
     for stream in (sys.stdout, sys.stderr):
@@ -35,7 +36,7 @@ def main():
                 try:
                     reload_catalog()
                 except Exception as exc:
-                    print(f'[歌曲列表] {exc}', flush=True)
+                    failure(name + ' / 歌曲列表加载', exc, context)
                     return False
                 return super().run(context, argv)
         AgentServer.custom_action(name)(WithCurrentCatalog)

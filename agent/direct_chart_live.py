@@ -1,4 +1,5 @@
 """Play one user-selected chart directly from the final live preparation page."""
+from task_logging import log
 from dataclasses import asdict
 
 from chart_live import ChartLive, ChartLiveFlow
@@ -26,9 +27,12 @@ class DirectChartLiveFlow(ChartLiveFlow):
         return None
 
     def prepare_round(self):
+        log('[指定谱面直接演出] 正在检查当前准备页并读取指定谱面')
         self.wait_ready()
         selection=self.settings.selections[0]
+        log(f'[指定谱面直接演出] 读取 {selection.song["title"]} / {selection.difficulty.upper()} 谱面（缺失时下载）')
         chart=self.store.get(selection, check_stop=self.check_stop)
+        log('[指定谱面直接演出] 谱面已就绪')
         return (selection,), (chart,)
 
     def run(self):
@@ -38,15 +42,18 @@ class DirectChartLiveFlow(ChartLiveFlow):
         song={'index':1, **asdict(selection), 'status':'prepared'}
         row={'songs':[song], 'status':'running'}
         self.report['rounds'].append(row)
-        print(f'[指定谱面直接演出] {selection.song["title"]} '
-              f'{selection.difficulty.upper()}；沿用当前准备页设置',flush=True)
+        log(f'[指定谱面直接演出] {selection.song["title"]} '
+              f'{selection.difficulty.upper()}；沿用当前准备页设置')
         self.play_chart(1,selection,charts[0][1],None,song)
-        self.await_chart_result(1,song)
+        # play_chart returns only after the worker confirms all chart input.
+        # Direct mode finishes here without inspecting or advancing results.
+        song['status']='input_complete'
         row['status']='finished'
         self.report.update(status='finished',completed_rounds=1)
 
 
 class DirectChartLive(ChartLive):
+    task_label = '指定谱面直接演出'
     option_defaults = OPTION_DEFAULTS
     option_nodes = OPTION_NODES
     report_directory = 'direct_chart_live'

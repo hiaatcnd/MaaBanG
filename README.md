@@ -172,6 +172,27 @@ uv run --project agent python tools/configure.py
 
 使用 VS Code 的 **MaaFramework Support** 插件加载 `assets/interface.json`。MaaFramework 与 Python Agent 均固定为 **5.12.2**；开发界面由 uv 启动 Agent，发布包使用内置解释器。
 
+### 开发配置隔离
+
+源码 Agent 默认将谱面缓存等用户数据放在当前项目的 `.maabang-dev/`；正式安装版仍使用 `%USERPROFILE%\.maabang`。开发数据不提交到 Git，并在重启、修改代码后保留。显式设置的 `MAABANG_DATA_DIR` 优先。
+
+测试本地构建包时，用下面的入口启动界面；界面及其 Agent 会一起使用开发目录，任务列表、勾选、顺序、设备设置与正式版分开保存：
+
+```powershell
+uv run --project agent python tools/run_dev.py --app install/MaaBanG-v0.6.5-dev1-win-x64
+```
+
+把示例路径换成实际构建包目录。此入口使用所选包内的代码和资源，修改源码后仍需重新构建；直接双击包内 `MaaBanG.exe` 则沿用正式配置。开发入口首次启动使用新配置，不自动导入正式设置。开发界面和正式界面可同时打开，连接同一模拟器时请勿同时执行任务。
+
+运行开发命令或验证全新配置，可使用：
+
+```powershell
+uv run --project agent python tools/run_dev.py -- python tools/run_chart_live.py --help
+uv run --project agent python tools/run_dev.py --data-dir .maabang-dev/fresh-test --app install/MaaBanG-v0.6.5-dev1-win-x64
+```
+
+VS Code 插件自身的任务配置仍由插件管理。测试 MFAAvalonia 的任务更新行为时请使用上述开发界面入口；Windows 通信临时目录仍复用短路径 `%USERPROFILE%\.maabang\temp`，不涉及正式任务配置。
+
 ### 项目结构
 
 | 路径 | 用途 |

@@ -34,7 +34,20 @@ class UserDataTests(unittest.TestCase):
                 self.assertEqual(ChartStore().directory, Path(folder).resolve() / 'cache/charts')
             self.assertEqual(ChartStore('custom').directory, Path('custom'))
         with patch.dict(os.environ, {k:v for k,v in os.environ.items() if k!='MAABANG_DATA_DIR'}, clear=True):
-            self.assertEqual(data_root(), Path.home() / '.maabang')
+            self.assertEqual(data_root(), Path(__file__).resolve().parents[1] / '.maabang-dev')
+
+    def test_packaged_agent_inside_checkout_keeps_production_default(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'assets').mkdir()
+            (root / 'tools').mkdir()
+            (root / 'assets/interface.json').write_text('{}')
+            (root / 'tools/configure.py').touch()
+            packaged_module = root / 'install/MaaBanG-dev/app/agent/user_data.py'
+            with patch.dict(os.environ, {'MAABANG_DATA_DIR': ''}), patch('user_data.__file__', str(packaged_module)):
+                self.assertEqual(data_root(), Path.home() / '.maabang')
+            with patch.dict(os.environ, {'MAABANG_DATA_DIR': str(root / 'explicit')}), patch('user_data.__file__', str(packaged_module)):
+                self.assertEqual(data_root(), root.resolve() / 'explicit')
 
     def test_imports_current_settings_as_one_snapshot_and_merges_unique_charts(self):
         with tempfile.TemporaryDirectory() as directory:

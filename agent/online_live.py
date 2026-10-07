@@ -1,4 +1,5 @@
 """Team live state machine. A room attempt is distinct from a completed song."""
+from task_logging import log
 from dataclasses import asdict
 from concurrent.futures import Future, TimeoutError as FutureTimeout, CancelledError
 from threading import Event, Thread
@@ -42,7 +43,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         if self.report['state']!=value:
             self.report['state']=value
             label='协力演出' if self.settings.mode=='coop' else '团队演出'
-            print(f'[{label}] {value}',flush=True)
+            log(f'[{label}] {value}')
             if self.current_attempt is not None:
                 self.current_attempt.setdefault('states',[]).append(value)
 
@@ -609,6 +610,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 self.settle_online(song)
                 self.current_attempt['status']='finished'
                 self.count_result(song)
+                log(f'[联网演出] 结果已确认，累计完成 {self.report["completed_rounds"]} 轮')
                 failures=0
                 self.room_active=False
                 self.home()
@@ -621,6 +623,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 failures+=1
                 delay=retry_delay(failures)
                 self.report['retries'].append({'attempt':self.report['attempts'],'reason':str(exc),'delay':delay})
+                log(f'[联网演出] 房间中断：{exc}；第 {failures} 次重试，退出后等待 {delay} 秒', level='warn')
                 self.recover_room()
                 self.pause(delay)
             except (FlowError,ValueError) as exc:

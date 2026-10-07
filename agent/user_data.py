@@ -11,7 +11,14 @@ import time
 
 def data_root():
     override = os.environ.get('MAABANG_DATA_DIR')
-    return Path(override).expanduser().resolve() if override else Path.home() / '.maabang'
+    if override:
+        return Path(override).expanduser().resolve()
+    # Inspect only this module's layout: a packaged app inside install/ or dist/
+    # must not become a development build just because an ancestor is a checkout.
+    root = Path(__file__).resolve().parents[1]
+    if (root / 'assets/interface.json').is_file() and (root / 'tools/configure.py').is_file():
+        return root / '.maabang-dev'
+    return Path.home() / '.maabang'
 
 
 def legacy_apps(app):

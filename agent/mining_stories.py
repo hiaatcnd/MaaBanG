@@ -1,4 +1,5 @@
 """Read filtered member stories, optionally practice and unlock with materials."""
+from task_logging import log, status_text
 import re
 import time
 import numpy as np
@@ -180,6 +181,7 @@ class StoryMiningFlow(DailyFlow):
         if not can_practice(self.mining,rarity,current,maximum,required):
             row['status'] = 'practice_disabled_or_ineligible'
             return False
+        log('[挖矿故事] 等级不足，正在准备练习')
         self.click('MN_PracticeEntry')
         self.snap()
         if self.reco('MN_PracticeHelp'):
@@ -316,6 +318,7 @@ class StoryMiningFlow(DailyFlow):
                 self.cancel_story_unlock()
                 return
             row['materials'] = materials
+            log('[挖矿故事] 材料已确认，正在解锁故事')
             self.save_frame(f'unlock_{len(self.report["members"])}.png')
             self.tap(770,543)
             self.snap()
@@ -387,7 +390,7 @@ class StoryMiningFlow(DailyFlow):
         hits=sorted(self.ocr([292,156,296,72]),key=lambda hit:(hit.box[1],hit.box[0]))
         identity=normalized(' '.join(hit.text for hit in hits)) or f'成员{number}'
         audit.update(member=identity,status='detail_ready')
-        print(f'[成员选择] {target} -> {identity}',flush=True)
+        log(f'[成员选择] {target} -> {identity}')
         return identity
 
     def run(self):
@@ -398,6 +401,7 @@ class StoryMiningFlow(DailyFlow):
         for memory,enabled in ((False,self.mining.stories),(True,self.mining.memories)):
             if not enabled:
                 continue
+            log('[挖矿故事] 正在筛选未读' + ('回忆小故事' if memory else '小故事'))
             self.filter_unread(memory)
             seen = []
             for _ in range(3000):
@@ -419,9 +423,10 @@ class StoryMiningFlow(DailyFlow):
                     seen.append(signature)
                     row = {'member':identity,'memory':memory}
                     self.report['members'].append(row)
-                    print(f'[挖矿故事] {identity}：'+('回忆小故事' if memory else '小故事'),flush=True)
+                    log(f'[挖矿故事] {identity}：'+('回忆小故事' if memory else '小故事'))
                     self.read_story(memory,row)
-                    print(f'[挖矿故事] {row.get("status","unknown")}',flush=True)
+                    log(f'[挖矿故事] {identity}：{status_text(row.get("status","unknown"))}',
+                        level="success" if row.get("status")=="read_reward_confirmed" else "warn")
                     self.back()
                     self.wait('MN_Members')
                     continue

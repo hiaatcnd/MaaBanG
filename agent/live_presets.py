@@ -1,4 +1,5 @@
 """Explicit, standalone application of the game's persistent live settings."""
+from task_logging import log, finish, failure
 import json
 from pathlib import Path
 import time
@@ -103,34 +104,41 @@ class LivePresetFlow(ChartLiveFlow):
         self.report['requested'] = dict(stage=stage, fever=fever, fire=fire)
         self.navigate_menu()
         if stage:
+            log('[演出预先设置] 正在应用演出画面、速度和皮肤设置')
             self.open_page('LV_FreeEntry', 'LV_SongPage')
             self.reset_inherited_song_filters()
             self.tap(1070,648)
             self.wait_ready()
             self.configure_stage()
+            log('[演出预先设置] 演出设定已保存')
             self.navigate_menu()
         # Set fire first: the game's full-consumption mode forbids Fever.
         self.menu_fire(fire)
         if self.menu_fire() != fire:
             raise FlowError('火数设定未保存')
         self.report['saved_fire'] = fire
+        log(f'[演出预先设置] 每首 {fire} 火已保存并复核，正在设置 Fever 印章')
         self.configure_fever(fever)
+        log('[演出预先设置] Fever 设置流程结束，正在返回主页')
         self.report['status'] = 'finished'
         self.home()
 
 
 class LivePresets(CustomAction):
     def run(self, context, argv):
+        label = getattr(self, 'task_label', '演出预先设置')
+        log(f'[{label}] 开始执行')
         output = Path('debug/live_presets')/time.strftime('%Y%m%d-%H%M%S')
         flow = LivePresetFlow(context, output)
         try:
             values = {key: (context.get_node_data(node) or {}).get('attach', {}).get('value', DEFAULTS[key])
                       for key, node in NODES.items()}
             flow.apply(**values)
+            finish(label, flow.report)
             return True
         except Exception as exc:
             flow.report.update(status='error', error=str(exc))
-            print(f'[演出预先设置] 已停止：{exc}', flush=True)
+            failure(label, exc, context)
             if flow.image is not None:
                 flow.save_frame('error.png')
             return False

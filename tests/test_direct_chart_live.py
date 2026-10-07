@@ -63,24 +63,29 @@ class DirectChartLiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.flow(folder)
             flow.store.get=Mock(return_value=([],{'duration':100}))
-            flow.play_chart=Mock();flow.await_chart_result=Mock()
+            flow.play_chart=Mock()
+            flow.await_chart_result=Mock(side_effect=AssertionError('must not wait for results'))
             flow.run()
             flow.play_chart.assert_called_once()
             self.assertIsNone(flow.play_chart.call_args.args[3])
-            flow.await_chart_result.assert_called_once()
+            flow.await_chart_result.assert_not_called()
             self.assertEqual(flow.report['status'],'finished')
             self.assertEqual(flow.report['completed_rounds'],1)
             self.assertEqual(flow.report['selection_source'],'user')
+            self.assertEqual(flow.report['rounds'][0]['songs'][0]['status'],'input_complete')
 
-    def test_uncertain_result_never_retries(self):
-        with tempfile.TemporaryDirectory() as folder:
-            flow=self.flow(folder)
-            flow.store.get=Mock(return_value=([],{'duration':100}))
-            flow.play_chart=Mock()
-            flow.await_chart_result=Mock(side_effect=FlowError('未确认演出结果'))
-            with self.assertRaises(FlowError):flow.run()
-            flow.play_chart.assert_called_once()
-            self.assertEqual(flow.report['completed_rounds'],0)
+    def test_playback_failure_or_stop_never_completes_or_retries(self):
+        for error in ('演奏进程失败','任务已被用户停止'):
+            with self.subTest(error=error),tempfile.TemporaryDirectory() as folder:
+                flow=self.flow(folder)
+                flow.store.get=Mock(return_value=([],{'duration':100}))
+                flow.play_chart=Mock(side_effect=FlowError(error))
+                flow.await_chart_result=Mock()
+                with self.assertRaises(FlowError):flow.run()
+                flow.play_chart.assert_called_once()
+                flow.await_chart_result.assert_not_called()
+                self.assertEqual(flow.report['completed_rounds'],0)
+                self.assertNotEqual(flow.report['status'],'finished')
 
     def test_task_uses_independent_options_and_ignores_repeat_mode(self):
         with tempfile.TemporaryDirectory() as folder:

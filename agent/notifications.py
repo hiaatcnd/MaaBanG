@@ -1,4 +1,5 @@
 """Shared, bounded handling of informational game dialogs."""
+from task_logging import log
 import re
 import time
 
@@ -94,7 +95,7 @@ class NotificationMixin:
             previous = fingerprint
             self.tap_hit(buttons[0])
             handled = True
-            print(f'[通知] 已确认：{title}', flush=True)
+            log(f'[通知] 已确认：{title}')
             # Observe after animation; every subsequent click uses fresh OCR.
             for _ in range(6):
                 self.check_stop()
