@@ -92,5 +92,10 @@
         "attach": {
             "value": false
         }
+    },
+    "CL_avoid_full_combo": {
+        "attach": {
+            "value": false
+        }
     }
 }

@@ -9,6 +9,42 @@ from chart_timing import TempoMap, compile_basic_chart, compile_chart, first_anc
 
 
 class ChartTimingTests(unittest.TestCase):
+    def test_first_anchor_gesture_skill_and_mode_matrix(self):
+        for kind in ('Single', 'Long', 'Slide', 'Directional'):
+            for skill in (False, True):
+                if kind == 'Directional' and skill:
+                    continue  # Directional notes do not carry skill annotations.
+                for online in (False, True):
+                    for flick in (False, True):
+                        with self.subTest(kind=kind, skill=skill, online=online, flick=flick):
+                            head={'beat':2,'lane':4,'skill':skill,'flick':flick}
+                            sustained=kind in ('Long','Slide')
+                            note=({'type':kind,'connections':[head,{'beat':4,'lane':4}]}
+                                  if sustained else {'type':kind,**head})
+                            if kind=='Directional': note.update(direction='Right',width=2)
+                            chart=[{'type':'BPM','beat':0,'bpm':120},note]
+                            if kind=='Directional': expected='orange'
+                            elif flick: expected='pink'
+                            elif skill:
+                                expected=('skill_green' if sustained else 'skill') if online else 'yellow'
+                            else: expected='green' if sustained else 'cyan'
+                            self.assertEqual(first_anchor(chart,online=online),(1.,4,expected))
+
+    def test_skill_tail_does_not_recolor_head_or_override_earliest_chord(self):
+        for kind in ('Long','Slide'):
+            chart=[{'type':'BPM','beat':0,'bpm':120},
+                   {'type':kind,'connections':[{'beat':2,'lane':0},
+                                               {'beat':4,'lane':0,'skill':True}]},
+                   {'type':'Single','beat':3,'lane':2}]
+            for online in (False,True):
+                self.assertEqual(first_anchor(chart,online=online),(1.,0,'green'))
+                chart[1]['connections'][0]['skill']=True
+                chart.append({'type':'Single','beat':2,'lane':6})
+                for ordering in (chart,list(reversed(chart))):
+                    self.assertEqual(first_anchor(ordering,online=online),(1.,6,'cyan'))
+                chart.pop()
+                del chart[1]['connections'][0]['skill']
+
     def test_opening_skill_tap_uses_yellow_anchor_and_plain_chord_tap_wins(self):
         chart=[{'type':'BPM','beat':0,'bpm':132},
                {'type':'Single','beat':12,'lane':0,'skill':True}]
@@ -95,10 +131,24 @@ class ChartTimingTests(unittest.TestCase):
         for direction, sign in [('Left',-1),('Right',1)]:
             chart = [{'type':'BPM','beat':0,'bpm':120},
                      {'type':'Directional','beat':1,'lane':3,'width':2,'direction':direction}]
+            expected='purple' if direction=='Left' else 'orange'
+            self.assertEqual(first_anchor(chart),(.5,3,expected))
+            self.assertEqual(first_anchor(chart,online=True),(.5,3,expected))
             e = compile_chart(chart)
             self.assertEqual(e[0].action, 'down')
             self.assertEqual(e[-1].action, 'up')
             self.assertGreater(sign*(e[-1].lane-e[0].lane), .5)
+
+    def test_directional_anchor_rejects_unknown_direction_and_prefers_simultaneous_tap(self):
+        for direction in ('Left','Right'):
+            chart=[{'type':'BPM','beat':0,'bpm':120},
+                   {'type':'Directional','beat':2,'lane':0,'width':2,'direction':direction},
+                   {'type':'Single','beat':2,'lane':4}]
+            for online in (False,True):
+                self.assertEqual(first_anchor(chart,online=online),(1.,4,'cyan'))
+        chart[1]['direction']='Up'
+        with self.assertRaisesRegex(ValueError,'Unknown flick direction'):
+            first_anchor(chart)
 
     def test_slide_motion_calibration_preserves_head_and_tail_flick(self):
         chart=[{'type':'BPM','beat':0,'bpm':120},

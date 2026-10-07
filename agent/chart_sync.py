@@ -25,6 +25,12 @@ def stage_state(image):
 def locate_note_y(image, lane, color='cyan'):
     if image.shape != (720, 1280, 3) or not 0 <= lane <= 6:
         raise ValueError('This probe requires the calibrated 1280x720 layout')
+    if color == 'skill_green':
+        # Separate masks keep a golden head from merging with its green ribbon
+        # into an over-height region. FirstNoteLock still enforces identity.
+        candidates = [y for appearance in ('yellow', 'green')
+                      if (y := locate_note_y(image, lane, appearance)) is not None]
+        return max(candidates) if candidates else None
     left, right, corridor = _corridor(lane)
     roi = image[60:555, left:right]
     blue, green, red = roi[:,:,0], roi[:,:,1], roi[:,:,2]
@@ -32,6 +38,17 @@ def locate_note_y(image, lane, color='cyan'):
         mask = (blue > 190) & (green > 190) & (red < 180)
     elif color == 'green':
         mask = (green > 220) & (blue < 200) & (red < 200)
+    elif color == 'orange':
+        # SP right arrows use orange, including pale orange edges. Require
+        # both chroma differences to exclude gold skills and ordinary flicks.
+        mask = ((red > 220) & (green > 110) &
+                (red.astype(np.int16)-green > 25) &
+                (green.astype(np.int16)-blue > 20))
+    elif color == 'purple':
+        # SP left arrows are violet rather than the ordinary magenta flick.
+        mask = ((blue > 210) & (red > 145) &
+                (blue.astype(np.int16)-red > 15) &
+                (red.astype(np.int16)-green > 15))
     elif color in ('yellow', 'skill'):
         # Skill taps have a gold head instead of the ordinary cyan head.
         # Require yellow chroma rather than matching white outlines/highlights.

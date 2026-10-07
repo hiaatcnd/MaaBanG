@@ -9,6 +9,92 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_recorded_sp_directional_heads_lock_before_the_first_arrow(self):
+        from PIL import Image
+        from chart_timing import first_anchor
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        for direction in ('left','right'):
+            data=json.loads((root/f'directional_{direction}.json').read_text(encoding='utf8'))
+            for online in (False,True):
+                with self.subTest(direction=direction,online=online):
+                    _,lane,color=first_anchor(data['chart'],online=online)
+                    lock=FirstNoteLock(travel_scale=.245)
+                    result=None
+                    for row in data['trace']:
+                        y=row['y']
+                        if 'image' in row:
+                            frame=np.asarray(Image.open(root/row['image']).convert('RGB'))[:,:,::-1].copy()
+                            self.assertEqual(locate_note_y(frame,lane,color),y)
+                        result=lock.observe(row['time'],y)
+                        if result:break
+                    self.assertIsNotNone(result)
+                    remaining=result['crossing']-row['time']-row['capture_ms']/2000
+                    self.assertGreater(remaining,.100)
+
+    def test_sp_arrow_colors_exclude_other_note_heads(self):
+        arrow_colors={'orange':[120,180,255],'purple':[255,160,200]}
+        others=([255,255,255],[255,255,100],[80,255,100],[253,230,254],[50,245,255])
+        for name,bgr in arrow_colors.items():
+            for other in (*others,arrow_colors['purple' if name=='orange' else 'orange']):
+                frame=np.zeros((720,1280,3),dtype=np.uint8)
+                frame[300:305,610:670]=other
+                self.assertIsNone(locate_note_y(frame,3,name))
+            frame[300:305,610:670]=bgr
+            self.assertEqual(locate_note_y(frame,3,name),300)
+
+    def test_online_skill_hold_accepts_gold_and_green_but_not_other_heads(self):
+        for color in ([50,245,255],[80,255,100],[180,255,220]):
+            with self.subTest(color=color):
+                lock=FirstNoteLock(travel_scale=.245)
+                result=None
+                for y in (70,95,125,165,215,275,335):
+                    frame=np.zeros((720,1280,3),dtype=np.uint8)
+                    frame[y:y+5,620:660]=color
+                    observed=locate_note_y(frame,3,'skill_green')
+                    self.assertEqual(observed,y)
+                    result=lock.observe(2-.245*np.log(590/y),observed)
+                    if result:break
+                self.assertIsNotNone(result)
+                self.assertAlmostEqual(result['crossing'],2)
+        for color in ([255,255,255],[255,255,100],[253,230,254]):
+            frame=np.zeros((720,1280,3),dtype=np.uint8)
+            frame[390:395,600:680]=color
+            self.assertIsNone(locate_note_y(frame,3,'skill_green'))
+
+    def test_online_skill_hold_does_not_merge_ribbon_or_switch_to_tail(self):
+        lock=FirstNoteLock(travel_scale=.245)
+        for y in (100,125,160,200):
+            frame=np.zeros((720,1280,3),dtype=np.uint8)
+            frame[y-30:y,620:660]=[80,255,100]
+            frame[y:y+5,620:660]=[50,245,255]
+            observed=locate_note_y(frame,3,'skill_green')
+            self.assertEqual(observed,y)
+            self.assertIsNone(lock.observe(2-.245*np.log(590/y),observed))
+        frame=np.zeros((720,1280,3),dtype=np.uint8)
+        frame[100:105,620:660]=[80,255,100]
+        with self.assertRaisesRegex(ValueError,'changed identity'):
+            lock.observe(2-.245*np.log(590/240),locate_note_y(frame,3,'skill_green'))
+
+    def test_recorded_skill_hold_locks_from_its_head_before_green_tail(self):
+        from PIL import Image
+        from chart_timing import first_anchor
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        data=json.loads((root/'eat_past_skill_hold.json').read_text(encoding='utf8'))
+        for online in (False,True):
+            _,lane,color=first_anchor(data['chart'],online=online)
+            lock=FirstNoteLock(travel_scale=.245)
+            result=None
+            for row in data['trace']:
+                y=row['y']
+                if 'image' in row:
+                    frame=np.asarray(Image.open(root/row['image']).convert('RGB'))[:,:,::-1].copy()
+                    self.assertEqual(locate_note_y(frame,lane,color),y)
+                    self.assertIsNone(locate_note_y(frame,lane,'green'))
+                result=lock.observe(row['time'],y)
+                if result:break
+            self.assertIsNotNone(result)
+            self.assertGreater(result['crossing']-row['time'],.140)
+
     def test_recorded_online_skill_head_uses_cyan_appearance(self):
         from PIL import Image
         frame=np.asarray(Image.open(Path(__file__).parent/
@@ -139,6 +225,7 @@ class ChartSyncTests(unittest.TestCase):
                 y=locate_note_y(frame,0,'green')
                 # Previously the first bright head at 220 became a later one at 92.
                 self.assertAlmostEqual(y,row['y'],delta=2)
+                self.assertAlmostEqual(locate_note_y(frame,0,'skill_green'),row['y'],delta=2)
             fitted=lock.observe(row['t'],y)
             if fitted:break
         self.assertIsNotNone(fitted)

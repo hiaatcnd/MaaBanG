@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT/'agent'))
 from task_logging import log, finish, failure
 from auto_live import AutoLive
 from chart_live import ChartLive, ChartLiveFlow
+from chart_policy import ChartOptions
 from costume_unlock import FlowError
 from direct_chart_live import DirectChartLive
 from costume_unlock import UnlockDefault3DCostumes
@@ -31,7 +32,7 @@ class TaskLoggingTests(unittest.TestCase):
             for worker_ok in (True, False):
                 with self.subTest(mode=mode, worker_ok=worker_ok), tempfile.TemporaryDirectory() as folder:
                     flow=SimpleNamespace(
-                        settings=SimpleNamespace(mode=mode,jitter='small'),
+                        settings=ChartOptions.parse({'mode':mode,'jitter':'small'}),
                         output=Path(folder), report={'completed_rounds':0,'attempts':1},
                         controller=SimpleNamespace(info={'test':True}))
                     for name in ('wait_ready','disable_mv','check_stop','save_frame','pause',
