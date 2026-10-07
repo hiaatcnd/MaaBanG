@@ -1,0 +1,34 @@
+"""Explicit metadata refresh task; never interacts with the game controller."""
+from pathlib import Path
+
+from maa.custom_action import CustomAction
+
+from catalog_update import playable, refresh_catalog
+
+
+class UpdateSongCatalog(CustomAction):
+    def run(self, context, argv):
+        agent = Path(__file__).resolve().parent
+        # Release: app/agent + app/interface.json. Development: agent + assets.
+        interface = agent.parent/'interface.json'
+        if not interface.is_file():
+            interface = agent.parent/'assets/interface.json'
+        try:
+            print('[更新歌曲列表] 正在下载歌曲和乐队资料……', flush=True)
+            catalog, recognition = refresh_catalog(
+                agent/'data', interface,
+                check_stop=lambda: self.check_stop(context))
+            from song_catalog import reload_catalog
+            reload_catalog()
+            print(f'[更新歌曲列表] 更新成功：国服可选 {len(playable(catalog["songs"]))} 首，'
+                  f'识别资料 {len(recognition["songs"])} 首。歌曲列表已动态加载。',
+                  flush=True)
+            return True
+        except Exception as exc:
+            print(f'[更新歌曲列表] 更新未完成：{exc}', flush=True)
+            return False
+
+    @staticmethod
+    def check_stop(context):
+        if context.tasker.stopping:
+            raise RuntimeError('任务已停止，未应用更新')

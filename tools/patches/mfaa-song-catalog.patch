@@ -1,0 +1,174 @@
+--- a/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
++++ b/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
+@@ -1960,6 +1960,9 @@
+         }
+ 
+         var callbackName = jObject["name"]?.ToString() ?? string.Empty;
++        if (callbackName == "UpdateSongCatalog" && args.Message.StartsWith(MaaMsg.Node.Action.Succeeded))
++            DispatcherHelper.PostOnMainThread(RefreshSongCatalogOptions);
++
+         var shouldTraceNodeEvent = ShouldTraceNodeEvent(jObject, args.Message);
+         if (CancellationTokenSource?.IsCancellationRequested != true
+             && (shouldTraceNodeEvent || args.Message.Equals("Node.PipelineNode.Starting", StringComparison.Ordinal)))
+@@ -3100,6 +3103,130 @@
+         _taskLoader.LoadTasks(tasks, TasksSource, ref FirstTask, oldDrags);
+     }
+ 
++    public static event Action? SongCatalogOptionsChanged;
++
++    private static bool IsSongCatalogOption(string name) =>
++        name == "演出歌曲" || name.StartsWith("歌曲难度_", StringComparison.Ordinal) ||
++        name == "直接演出歌曲" || name.StartsWith("直接演出难度_", StringComparison.Ordinal) ||
++        name == "谱面挑战歌曲" || name == "谱面协力歌曲" ||
++        Enumerable.Range(1, 3).Any(i => name == $"谱面第{i}首歌曲" ||
++            name.StartsWith($"谱面第{i}首难度_", StringComparison.Ordinal));
++
++    private static bool RemapSongSelections(List<MaaInterface.MaaInterfaceSelectOption>? selections,
++        Dictionary<string, MaaInterface.MaaInterfaceOption> previous,
++        Dictionary<string, MaaInterface.MaaInterfaceOption> current)
++    {
++        var valid = true;
++        foreach (var selection in selections ?? [])
++        {
++            var name = selection.Name ?? "";
++            if (IsSongCatalogOption(name) && previous.TryGetValue(name, out var oldOption) &&
++                oldOption.Cases != null && selection.Index is int index && index >= 0 && index < oldOption.Cases.Count)
++            {
++                var oldCase = oldOption.Cases[index];
++                if (!current.TryGetValue(name, out var newOption) || newOption.Cases == null)
++                    continue;
++                var replacement = newOption.Cases.FindIndex(c => c.Name == oldCase.Name ||
++                    (c.PipelineOverride != null && oldCase.PipelineOverride != null &&
++                     JToken.DeepEquals(JToken.FromObject(c.PipelineOverride), JToken.FromObject(oldCase.PipelineOverride))));
++                selection.Index = replacement;
++                if (replacement < 0) valid = false;
++                else if (oldCase.Option is { Count: 1 } && newOption.Cases[replacement].Option is { Count: 1 } next &&
++                    oldCase.Option[0] != next[0] && selection.SubOptions != null)
++                {
++                    var difficulty = selection.SubOptions.Find(o => o.Name == oldCase.Option[0]);
++                    if (difficulty != null && previous.TryGetValue(oldCase.Option[0], out var oldDifficulty) &&
++                        current.TryGetValue(next[0], out var newDifficulty) && difficulty.Index is int di &&
++                        oldDifficulty.Cases != null && di >= 0 && di < oldDifficulty.Cases.Count)
++                    {
++                        // Add the new profile without discarding remembered choices for other songs.
++                        selection.SubOptions.RemoveAll(o => o.Name == next[0]);
++                        var mapped = newDifficulty.Cases?.FindIndex(c => c.Name == oldDifficulty.Cases[di].Name) ?? -1;
++                        selection.SubOptions.Add(new MaaInterface.MaaInterfaceSelectOption { Name = next[0], Index = mapped });
++                        if (mapped < 0) valid = false;
++                    }
++                }
++            }
++            if (!RemapSongSelections(selection.SubOptions, previous, current)) valid = false;
++        }
++        return valid;
++    }
++
++    private void RefreshSongCatalogOptions()
++    {
++        try
++        {
++            var path = GetInterfaceFilePath();
++            if (path == null || Interface?.Option == null)
++                throw new InvalidOperationException("歌曲选项文件不存在");
++            var updated = LoadMaaInterfaceRecursive(path);
++            if (updated.Option == null || !updated.Option.ContainsKey("演出歌曲"))
++                throw new InvalidOperationException("歌曲选项文件不完整");
++            // Keep the interface/task objects, instance selections and run queue intact.
++            var options = new Dictionary<string, MaaInterface.MaaInterfaceOption>(Interface.Option);
++            foreach (var key in options.Keys.Where(IsSongCatalogOption).ToList())
++                options.Remove(key);
++            foreach (var entry in updated.Option.Where(entry => IsSongCatalogOption(entry.Key)))
++            {
++                entry.Value.Name = entry.Key;
++                options[entry.Key] = entry.Value;
++            }
++            var loadedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
++            foreach (var processor in Processors.Where(p => p.TasksSource.Count > 0))
++            {
++                loadedPaths.Add(processor.InstanceConfiguration.GetConfigFilePath());
++                foreach (var item in processor.TasksSource)
++                {
++                    if (!RemapSongSelections(item.InterfaceItem?.Option, Interface.Option, options))
++                    {
++                        item.IsChecked = false;
++                        processor.AddLog($"{item.Name} 的原歌曲或难度已不可用，请重新选择。", Brushes.OrangeRed, changeColor: false);
++                    }
++                }
++                try
++                {
++                    processor.InstanceConfiguration.SetValue(ConfigurationKeys.TaskItems,
++                        processor.TasksSource.Where(item => !item.IsResourceOptionItem).Select(item => item.InterfaceItem).ToList());
++                }
++                catch (Exception ex)
++                {
++                    processor.AddLog($"歌曲选择已刷新，但配置保存失败：{ex.Message}。下次启动请核对选歌。", Brushes.OrangeRed, changeColor: false);
++                }
++            }
++            // Dormant instances also store indices; migrate them before they are opened.
++            if (Directory.Exists(InstanceConfiguration.InstancesDir))
++                foreach (var file in Directory.EnumerateFiles(InstanceConfiguration.InstancesDir, "*.json"))
++                {
++                    if (loadedPaths.Contains(file)) continue;
++                    try
++                    {
++                        var saved = JObject.Parse(File.ReadAllText(file));
++                        if (saved[ConfigurationKeys.TaskItems] == null) continue;
++                        var config = Processors.FirstOrDefault(p => string.Equals(
++                            p.InstanceConfiguration.GetConfigFilePath(), file, StringComparison.OrdinalIgnoreCase))?.InstanceConfiguration
++                            ?? new InstanceConfiguration(Path.GetFileNameWithoutExtension(file));
++                        if (!config.TryGetValue<List<MaaInterface.MaaInterfaceTask>>(ConfigurationKeys.TaskItems, out var tasks,
++                            new MaaInterfaceSelectAdvancedConverter(false), new MaaInterfaceSelectOptionConverter(false))) continue;
++                        foreach (var task in tasks)
++                            if (!RemapSongSelections(task.Option, Interface.Option, options)) task.Check = false;
++                        config.SetValue(ConfigurationKeys.TaskItems, tasks);
++                    }
++                    catch (Exception ex)
++                    {
++                        AddLog($"实例 {Path.GetFileNameWithoutExtension(file)} 的选歌配置更新失败：{ex.Message}。打开后请重新选择歌曲。", Brushes.OrangeRed, changeColor: false);
++                    }
++                }
++            Interface.Option = options;
++            SongCatalogOptionsChanged?.Invoke();
++            AddLog("歌曲列表已更新并动态加载。", Brushes.ForestGreen, changeColor: false);
++        }
++        catch (Exception ex)
++        {
++            LoggerHelper.Warning($"歌曲选项刷新失败：{ex}");
++            AddLog($"歌曲资料已保存，但界面刷新失败：{ex.Message}。请重新打开 MaaBanG。", Brushes.OrangeRed, changeColor: false);
++        }
++    }
++
+     private void ResetActionFailedCount()
+     {
+         _screencapFailedCount = 0;
+--- a/MFAAvalonia/Views/Pages/TaskQueueView.axaml.cs
++++ b/MFAAvalonia/Views/Pages/TaskQueueView.axaml.cs
+@@ -2845,8 +2845,20 @@
+         SetOption(currentItem, true);
+     }
+ 
++    private void RefreshSongCatalogPanel()
++    {
++        ClearOptionPanelCaches();
++        // Do not open a settings popup merely because metadata changed.
++        if (DataContext is TaskQueueViewModel vm && vm.IsCompactMode && !vm.IsSettingsPopupOpen)
++            return;
++        ReopenActiveTaskPanel();
++    }
++
+     private void OnLoaded(object? sender, RoutedEventArgs e)
+     {
++        MaaProcessor.SongCatalogOptionsChanged -= RefreshSongCatalogPanel;
++        MaaProcessor.SongCatalogOptionsChanged += RefreshSongCatalogPanel;
++        RefreshSongCatalogPanel();
+         TopToolbar.SizeChanged += OnTopToolbarSizeChanged;
+         Dispatcher.UIThread.Post(() => UpdateTopToolbarLayout(true), DispatcherPriority.Render);
+         Dispatcher.UIThread.Post(ClearUnsupportedSelection, DispatcherPriority.Background);
+@@ -2876,6 +2888,7 @@
+ // 在 UserControl 卸载时停止定时器
+     private void OnUnloaded(object? sender, RoutedEventArgs e)
+     {
++        MaaProcessor.SongCatalogOptionsChanged -= RefreshSongCatalogPanel;
+         TopToolbar.SizeChanged -= OnTopToolbarSizeChanged;
+ 
+         UpdateViewModelSubscription(null);

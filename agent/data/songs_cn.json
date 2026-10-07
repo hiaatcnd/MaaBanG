@@ -1,13 +1,13 @@
 {
-  "server": "cn",
-  "server_index": 3,
-  "fetched_at": "2026-10-05T18:30:29.304858+00:00",
+  "fetched_at": "2026-10-07T05:54:07.289661+00:00",
   "sources": [
     "https://bestdori.com/api/songs/all.7.json",
     "https://bestdori.com/api/bands/all.1.json"
   ],
-  "source_sha256": "8a04a9a8a67d2b89dfca9ccbdf0127b4f8fa376943bbd299018737b4b20ee165",
+  "source_sha256": "5bc03af8f8fa8516fef7ef2874f92ca86aca13df461864e640cc22d56196a0f7",
   "bands_source_sha256": "b7739d0139d3ffd29bd872b774336c6428f24b51536bf9c1171481df84f97ea6",
+  "server": "cn",
+  "server_index": 3,
   "songs": [
     {
       "id": "1",
@@ -37609,6 +37609,107 @@
         "780_iinazuke"
       ],
       "url": "https://bestdori.com/info/songs/780"
+    },
+    {
+      "id": "781",
+      "title": "過去を喰らう",
+      "aliases": [
+        "過去を喰らう",
+        "EAT THE PAST"
+      ],
+      "band_id": 45,
+      "band": "MyGO!!!!!",
+      "band_aliases": [
+        "MyGO!!!!!"
+      ],
+      "tag": "anime",
+      "length_seconds": 129.048,
+      "published_at": 1791262800000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 7,
+          "notes": 111,
+          "published_at": 1791262800000,
+          "available": true
+        },
+        "normal": {
+          "level": 14,
+          "notes": 259,
+          "published_at": 1791262800000,
+          "available": true
+        },
+        "hard": {
+          "level": 23,
+          "notes": 694,
+          "published_at": 1791262800000,
+          "available": true
+        },
+        "expert": {
+          "level": 27,
+          "notes": 1032,
+          "published_at": 1791262800000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "781_kako_wo_kurau"
+      ],
+      "url": "https://bestdori.com/info/songs/781"
+    },
+    {
+      "id": "782",
+      "title": "Game Changer",
+      "aliases": [
+        "Game Changer"
+      ],
+      "band_id": 1,
+      "band": "Poppin'Party",
+      "band_aliases": [
+        "Poppin'Party"
+      ],
+      "tag": "normal",
+      "length_seconds": 141.264,
+      "published_at": 1791349200000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 12,
+          "notes": 280,
+          "published_at": 1791349200000,
+          "available": true
+        },
+        "normal": {
+          "level": 16,
+          "notes": 478,
+          "published_at": 1791349200000,
+          "available": true
+        },
+        "hard": {
+          "level": 25,
+          "notes": 830,
+          "published_at": 1791349200000,
+          "available": true
+        },
+        "expert": {
+          "level": 29,
+          "notes": 1250,
+          "published_at": 1791349200000,
+          "available": true
+        },
+        "special": {
+          "level": 30,
+          "notes": 1400,
+          "published_at": 1791349200000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "782_game_changer"
+      ],
+      "url": "https://bestdori.com/info/songs/782"
     },
     {
       "id": "786",
