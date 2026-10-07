@@ -7,13 +7,14 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from task_logging import log, finish, failure
 from auto_live import AutoLive
-from chart_live import ChartLive
+from chart_live import ChartLive, ChartLiveFlow
+from costume_unlock import FlowError
 from direct_chart_live import DirectChartLive
 from costume_unlock import UnlockDefault3DCostumes
 from daily_tasks import ClaimHomeGifts, ClaimHomeMissions, ExchangeMichelle, DailyFreeRecruit
@@ -23,6 +24,51 @@ from update_songs import UpdateSongCatalog
 
 
 class TaskLoggingTests(unittest.TestCase):
+    def test_real_play_chart_logs_without_shadowing_worker_output(self):
+        # Exercise the actual playback orchestration, not a mocked flow.run.
+        # Only the game calls and external worker are replaced.
+        for mode in ('free', 'team', 'coop', 'challenge'):
+            for worker_ok in (True, False):
+                with self.subTest(mode=mode, worker_ok=worker_ok), tempfile.TemporaryDirectory() as folder:
+                    flow=SimpleNamespace(
+                        settings=SimpleNamespace(mode=mode,jitter='small'),
+                        output=Path(folder), report={'completed_rounds':0,'attempts':1},
+                        controller=SimpleNamespace(info={'test':True}))
+                    for name in ('wait_ready','disable_mv','check_stop','save_frame','pause',
+                                 'monitor_online_worker','monitor_chart_worker',
+                                 'submit_online_ready','handle_online_playback_error'):
+                        setattr(flow,name,Mock())
+                    flow.verify_chart_start=Mock(return_value=0)
+                    process=Mock(returncode=0 if worker_ok else 1)
+                    process.poll.return_value=process.returncode
+                    worker_streams=[]
+                    def spawn(command, **kwargs):
+                        destination=Path(command[-1]).parent
+                        (destination/'armed').touch()
+                        (destination/'playback.json').write_text(json.dumps({
+                            'status':'input_complete' if worker_ok else 'error',
+                            'error':'测试演奏进程失败'}),encoding='utf8')
+                        kwargs['stdout'].write('worker output\n')
+                        worker_streams.append(kwargs['stdout'])
+                        return process
+                    selection=SimpleNamespace(song={'title':'测试歌曲'},difficulty='easy')
+                    row={}
+                    with patch('chart_live.subprocess.Popen',side_effect=spawn), \
+                            contextlib.redirect_stdout(io.StringIO()) as output:
+                        if worker_ok:
+                            ChartLiveFlow.play_chart(flow,1,selection,{'duration':1},0,row)
+                        else:
+                            with self.assertRaisesRegex(FlowError,'测试演奏进程失败'):
+                                ChartLiveFlow.play_chart(flow,1,selection,{'duration':1},0,row)
+                    self.assertIn('正在准备演奏进程',output.getvalue())
+                    self.assertIn('已发送开演指令',output.getvalue())
+                    self.assertEqual('谱面输入已完成' in output.getvalue(),worker_ok)
+                    self.assertTrue(worker_streams[0].closed)
+                    self.assertEqual(Path(worker_streams[0].name).read_text(encoding='utf8'),
+                                     'worker output\n')
+                    flow.verify_chart_start.assert_called_once_with(1,selection,0)
+                    process.terminate.assert_not_called()
+
     def test_protocol_prefixes_each_line_and_flushes(self):
         with patch('builtins.print') as output:
             log('[任务] 第一行\n第二行\n', level='warn')
