@@ -137,12 +137,16 @@ def first_anchor(chart, *, online=False):
         if note['type'] in ('BPM', 'System'):
             continue
         p = note.get('connections', [note])[0]
-        color = ('pink' if p.get('flick') or note['type'] == 'Directional'
-                 else 'green' if 'connections' in note else 'cyan')
+        if note['type'] == 'Directional':
+            if note.get('direction') not in ('Left', 'Right'):
+                raise ValueError('Unknown flick direction')
+            color = 'purple' if note['direction'] == 'Left' else 'orange'
+        else:
+            color = ('pink' if p.get('flick') else 'green' if 'connections' in note else 'cyan')
         # Skill changes tap, hold and slide heads. Online skill timing can
         # differ from the solo chart, so retain the ordinary gesture color.
         # Flick appearance still takes precedence over a skill annotation.
-        if p.get('skill') and color != 'pink':
+        if p.get('skill') and color in ('cyan', 'green'):
             color = ('skill_green' if color == 'green' else 'skill') if online else 'yellow'
         heads.append((tempo.seconds(p['beat']), color != 'cyan', p['lane'], color))
     if not heads:

@@ -9,6 +9,39 @@ from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTrac
 
 
 class ChartSyncTests(unittest.TestCase):
+    def test_recorded_sp_directional_heads_lock_before_the_first_arrow(self):
+        from PIL import Image
+        from chart_timing import first_anchor
+        root=Path(__file__).parent/'fixtures/chart_sync'
+        for direction in ('left','right'):
+            data=json.loads((root/f'directional_{direction}.json').read_text(encoding='utf8'))
+            for online in (False,True):
+                with self.subTest(direction=direction,online=online):
+                    _,lane,color=first_anchor(data['chart'],online=online)
+                    lock=FirstNoteLock(travel_scale=.245)
+                    result=None
+                    for row in data['trace']:
+                        y=row['y']
+                        if 'image' in row:
+                            frame=np.asarray(Image.open(root/row['image']).convert('RGB'))[:,:,::-1].copy()
+                            self.assertEqual(locate_note_y(frame,lane,color),y)
+                        result=lock.observe(row['time'],y)
+                        if result:break
+                    self.assertIsNotNone(result)
+                    remaining=result['crossing']-row['time']-row['capture_ms']/2000
+                    self.assertGreater(remaining,.100)
+
+    def test_sp_arrow_colors_exclude_other_note_heads(self):
+        arrow_colors={'orange':[120,180,255],'purple':[255,160,200]}
+        others=([255,255,255],[255,255,100],[80,255,100],[253,230,254],[50,245,255])
+        for name,bgr in arrow_colors.items():
+            for other in (*others,arrow_colors['purple' if name=='orange' else 'orange']):
+                frame=np.zeros((720,1280,3),dtype=np.uint8)
+                frame[300:305,610:670]=other
+                self.assertIsNone(locate_note_y(frame,3,name))
+            frame[300:305,610:670]=bgr
+            self.assertEqual(locate_note_y(frame,3,name),300)
+
     def test_online_skill_hold_accepts_gold_and_green_but_not_other_heads(self):
         for color in ([50,245,255],[80,255,100],[180,255,220]):
             with self.subTest(color=color):
