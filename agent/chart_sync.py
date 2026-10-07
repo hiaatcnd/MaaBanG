@@ -25,6 +25,12 @@ def stage_state(image):
 def locate_note_y(image, lane, color='cyan'):
     if image.shape != (720, 1280, 3) or not 0 <= lane <= 6:
         raise ValueError('This probe requires the calibrated 1280x720 layout')
+    if color == 'skill_green':
+        # Separate masks keep a golden head from merging with its green ribbon
+        # into an over-height region. FirstNoteLock still enforces identity.
+        candidates = [y for appearance in ('yellow', 'green')
+                      if (y := locate_note_y(image, lane, appearance)) is not None]
+        return max(candidates) if candidates else None
     left, right, corridor = _corridor(lane)
     roi = image[60:555, left:right]
     blue, green, red = roi[:,:,0], roi[:,:,1], roi[:,:,2]
