@@ -219,9 +219,9 @@ class ChartLiveFlow(LiveFlow):
                 'jitter':self.settings.jitter,'seed':secrets.randbits(32),
                 'start_mode':'online' if online else 'click'}
         (destination/'config.json').write_text(json.dumps(config),encoding='utf8')
-        log=(destination/'worker.log').open('w',encoding='utf8')
+        worker_log=(destination/'worker.log').open('w',encoding='utf8')
         process=subprocess.Popen([sys.executable,'-X','utf8',str(Path(__file__).with_name('chart_worker.py')),
-                                  str(destination/'config.json')],stdout=log,stderr=subprocess.STDOUT,
+                                  str(destination/'config.json')],stdout=worker_log,stderr=subprocess.STDOUT,
                                   creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         try:
             deadline=time.monotonic()+60
@@ -276,7 +276,7 @@ class ChartLiveFlow(LiveFlow):
                 except subprocess.TimeoutExpired:
                     process.terminate()
                     process.wait(timeout=5)
-            log.close()
+            worker_log.close()
 
     def monitor_chart_worker(self, destination):
         """Optional handling of mode-specific confirmations before notes start."""
