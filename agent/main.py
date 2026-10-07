@@ -24,15 +24,30 @@ def main():
     from chart_live import ChartLive
     from direct_chart_live import DirectChartLive
     from live_presets import LivePresets
+    from update_songs import UpdateSongCatalog
     import mining
 
+    from song_catalog import reload_catalog
+
+    def catalog_action(name, action):
+        class WithCurrentCatalog(action):
+            def run(self, context, argv):
+                try:
+                    reload_catalog()
+                except Exception as exc:
+                    print(f'[歌曲列表] {exc}', flush=True)
+                    return False
+                return super().run(context, argv)
+        AgentServer.custom_action(name)(WithCurrentCatalog)
+
     AgentServer.custom_action("UnlockDefault3DCostumes")(costume_unlock.UnlockDefault3DCostumes)
-    AgentServer.custom_action("AutoLive")(AutoLive)
-    AgentServer.custom_action("ChartLive")(ChartLive)
-    AgentServer.custom_action("DirectChartLive")(DirectChartLive)
+    catalog_action("AutoLive", AutoLive)
+    catalog_action("ChartLive", ChartLive)
+    catalog_action("DirectChartLive", DirectChartLive)
     AgentServer.custom_action("LivePresets")(LivePresets)
+    AgentServer.custom_action("UpdateSongCatalog")(UpdateSongCatalog)
     for name in ("MineFullCombo", "MineStories", "MineChallenges"):
-        AgentServer.custom_action(name)(getattr(mining, name))
+        catalog_action(name, getattr(mining, name))
     for name in ("ClaimHomeGifts", "ClaimHomeMissions", "ExchangeMichelle", "DailyFreeRecruit"):
         AgentServer.custom_action(name)(getattr(daily_tasks, name))
     Toolkit.init_option("./")

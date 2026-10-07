@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.6.10",
+    "version": "v0.6.11",
     "controller": [
         {
             "name": "安卓端",
@@ -103,6 +103,12 @@
             "option": [
                 "贴纸交换分类"
             ]
+        },
+        {
+            "name": "更新歌曲列表",
+            "entry": "UpdateSongCatalog",
+            "default_check": false,
+            "description": "联网更新国服可选歌曲、各歌曲难度与全服识别资料，完成后自动刷新列表。下载或校验失败时保留原列表。不会操作游戏或下载谱面。"
         },
         {
             "name": "挖矿：自由演出 Full Combo",
@@ -11268,6 +11274,34 @@
                         "LV_Song": {
                             "attach": {
                                 "value": "許婚っきゅん"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "過去を喰らう"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "option": [
+                        "歌曲难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "LV_Song": {
+                            "attach": {
+                                "value": "Game Changer"
                             }
                         }
                     }
@@ -22517,6 +22551,34 @@
                     "label": "許婚っきゅん · Hello, Happy World！"
                 },
                 {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "781"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "option": [
+                        "谱面第1首难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "CL_song1": {
+                            "attach": {
+                                "value": "782"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "pipeline_override": {
                         "CL_song1": {
@@ -33184,6 +33246,34 @@
                         "谱面第2首难度_easy_normal_hard_expert"
                     ],
                     "label": "許婚っきゅん · Hello, Happy World！"
+                },
+                {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "781"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "option": [
+                        "谱面第2首难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "CL_song2": {
+                            "attach": {
+                                "value": "782"
+                            }
+                        }
+                    }
                 },
                 {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
@@ -43855,6 +43945,34 @@
                     "label": "許婚っきゅん · Hello, Happy World！"
                 },
                 {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "781"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "option": [
+                        "谱面第3首难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "CL_song3": {
+                            "attach": {
+                                "value": "782"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "pipeline_override": {
                         "CL_song3": {
@@ -52325,6 +52443,28 @@
                     "label": "許婚っきゅん · Hello, Happy World！"
                 },
                 {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "pipeline_override": {
+                        "CL_cp_song": {
+                            "attach": {
+                                "value": "781"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "pipeline_override": {
+                        "CL_cp_song": {
+                            "attach": {
+                                "value": "782"
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
                     "pipeline_override": {
                         "CL_cp_song": {
@@ -60591,6 +60731,28 @@
                         }
                     },
                     "label": "許婚っきゅん · Hello, Happy World！"
+                },
+                {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "pipeline_override": {
+                        "CL_coop_song": {
+                            "attach": {
+                                "value": "781"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "pipeline_override": {
+                        "CL_coop_song": {
+                            "attach": {
+                                "value": "782"
+                            }
+                        }
+                    }
                 },
                 {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
@@ -71444,6 +71606,34 @@
                         "直接演出难度_easy_normal_hard_expert"
                     ],
                     "label": "許婚っきゅん · Hello, Happy World！"
+                },
+                {
+                    "name": "過去を喰らう",
+                    "label": "過去を喰らう · MyGO!!!!!",
+                    "option": [
+                        "直接演出难度_easy_normal_hard_expert"
+                    ],
+                    "pipeline_override": {
+                        "DL_song1": {
+                            "attach": {
+                                "value": "781"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Game Changer",
+                    "label": "Game Changer · Poppin'Party",
+                    "option": [
+                        "直接演出难度_easy_normal_hard_expert_special"
+                    ],
+                    "pipeline_override": {
+                        "DL_song1": {
+                            "attach": {
+                                "value": "782"
+                            }
+                        }
+                    }
                 },
                 {
                     "name": "ときめきエクスペリエンス！ (月岛麻里奈ver.) [786]",
