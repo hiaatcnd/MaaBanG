@@ -20,7 +20,7 @@ def update(interface):
              option=['挖矿阅读小故事','挖矿阅读回忆','挖矿练习星级','挖矿练习满级']),
         dict(name='挖矿：舞台挑战',entry='MineChallenges',default_check=False,
              description=TASK_DESCRIPTIONS['MineChallenges'],
-             option=['挖矿舞台类型','挖矿挑战目标','挖矿每首火数','挖矿火不足策略','挖矿最大演出数'])]
+             option=['挖矿舞台类型','挖矿挑战目标','挖矿舞台避免FullCombo','挖矿每首火数','挖矿火不足策略','挖矿最大演出数'])]
     names = {t['entry'] for t in tasks}
     interface['task'] = [t for t in interface['task'] if t['entry'] not in names]+tasks
     options = interface['option']
@@ -46,6 +46,10 @@ def update(interface):
         description=OPTION_DESCRIPTIONS['挖矿挑战目标'],
         cases=[dict(name=name,pipeline_override={NODES['challenge_target']:{'attach':{'value':value}}})
                for name,value in [('未完成','uncleared'),('未满星','not_full_stars')]])
+    options['挖矿舞台避免FullCombo'] = dict(type='select',default_case='关',
+        description=OPTION_DESCRIPTIONS['挖矿舞台避免FullCombo'],
+        cases=[dict(name=name,pipeline_override={NODES['avoid_full_combo']:{'attach':{'value':value}}})
+               for name,value in [('关',False),('开',True)]])
     options.pop('挖矿材料解锁',None)
     options['挖矿练习满级'] = dict(type='select',label='练习至满级',default_case='关闭',
         description=OPTION_DESCRIPTIONS['挖矿练习满级'],
@@ -64,6 +68,7 @@ def update(interface):
         for name in task['option']:
             option=options[name]
             label={'挖矿练习星级':'成员星级','挖矿练习满级':'练习至满级',
+                   '挖矿舞台避免FullCombo':'避免 Full Combo',
                    '挖矿最大演出数':'最大演出次数'}.get(name,name.removeprefix('挖矿'))
             option['label']=label
             for field in option.get('inputs',[]):

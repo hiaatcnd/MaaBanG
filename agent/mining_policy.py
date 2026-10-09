@@ -5,7 +5,8 @@ import numpy as np
 
 DIFFICULTIES = ('easy', 'normal', 'hard', 'expert', 'special')
 DEFAULTS = dict(max_rounds='', stories=True, memories=True, practice=False,
-                unlock=False, stars='1,2,3', stage='main', challenge_target='uncleared', fire=0, shortage='stop')
+                unlock=False, stars='1,2,3', stage='main', challenge_target='uncleared', fire=0, shortage='stop',
+                avoid_full_combo=False)
 NODES = {key: 'MN_' + key for key in DEFAULTS}
 DIFFICULTY_NODES = {difficulty:'MN_difficulty_'+difficulty for difficulty in DIFFICULTIES}
 STAR_NODES = {stars:f'MN_star_{stars}' for stars in range(1,6)}
@@ -24,6 +25,7 @@ class MiningOptions:
     fire: int
     shortage: str
     challenge_target: str
+    avoid_full_combo: bool = False
 
     @classmethod
     def parse(cls, data):
@@ -38,6 +40,8 @@ class MiningOptions:
         for key in ('stories', 'memories', 'practice', 'unlock'):
             if not isinstance(values[key], bool):
                 raise ValueError(f'{key} 必须为布尔值')
+        if not isinstance(values['avoid_full_combo'], bool):
+            raise ValueError('避免 Full Combo 必须为开或关')
         raw_stars = values['stars']
         if not isinstance(raw_stars, str) or (raw_stars and not re.fullmatch(r'[1-5](?:,[1-5])*', raw_stars)):
             raise ValueError('成员星级请用英文逗号分隔，例如 1,2,3')
@@ -56,7 +60,8 @@ class MiningOptions:
         if shortage not in ('stop','items'):
             raise ValueError('火不足时请选择停止或使用回复道具')
         return cls(limit, *(values[k] for k in ('stories', 'memories', 'practice', 'unlock')),
-                   stars, values['stage'],tuple(d for d in DIFFICULTIES if d in difficulties),int(fire),shortage,values['challenge_target'])
+                   stars, values['stage'],tuple(d for d in DIFFICULTIES if d in difficulties),int(fire),shortage,
+                   values['challenge_target'],values['avoid_full_combo'])
 
 
 def challenge_star_count(image):

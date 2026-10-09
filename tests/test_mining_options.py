@@ -10,10 +10,11 @@ from unittest.mock import Mock,patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
-from mining import MineStories
+from mining import MineStories, MineChallenges
+from mining_live import MiningLiveFlow, ChallengeMiningFlow
 from mining_policy import MiningOptions,STAR_NODES
 from mining_stories import StoryMiningFlow
-from chart_policy import ChartOptions
+from chart_policy import ChartOptions, ChartSelection
 
 
 def merge(target,override):
@@ -88,6 +89,63 @@ class MiningOptionTests(unittest.TestCase):
         self.assertIsNone(ChartOptions.parse({}).max_rounds)
         self.assertEqual(MiningOptions.parse({'max_rounds':'2'}).max_rounds,2)
         self.assertEqual(ChartOptions.parse({'max_rounds':'2'}).max_rounds,2)
+
+    def test_stage_avoid_full_combo_defaults_and_strict_boolean(self):
+        self.assertIs(MiningOptions.parse({}).avoid_full_combo,False)
+        self.assertIs(self.nodes['MN_avoid_full_combo']['attach']['value'],False)
+        option=self.interface['option']['挖矿舞台避免FullCombo']
+        self.assertEqual(option['default_case'],'关')
+        for task in self.interface['task']:
+            if task['entry'] in ('MineChallenges','MineFullCombo','MineStories'):
+                self.assertEqual('挖矿舞台避免FullCombo' in task['option'],task['entry']=='MineChallenges')
+        for value in ('false','true',0,1,None):
+            with self.subTest(value=value),self.assertRaisesRegex(ValueError,'避免 Full Combo'):
+                MiningOptions.parse({'avoid_full_combo':value})
+
+    def test_stage_ui_option_reaches_playback_worker(self):
+        option=self.interface['option']['挖矿舞台避免FullCombo']
+        for stage in ('main','special'):
+            # Check pipeline defaults, old resources missing the node, and both UI choices.
+            for choice in ('default','legacy','关','开'):
+                with self.subTest(stage=stage,choice=choice),tempfile.TemporaryDirectory() as folder:
+                    enabled=choice=='开'
+                    nodes=copy.deepcopy(self.nodes)
+                    nodes['MN_stage']['attach']['value']=stage
+                    if choice=='legacy':
+                        nodes.pop('MN_avoid_full_combo')
+                    for case in option['cases']:
+                        if case['name']==choice:merge(nodes,case['pipeline_override'])
+                    context=SimpleNamespace(get_node_data=nodes.get,tasker=SimpleNamespace(
+                        controller=SimpleNamespace(info={}),stopping=False))
+                    configs=[]
+                    def worker(args,**kwargs):
+                        config_path=Path(args[-1])
+                        configs.append(json.loads(config_path.read_text(encoding='utf8')))
+                        (config_path.parent/'armed').write_text('ready')
+                        (config_path.parent/'playback.json').write_text('{"status":"input_complete"}')
+                        return SimpleNamespace(poll=lambda:0,returncode=0)
+                    def play(flow):
+                        self.assertEqual(flow.mining.stage,stage)
+                        self.assertIs(flow.report['options']['avoid_full_combo'],enabled)
+                        for name in ('wait_ready','disable_mv','save_frame'):
+                            setattr(flow,name,Mock())
+                        flow.verify_chart_start=Mock(return_value=None)
+                        flow.play_chart(1,ChartSelection('306','expert'),{'duration':120},0,{})
+                        flow.report['status']='max_rounds_reached'
+                    with patch('mining.Path',return_value=Path(folder)),patch.object(
+                            ChallengeMiningFlow,'run',play),patch('chart_live.subprocess.Popen',side_effect=worker):
+                        self.assertTrue(MineChallenges().run(context,None))
+                    self.assertEqual(len(configs),1)
+                    self.assertIs(configs[0]['avoid_full_combo'],enabled)
+                    self.assertEqual(configs[0]['chart']['duration'],120)
+
+    def test_stage_option_does_not_disable_fc_mining(self):
+        for enabled in (False,True):
+            with self.subTest(enabled=enabled),tempfile.TemporaryDirectory() as folder:
+                context=SimpleNamespace(tasker=SimpleNamespace(controller=SimpleNamespace(info={})))
+                flow=MiningLiveFlow(context,MiningOptions.parse({'avoid_full_combo':enabled}),folder)
+                self.assertIs(flow.settings.avoid_full_combo,False)
+                self.assertIs(flow.report['options']['avoid_full_combo'],False)
 
 
 if __name__=='__main__':unittest.main()
