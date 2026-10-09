@@ -29,7 +29,7 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.6.16-ci' }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.6.17-ci' }
           python tools/install.py $version
           python tools/verify_song_interface.py
       - name: Test refreshed catalogs and release sources

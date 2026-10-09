@@ -66,6 +66,11 @@
             "value": "uncleared"
         }
     },
+    "MN_avoid_full_combo": {
+        "attach": {
+            "value": false
+        }
+    },
     "MN_SongFilter": {
         "recognition": "OCR",
         "roi": [

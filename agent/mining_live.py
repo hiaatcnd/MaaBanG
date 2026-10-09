@@ -1,6 +1,6 @@
 """Free-live FC mining and stage challenge progression."""
 from task_logging import log
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import time
 import re
 import numpy as np
@@ -17,7 +17,7 @@ class MiningLiveFlow(ChartLiveFlow):
         super().__init__(context, ChartOptions.parse(dict(jitter='precise', fire=options.fire,
                                                          shortage=options.shortage)), output)
         self.mining = options
-        self.report['options'] = dict(jitter='precise',shortage=options.shortage)
+        self.report['options'] = dict(jitter='precise',shortage=options.shortage,avoid_full_combo=False)
         self.report.update(mining_options={**{k:v for k,v in asdict(options).items() if k!='fire'}, 'stars': sorted(options.stars)},
                            scanned=[], skipped=[], full_combos=[], attempted=0)
         self.scan_initialized = False
@@ -311,6 +311,11 @@ class MiningLiveFlow(ChartLiveFlow):
 
 
 class ChallengeMiningFlow(MiningLiveFlow):
+    def __init__(self, context, options, output):
+        super().__init__(context, options, output)
+        self.settings = replace(self.settings, avoid_full_combo=options.avoid_full_combo)
+        self.report['options']['avoid_full_combo'] = self.settings.avoid_full_combo
+
     def select_stage_kind(self):
         self.wait('MN_ChallengeSelect')
         expected = 'MN_MainStage' if self.mining.stage == 'main' else 'MN_SpecialStage'

@@ -18,6 +18,8 @@ def main():
     parser.add_argument('--unlock',action='store_true')
     parser.add_argument('--stars',default='1,2,3')
     parser.add_argument('--stage',choices=['main','special'],default='main')
+    parser.add_argument('--avoid-full-combo',action=argparse.BooleanOptionalAction,default=False,
+                        help='Avoid Full Combo in stage challenges only (default: disabled)')
     parser.add_argument('--difficulties',nargs='*',choices=['easy','normal','hard','expert','special'],
                         default=['easy','normal','hard','expert','special'])
     parser.add_argument('--no-stories',action='store_true')
@@ -28,7 +30,7 @@ def main():
     values = dict(max_rounds=args.max_rounds,practice=args.practice,unlock=args.unlock,
                   stars=args.stars,stage=args.stage,stories=not args.no_stories,memories=not args.no_memories,
                   difficulties=args.difficulties)
-    values.update(shortage=args.shortage)
+    values.update(shortage=args.shortage,avoid_full_combo=args.avoid_full_combo)
     options = MiningOptions.parse(values)
     from maa.resource import Resource
     from maa.controller import AdbController
