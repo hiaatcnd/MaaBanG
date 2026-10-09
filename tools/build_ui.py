@@ -32,6 +32,7 @@ def build_ui():
         subprocess.run(['git', 'apply', '-'], input=patch_bytes, cwd=source_dir, check=True)
     output = cache / 'ui-build'
     shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGUpdate.cs')
+    shutil.copy2(ROOT / 'tools/MaaBanGSongCatalog.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGSongCatalog.cs')
     dotnet = os.environ.get('MAABANG_DOTNET', 'dotnet')
     subprocess.run([dotnet, 'build', str(source_dir / 'MFAAvalonia/MFAAvalonia.csproj'),
                     '-c', 'Release', '-r', 'win-x64', '-o', str(output),

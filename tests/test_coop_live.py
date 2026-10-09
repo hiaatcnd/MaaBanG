@@ -1,3 +1,4 @@
+from interface_test_support import load_interface
 """Cooperative room regression checks against captured game screens."""
 import tempfile
 import json
@@ -27,7 +28,7 @@ class CoopTests(unittest.TestCase):
         self.assertEqual((settings.coop_song,settings.coop_room,settings.coop_room_group),('361','legend','special'))
 
     def test_coop_and_cp_song_dropdowns_include_cn_catalog_and_write_distinct_parameters(self):
-        interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
+        interface=load_interface()
         for name,key in [('谱面协力歌曲','coop_song'),('谱面挑战歌曲','cp_song')]:
             option=interface['option'][name]
             self.assertEqual(option['type'],'select')

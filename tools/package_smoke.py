@@ -15,6 +15,11 @@ assert Path("MFAAvalonia.exe").is_file()
 assert {p.name for p in package.parent.glob('*.exe')} == {'MaaBanG.exe'}
 assert package.name == 'app'
 assert Path(interface['icon']).is_file()
+bindings = json.loads(Path('interface.songs.json').read_text(encoding='utf8'))
+assert bindings['version'] == 1
+assert bindings['catalog'] == 'agent/data/songs_cn.json'
+assert Path(bindings['catalog']).is_file()
+assert not interface['option']['演出歌曲']['cases']
 from user_data import data_root
 assert Path(os.environ["TEMP"]).resolve() == Path.home() / ".maabang" / "temp"
 from chart_store import ChartStore

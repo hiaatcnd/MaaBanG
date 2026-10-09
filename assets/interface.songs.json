@@ -1,0 +1,52 @@
+{
+    "version": 1,
+    "catalog": "../agent/data/songs_cn.json",
+    "default_case": "SAVIOR OF SONG",
+    "selectors": {
+        "演出歌曲": {
+            "song_node": "LV_Song",
+            "difficulty_node": "LV_Difficulty",
+            "difficulty_prefix": "歌曲难度_",
+            "value": "key",
+            "order": "catalog"
+        },
+        "谱面第1首歌曲": {
+            "song_node": "CL_song1",
+            "difficulty_node": "CL_difficulty1",
+            "difficulty_prefix": "谱面第1首难度_",
+            "value": "id",
+            "order": "chart"
+        },
+        "谱面第2首歌曲": {
+            "song_node": "CL_song2",
+            "difficulty_node": "CL_difficulty2",
+            "difficulty_prefix": "谱面第2首难度_",
+            "value": "id",
+            "order": "chart"
+        },
+        "谱面第3首歌曲": {
+            "song_node": "CL_song3",
+            "difficulty_node": "CL_difficulty3",
+            "difficulty_prefix": "谱面第3首难度_",
+            "value": "id",
+            "order": "chart"
+        },
+        "直接演出歌曲": {
+            "song_node": "DL_song1",
+            "difficulty_node": "DL_difficulty1",
+            "difficulty_prefix": "直接演出难度_",
+            "value": "id",
+            "order": "chart"
+        },
+        "谱面挑战歌曲": {
+            "song_node": "CL_cp_song",
+            "value": "id",
+            "order": "chart"
+        },
+        "谱面协力歌曲": {
+            "song_node": "CL_coop_song",
+            "value": "id",
+            "order": "chart"
+        }
+    }
+}

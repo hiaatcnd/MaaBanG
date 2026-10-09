@@ -1,3 +1,4 @@
+from interface_test_support import load_interface
 import json
 from pathlib import Path
 import sys
@@ -112,7 +113,7 @@ class ChartLiveTests(unittest.TestCase):
         self.assertIsNone(ChartOptions.parse({'max_rounds':''}).max_rounds)
 
     def test_every_song_and_difficulty_is_exposed_in_each_slot(self):
-        interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
+        interface=load_interface()
         for slot in range(1,4):
             cases=interface['option'][f'谱面第{slot}首歌曲']['cases']
             self.assertEqual(len(cases),len(BY_ID))
@@ -201,7 +202,8 @@ class ChartLiveTests(unittest.TestCase):
             f.snap=Mock();f.tap=Mock();f.tap_hit=Mock();f.pause=Mock()
             f.fire_balance=Mock(side_effect=[14,15])
             f.hit_text=Mock(return_value=object())
-            f.read_integer=Mock(side_effect=[14,14,5462,425,15,14])
+            f.refill_items=Mock(return_value=[{'item':'小型','gain':1,'inventory_before':5462,'y':227}])
+            f.read_integer=Mock(side_effect=[14,14,15,15,14])
             f.text=Mock(side_effect=['将要回复LIVE BOOST。 确认吗？','LIVE BOOST已回复1！'])
             self.assertTrue(f.refill_fire(15))
             self.assertEqual([c.args for c in f.tap.call_args_list],[(1150,39),(766,227),(770,602)])
@@ -218,7 +220,8 @@ class ChartLiveTests(unittest.TestCase):
             f.snap=Mock();f.tap=Mock();f.tap_hit=Mock()
             f.fire_balance=Mock(return_value=14)
             f.hit_text=Mock(return_value=object())
-            f.read_integer=Mock(side_effect=[14,14,5462,425,15,14])
+            f.refill_items=Mock(return_value=[{'item':'小型','gain':1,'inventory_before':5462,'y':227}])
+            f.read_integer=Mock(side_effect=[14,14,15,15,14])
             f.text=Mock(return_value='unexpected popup')
             with self.assertRaisesRegex(RuntimeError,'确认框'):
                 f.refill_fire(15)

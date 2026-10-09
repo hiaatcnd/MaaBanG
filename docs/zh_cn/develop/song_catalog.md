@@ -4,10 +4,12 @@
 
 ## 文件与刷新
 
-- `agent/data/songs_cn.json`：离线目录，包含 ID、中国服名称、其他区服名称别名、演奏乐队、分类、长度、发行/关闭时间、各难度等级及音符数、封面资源名和来源链接。
+- `agent/data/songs_cn.json`：界面和 Agent 共用的唯一国服曲库，包含 ID、中国服名称、其他区服名称别名、演奏乐队、分类、长度、发行/关闭时间、各难度等级及音符数、封面资源名和来源链接。
+- `assets/interface.json`：任务、普通设置和选歌入口；不保存展开后的歌曲列表或逐曲难度关联。
+- `assets/interface.songs.json`：MaaBanG 客户端的选歌绑定配置，声明曲库相对路径、默认歌曲，以及七个入口各自的参数节点、排序、歌曲值类型和难度前缀；不复制歌曲数据。
 - `agent/data/songs_all.json`：全服离线匹配目录，包含 Bestdori 全部歌曲的 ID、各服名称、乐队及谱面等级和音符数，不按国服发布时间筛选。只用于团队最终歌曲和课题巡演固定歌曲识别，不生成选歌选项；其中难度 `available` 表示存在谱面元数据，不表示中国服已开放。
 - `docs/data/songs_cn.csv`：可阅读的目录表格。
-- `tools/update_song_catalog.py`：请求两个批量接口，刷新上述文件及 `assets/interface.json` 的歌曲和联动难度选项。
+- `tools/update_song_catalog.py`：请求两个批量接口，刷新两份曲库和 CSV；不再重写界面配置。
 
 ```powershell
 python tools/update_song_catalog.py
@@ -27,7 +29,15 @@ Bestdori 前端的区服顺序为 `jp, en, tw, cn, kr`，中国服索引是 3。
 
 ## 界面与运行
 
-歌曲 case 引用对应的子难度配置，切换歌曲时只显示该歌开放的难度。EXIST 仅 Easy–Expert，SAVIOR OF SONG 包含 Special。保留旧的难度配置定义兼容已有配置，任务顶层不再显示独立的全难度选择器。旧配置仍指定不可用 Special 时，Agent 回退 Expert。
+客户端通过 `tools/MaaBanGSongCatalog.cs` 在初始化和更新后刷新时读取同目录的 `interface.songs.json`，从指定国服曲库在内存中生成标准 PI 选项。七个入口共用曲库，但有独立的选项对象和参数节点，巡演三首不会互相覆盖。缺少绑定文件、曲库不可读、曲库为空或误用全服识别库时报告错误，不使用空列表继续运行。
+
+自动演出按曲库顺序排列；谱面入口维持 SAVIOR OF SONG 优先、其余按数字 ID 排序；协力和挑战保留首项“不指定／沿用当前”。保持原选项键、case 名称、数组索引及难度配置键，迁移到共用曲库本身不改变已有选择。更新后继续使用原有的选择映射和实例保存流程；同名歌曲以 ID 区分。
+
+歌曲 case 引用在内存中生成的子难度配置，切换歌曲时只显示该歌开放的难度。EXIST 仅 Easy–Expert，SAVIOR OF SONG 包含 Special。任务顶层不显示独立的全难度选择器。旧配置仍指定不可用 Special 时，Agent 回退 Expert。
+
+这是 MaaBanG 的客户端扩展，需要同时部署本项目构建的 UI 核心、精简后的 `interface.json`、绑定文件及曲库；不能只把精简配置复制给未修改的通用客户端。打包时将绑定文件的曲库路径改为 `agent/data/songs_cn.json`。开发工具 `tools/song_interface.py` 提供参考展开；Windows CI 使用 `tools/verify_song_interface.py` 调用实际编译后的加载器，核对开发／安装路径、全部选项、刷新数据、缺文件及无效曲库。可以通过 `--legacy-interface` 额外核对旧文件中的选项和索引。
+
+v0.6.15 发布验证已将实际编译加载器与 v0.6.14 展开界面的全部选项逐项比对，并通过 8 组加载夹具。隔离客户端启动验证覆盖 5 种已有／新建实例状态，确认巡演三首不同歌曲与难度、直接演出 Special、预设火数、任务顺序和勾选状态保存正确；实际 C# 选择映射也核对了目录重排、歌曲改名、难度配置变化和移除歌曲。这些检查验证客户端配置与迁移，不代表逐首游戏演出验证。
 
 同名歌曲保留独立 ID，界面显示演奏乐队；运行时额外识别选歌页的乐队名称。命令行可用 `--song 676` 选择明确版本，不接受不带 ID 的歧义歌名。
 
