@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from interface_test_support import expand_interface
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
@@ -31,7 +32,7 @@ class CatalogUpdateTests(unittest.TestCase):
         self.raw = json.dumps(self.source).encode()
 
     def refresh(self, **kwargs):
-        return updater.refresh_catalog(self.data, self.interface, songs_raw=self.raw,
+        return updater.refresh_catalog(self.data, songs_raw=self.raw,
                                        bands_raw=b'{}', **kwargs)
 
     def assert_unchanged(self):
@@ -42,8 +43,9 @@ class CatalogUpdateTests(unittest.TestCase):
         catalog, recognition = self.refresh()
         self.assertEqual([s['id'] for s in catalog['songs']], ['99999'])
         self.assertEqual([s['id'] for s in recognition['songs']], ['99998', '99999'])
-        new = json.loads(self.interface.read_text(encoding='utf8'))
+        new = expand_interface(json.loads(self.interface.read_text(encoding='utf8')), catalog)
         old = json.loads(self.original[self.interface])
+        self.assertEqual(self.interface.read_bytes(), self.original[self.interface])
         self.assertEqual(new['task'], old['task'])
         self.assertEqual(new['option']['谱面随机偏差'], old['option']['谱面随机偏差'])
         for key in ('演出歌曲', '谱面第1首歌曲', '谱面第2首歌曲', '谱面第3首歌曲', '直接演出歌曲'):
@@ -54,7 +56,7 @@ class CatalogUpdateTests(unittest.TestCase):
     def test_download_invalid_data_and_cancel_keep_existing_files(self):
         with patch.object(updater, 'fetch', side_effect=TimeoutError('offline')):
             with self.assertRaises(TimeoutError):
-                updater.refresh_catalog(self.data, self.interface)
+                updater.refresh_catalog(self.data)
         self.assert_unchanged()
         self.raw = b'{}'
         with self.assertRaises(ValueError):
@@ -69,13 +71,13 @@ class CatalogUpdateTests(unittest.TestCase):
         calls = []
         def replace(source, target):
             calls.append(target)
-            if target == self.interface:
-                raise PermissionError('interface locked')
+            if target == self.data/'songs_all.json':
+                raise PermissionError('recognition catalog locked')
             return real_replace(source, target)
         with patch.object(updater.os, 'replace', side_effect=replace):
             with self.assertRaises(PermissionError):
                 self.refresh()
-        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(calls), 2)
         self.assert_unchanged()
         self.assertFalse(list(self.data.glob('*.tmp')))
 

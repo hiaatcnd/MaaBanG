@@ -1,0 +1,13 @@
+--- a/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
++++ b/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
+@@ -2582,6 +2582,10 @@
+         if (loaded == null)
+             throw new Exception($"Failed to load interface file: {fullPath}");
+ 
++        if (MaaBanGSongCatalog.LoadOptions(fullPath) is { } songOptions)
++            loaded.Option = songOptions.ToObject<Dictionary<string, MaaInterface.MaaInterfaceOption>>()
++                ?? throw new InvalidDataException("歌曲选项加载失败");
++
+         // PI import 的顺序为主文件在前、随后按 import 数组顺序追加；同名 option 以后导入者为准。
+         var result = loaded;
+ 

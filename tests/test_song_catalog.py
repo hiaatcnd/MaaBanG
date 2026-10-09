@@ -1,3 +1,4 @@
+from interface_test_support import load_interface
 import json
 from pathlib import Path
 import sys
@@ -95,7 +96,7 @@ class SongCatalogTests(unittest.TestCase):
         self.assertFalse(result[1]['active'])
 
     def test_all_song_cases_offer_only_their_cn_difficulties(self):
-        interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf-8'))
+        interface=load_interface()
         task=next(t for t in interface['task'] if t['entry']=='AutoLive')
         self.assertNotIn('演出难度',task['option'])
         cases=interface['option']['演出歌曲']['cases']

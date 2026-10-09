@@ -11,6 +11,8 @@ from pathlib import Path
 import subprocess
 import time
 
+from song_interface import load_interface
+
 
 MARKER = 'MaaBanGLivePresetsFirstV1'
 PRESET = 'LivePresets'
@@ -24,6 +26,28 @@ def verify(package, work):
     old = [dict(name='每日免费招募', entry='DailyFreeRecruit', default_check=True),
            dict(name='Maa代打演出', entry='ChartLive', default_check=False)]
     interface = json.loads((package / 'app/interface.json').read_text(encoding='utf8'))
+    if (package / 'app/interface.songs.json').is_file():
+        interface = load_interface(package / 'app/interface.json')
+    options = interface['option']
+    def song_selection(name, node, value, difficulty):
+        cases = options[name]['cases']
+        index = next(i for i, case in enumerate(cases)
+                     if case['pipeline_override'][node]['attach']['value'] == value)
+        profile = cases[index]['option'][0]
+        di = next(i for i, case in enumerate(options[profile]['cases']) if case['name'] == difficulty)
+        return dict(name=name, index=index, sub_options=[dict(name=profile, index=di)])
+    # Stored nested indices from the expanded interface must survive loading the
+    # shared-catalog UI, including three independent tour songs/difficulties.
+    old[1]['option'] = [dict(name='谱面演出模式', index=1, sub_options=[
+        song_selection(f'谱面第{i}首歌曲', f'CL_song{i}', sid, difficulty)
+        for i, sid, difficulty in ((1,'306','EASY'),(2,'359','HARD'),(3,'186','EXPERT'))])]
+    old.append(dict(name='指定谱面直接演出', entry='DirectChartLive', default_check=False,
+                    option=[song_selection('直接演出歌曲','DL_song1','306','SPECIAL')]))
+    def assert_selections(original, current, label):
+        for selection in original:
+            saved = next(o for o in current if o['name'] == selection['name'])
+            assert saved['index'] == selection['index'], (label, selection, saved)
+            assert_selections(selection.get('sub_options', []), saved.get('sub_options', []), label)
     history = [f'{t["name"]}<|||>{t["entry"]}' for t in interface['task']]
     cases = [
         ('missing', dict(TaskItems=old, CurrentTasks=history), True),
@@ -80,8 +104,9 @@ def verify(package, work):
                     if original['entry'] == PRESET:
                         fire = next(o for o in current['option'] if o['name'] == '预设火数')
                         assert fire['index'] == 3, (name, fire)
+                    assert_selections(original.get('option', []), current.get('option', []), name)
                 if name in ('missing', 'last'):
-                    assert entries[1:3] == [t['entry'] for t in old], (name, entries)
+                    assert entries[1:1+len(old)] == [t['entry'] for t in old], (name, entries)
                 results.append(dict(case=name, entries=entries, passed=True))
             finally:
                 process.terminate()

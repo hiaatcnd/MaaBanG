@@ -1,3 +1,4 @@
+from interface_test_support import load_interface
 import json
 from pathlib import Path
 import sys
@@ -101,8 +102,10 @@ class DirectChartLiveTests(unittest.TestCase):
                 DirectChartLive().create_flow(flow.ctx,dict(values,song1='not a song'),folder)
 
     def test_generated_ui_is_idempotent_and_exposes_exact_cn_difficulties(self):
-        interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
-        self.assertEqual(interface,update(json.loads(json.dumps(interface))))
+        interface=load_interface()
+        from song_interface import compact_interface
+        compact = compact_interface(interface)
+        self.assertEqual(compact, update(json.loads(json.dumps(compact))))
         task=next(t for t in interface['task'] if t['entry']=='DirectChartLive')
         self.assertFalse(task['default_check'])
         self.assertEqual(task['option'],['直接演出歌曲','直接演出随机偏差'])

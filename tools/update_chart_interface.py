@@ -6,7 +6,6 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from chart_policy import OPTION_DEFAULTS, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS
-from song_catalog import BY_ID, SONGS, resolve_song, available_difficulties
 from live_policy import DIFFICULTIES
 from interface_descriptions import OPTION_DESCRIPTIONS, INPUT_DESCRIPTIONS, TASK_DESCRIPTIONS
 
@@ -28,18 +27,8 @@ def update(interface):
         if key.startswith('谱面'):
             del options[key]
     for slot in range(1,4):
-        cases=[]
-        for key in SONGS:
-            song=resolve_song(key)
-            names=available_difficulties(song)
-            profile=f'谱面第{slot}首难度_'+'_'.join(names)
-            options[profile]={'type':'select','label':f'第{slot}首难度','default_case':'EXPERT',
-                'cases':[choice(name.upper(),f'difficulty{slot}',name) for name in DIFFICULTIES if name in names]}
-            item=choice(key,f'song{slot}',song['id'],[profile])
-            item['label']=f"{song['title']} · {song['band']}"
-            cases.append(item)
-        options[f'谱面第{slot}首歌曲']={'type':'select','default_case':'SAVIOR OF SONG',
-                                    'label':f'第{slot}首歌曲','cases':cases}
+        options[f'谱面第{slot}首歌曲']={'type':'select',
+                                    'label':f'第{slot}首歌曲','cases':[]}
         options[f'谱面课题第{slot}首难度']={'type':'select','default_case':'EXPERT',
             'label':f'课题第{slot}首难度',
             'description':'读取当前课题固定歌曲；所选难度不存在时停止，不替换难度。',
@@ -65,9 +54,6 @@ def update(interface):
         ('谱面协力歌曲','协力选歌','coop_song','不指定歌曲',
          '从中国服歌曲列表选择要提交的歌曲；最终演奏曲目由游戏在全房间提交的歌曲中抽选。')):
         cases=[choice(default,key,'')]
-        for song_key in SONGS:
-            song=resolve_song(song_key)
-            cases.append(dict(choice(song_key,key,song['id']),label=f"{song['title']} · {song['band']}"))
         options[option]={'type':'select','label':label,'default_case':default,
                          'description':description,'cases':cases}
     options['谱面协力房间类别']={'type':'select','label':'房间类别','default_case':'普通',
@@ -120,7 +106,7 @@ def main():
     (ROOT/'assets/resource/pipeline/chart_live.json').write_text(json.dumps(nodes,ensure_ascii=False,indent=4)+'\n',encoding='utf8')
     from update_direct_chart_interface import write_pipeline
     write_pipeline()
-    print(f'Generated ChartLive options for {len(BY_ID)} songs')
+    print('Generated ChartLive options; song choices load from the shared CN catalog')
 
 
 if __name__=='__main__':

@@ -1,3 +1,4 @@
+from interface_test_support import load_interface
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -256,7 +257,7 @@ class LiveFlowTests(unittest.TestCase):
         from copy import deepcopy
         from auto_live import OPTION_NODES
         root=Path(__file__).resolve().parents[1]
-        interface=json.loads((root/'assets/interface.json').read_text(encoding='utf-8'))
+        interface=load_interface()
         pipeline=json.loads((root/'assets/resource/pipeline/live.json').read_text(encoding='utf-8'))
         names=('演出模式','演出歌曲','演出难度')
         limit=interface['option']['最大演出次数']

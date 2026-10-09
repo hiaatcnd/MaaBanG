@@ -12,6 +12,7 @@ import urllib.request
 import zipfile
 from build_ui import build_ui
 from package_manifest import build_updater, write_manifest
+from song_interface import install_bindings
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -65,6 +66,7 @@ def build(version):
     shutil.copy2(ROOT / "assets/branding/MaaBanG.ico", package / "MaaBanG.ico")
     interface["agent"] = {"child_exec": "./python/python.exe", "child_args": ["./agent/main.py"]}
     (package / "interface.json").write_text(json.dumps(interface, ensure_ascii=False, indent=4), encoding="utf-8")
+    install_bindings(package)
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, release)
     readme_images = release / 'assets/branding'
@@ -78,6 +80,7 @@ def build(version):
         shutil.copy2(patch, source_bundle)
     shutil.copy2(ROOT / 'tools/build_ui.py', source_bundle)
     shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_bundle)
+    shutil.copy2(ROOT / 'tools/MaaBanGSongCatalog.cs', source_bundle)
     (package / "tools").mkdir()
     build_updater(package / 'tools/MaaBanGUpdater.exe')
     shutil.copy2(ROOT / "tools/package_smoke.py", package / "tools/package_smoke.py")

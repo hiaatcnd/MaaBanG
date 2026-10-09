@@ -18,7 +18,7 @@ def main():
     parser.add_argument('--bands-file', type=Path)
     args = parser.parse_args()
     payload, recognition_payload = refresh_catalog(
-        ROOT/'agent/data', ROOT/'assets/interface.json',
+        ROOT/'agent/data',
         songs_raw=args.songs_file.read_bytes() if args.songs_file else None,
         bands_raw=args.bands_file.read_bytes() if args.bands_file else None)
     songs = payload['songs']

@@ -2,7 +2,6 @@
 import hashlib
 import json
 import os
-from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
@@ -131,54 +130,6 @@ def song_key(song, songs):
 
 
 
-def update_interface(interface, catalog):
-    """Replace only song selectors; preserve tasks, order and unrelated options."""
-    interface = deepcopy(interface)
-    songs = playable(catalog)
-    if not songs:
-        raise ValueError('Empty playable CN catalog; refusing to replace local data')
-    chart_songs = sorted(songs, key=lambda s: (s['title'] != 'SAVIOR OF SONG', int(s['id'])))
-    options = interface['option']
-    def preserve_case_layout(old, cases):
-        previous = {case['name']: case for case in old['cases']}
-        return [{**previous.get(case['name'], {}), **case} for case in cases]
-    selectors = [('演出歌曲', '歌曲难度_', 'LV_Song', 'LV_Difficulty', False)]
-    selectors += [(f'谱面第{i}首歌曲', f'谱面第{i}首难度_', f'CL_song{i}',
-                   f'CL_difficulty{i}', True) for i in range(1, 4)]
-    selectors += [('直接演出歌曲', '直接演出难度_', 'DL_song1', 'DL_difficulty1', True)]
-    for selector, prefix, song_node, difficulty_node, use_id in selectors:
-        old = options[selector]
-        profiles = set()
-        cases = []
-        for song in chart_songs if use_id else songs:
-            names = [d for d in DIFFICULTIES if song['difficulties'].get(d, {}).get('available')]
-            profile = prefix + '_'.join(names)
-            profiles.add(profile)
-            options[profile] = {
-                'type': 'select', 'label': old['label'].replace('歌曲', '难度'),
-                'default_case': 'EXPERT', 'cases': [
-                    {'name': d.upper(), 'pipeline_override': {difficulty_node: {'attach': {'value': d}}}}
-                    for d in names]}
-            key = song_key(song, songs)
-            cases.append({'name': key, 'label': f"{song['title']} · {song['band']}",
-                          'option': [profile], 'pipeline_override': {
-                              song_node: {'attach': {'value': song['id'] if use_id else key}}}})
-        old['cases'] = preserve_case_layout(old, cases)
-        for key in list(options):
-            if key.startswith(prefix) and key not in profiles:
-                del options[key]
-        if old.get('default_case') not in {c['name'] for c in cases}:
-            old['default_case'] = cases[0]['name']
-    for selector, node in [('谱面挑战歌曲', 'CL_cp_song'), ('谱面协力歌曲', 'CL_coop_song')]:
-        old = options[selector]
-        empty = [case for case in old['cases']
-                 if case['pipeline_override'][node]['attach']['value'] == '']
-        old['cases'] = preserve_case_layout(old, empty + [
-            {'name': song_key(song, songs), 'label': f"{song['title']} · {song['band']}",
-             'pipeline_override': {node: {'attach': {'value': song['id']}}}} for song in chart_songs])
-    return interface
-
-
 def fetch(url):
     with urlopen(Request(url, headers={'User-Agent': 'MaaBanG-song-catalog/1.0'}), timeout=40) as response:
         return response.read()
@@ -236,13 +187,13 @@ def catalog_update_lock(data_dir):
             release()
 
 
-def refresh_catalog(data_dir, interface_path, *, songs_raw=None, bands_raw=None, check_stop=lambda: None):
+def refresh_catalog(data_dir, *, songs_raw=None, bands_raw=None, check_stop=lambda: None):
     with catalog_update_lock(data_dir):
-        return _refresh_catalog(data_dir, interface_path, songs_raw=songs_raw,
+        return _refresh_catalog(data_dir, songs_raw=songs_raw,
                                 bands_raw=bands_raw, check_stop=check_stop)
 
 
-def _refresh_catalog(data_dir, interface_path, *, songs_raw, bands_raw, check_stop):
+def _refresh_catalog(data_dir, *, songs_raw, bands_raw, check_stop):
     check_stop()
     raw = fetch(SONGS_URL) if songs_raw is None else songs_raw
     check_stop()
@@ -261,10 +212,10 @@ def _refresh_catalog(data_dir, interface_path, *, songs_raw, bands_raw, check_st
                 'bands_source_sha256': hashlib.sha256(bands_raw).hexdigest()}
     catalog = dict(metadata, server='cn', server_index=CN, songs=songs)
     recognition_catalog = dict(metadata, scope='all_servers', songs=recognition)
-    interface = update_interface(json.loads(interface_path.read_text(encoding='utf8')), songs)
+    if not playable(songs):
+        raise ValueError('Empty playable CN catalog; refusing to replace local data')
     check_stop()
-    contents = {data_dir/'songs_cn.json': catalog, data_dir/'songs_all.json': recognition_catalog,
-                interface_path: interface}
-    replace_files({path: (json.dumps(value, ensure_ascii=False, indent=4 if path == interface_path else 2)+'\n').encode('utf8')
+    contents = {data_dir/'songs_cn.json': catalog, data_dir/'songs_all.json': recognition_catalog}
+    replace_files({path: (json.dumps(value, ensure_ascii=False, indent=2)+'\n').encode('utf8')
                    for path, value in contents.items()})
     return catalog, recognition_catalog

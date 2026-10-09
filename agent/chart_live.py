@@ -106,6 +106,35 @@ class ChartLiveFlow(LiveFlow):
             raise FlowError(f'无法确认数量：{text}')
         return int(text)
 
+    def refill_items(self):
+        """Bind each supported drink to its visible row, including after depletion."""
+        kinds={'小型liveboost饮料':('小型',1),'liveboost饮料':('普通',10)}
+        items=[]
+        for hit in self.ocr([494,145,220,283]):
+            kind=kinds.get(normalized(hit.text).lower())
+            if kind is None:
+                continue
+            name,gain=kind
+            # The title anchors the controls and inventory within the same card.
+            # Empty cards may disappear, so neither drink has a fixed row.
+            y=hit.box[1]+hit.box[3]//2+60
+            if not 195<=y<=401:
+                continue  # Do not operate a partly clipped card.
+            if any(item['gain']==gain for item in items):
+                raise FlowError(f'回复道具位置不唯一：{name}')
+            inventory=normalized(self.text([406,y+13,86,35]))
+            count=re.fullmatch(r'[xX×]?(\d{1,5})',inventory)
+            if not count:
+                # At native 720p the detector can split "x1" and read only "+".
+                # Read the inventory strip directly, without guessing a number.
+                hits=self.ocr([406,y+20,83,22],only_rec=True)
+                fallback=normalized(hits[0].text) if len(hits)==1 else ''
+                count=re.fullmatch(r'[xX×]?(\d{1,5})',fallback)
+                if not count or hits[0].score<.9:
+                    raise FlowError(f'无法确认{name}饮料库存：{inventory}')
+            items.append({'item':name,'gain':gain,'inventory_before':int(count[1]),'y':y})
+        return sorted(items,key=lambda item:item['gain'])
+
     def refill_fire(self, needed):
         self.snap()
         balance=self.fire_balance()
@@ -128,16 +157,20 @@ class ChartLiveFlow(LiveFlow):
             raise FlowError('道具回复预览初始值不符')
         used=[]
         # Prefer +1 drinks to minimize surplus; +10 drinks are the fallback.
-        for name,y,count_roi,gain in [('小型',227,[430,242,59,32],1),
-                                      ('普通',376,[441,390,48,31],10)]:
-            self.snap()
-            available=self.read_integer(count_roi)
+        for item in self.refill_items():
+            if after>=needed:
+                break
+            name,y,gain,available=(item[key] for key in ('item','y','gain','inventory_before'))
             count=min(available,max(0,(needed-after+gain-1)//gain))
+            if not count:
+                continue
             for _ in range(count):
                 self.tap(766,y)
-            if count:
-                used.append({'item':name,'count':count,'gain':gain,'inventory_before':available})
-                after+=count*gain
+                after+=gain
+                self.snap()
+                if self.read_integer([820,471,69,42])!=after:
+                    raise FlowError('回复道具预览与所选数量不符')
+            used.append({'item':name,'count':count,'gain':gain,'inventory_before':available})
         if after<needed:
             self.tap(506,602)
             return False

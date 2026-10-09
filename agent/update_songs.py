@@ -10,14 +10,10 @@ from catalog_update import playable, refresh_catalog
 class UpdateSongCatalog(CustomAction):
     def run(self, context, argv):
         agent = Path(__file__).resolve().parent
-        # Release: app/agent + app/interface.json. Development: agent + assets.
-        interface = agent.parent/'interface.json'
-        if not interface.is_file():
-            interface = agent.parent/'assets/interface.json'
         try:
             log('[更新歌曲列表] 正在下载歌曲和乐队资料……')
             catalog, recognition = refresh_catalog(
-                agent/'data', interface,
+                agent/'data',
                 check_stop=lambda: self.check_stop(context))
             from song_catalog import reload_catalog
             reload_catalog()
