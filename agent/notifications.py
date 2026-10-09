@@ -9,6 +9,7 @@ from costume_unlock import FlowError, normalized
 
 
 BUTTON = re.compile(r'^(?:确定|确认|关闭|下一步|OK)$', re.I)
+STORY_PROMPT = re.compile(r'^阅读与这首歌曲相关的故事吧[!！]?$')
 # Recruitment tickets can be reward items. Actual purchases/choices remain
 # owned by the calling task, even if their affirmative button says "OK".
 TRANSACTION = re.compile(r'是否|取消|消耗|购买|花费|招募(?!券)|交换|兑换|恢复体力|继续演出')
@@ -61,7 +62,8 @@ class NotificationMixin:
     def dismiss_notifications(self):
         """Drain safe notifications, verifying progress before another click.
 
-        Titles are used only for logging, never as an allowlist. Transaction
+        Generic confirmations do not require a title allowlist. Story prompts
+        additionally require their title and both reading choices. Transaction
         dialogs remain owned by their task. Missing buttons may still be
         animating; callers must keep the overlay in front of background actions.
         """
@@ -80,10 +82,19 @@ class NotificationMixin:
             text = ' '.join(normalized(hit.text) for hit in hits)
             if TRANSACTION.search(text):
                 return handled
-            buttons = [hit for hit in hits if BUTTON.fullmatch(normalized(hit.text))
-                       and hit.box[1] > y+h*.55
+            footer = [hit for hit in hits if hit.box[1] > y+h*.55
                        and x <= hit.box[0] and hit.box[0]+hit.box[2] <= x+w
                        and hit.box[1]+hit.box[3] <= y+h]
+            if STORY_PROMPT.fullmatch(normalized(title)):
+                # Defer this specific two-choice prompt; never enter its story
+                # or click the still-visible result confirmation behind it.
+                later = [hit for hit in footer if normalized(hit.text) == '稍后再读']
+                read = [hit for hit in footer if normalized(hit.text) == '阅读']
+                if len(later) != 1 or len(read) != 1 or later[0].box[0]+later[0].box[2] > read[0].box[0]:
+                    return handled
+                buttons = later
+            else:
+                buttons = [hit for hit in footer if BUTTON.fullmatch(normalized(hit.text))]
             if not buttons:
                 return handled
             if len(buttons) != 1:
@@ -95,7 +106,8 @@ class NotificationMixin:
             previous = fingerprint
             self.tap_hit(buttons[0])
             handled = True
-            log(f'[通知] 已确认：{title}')
+            action = '已选择稍后再读' if normalized(buttons[0].text) == '稍后再读' else '已确认'
+            log(f'[通知] {action}：{title}')
             # Observe after animation; every subsequent click uses fresh OCR.
             for _ in range(6):
                 self.check_stop()

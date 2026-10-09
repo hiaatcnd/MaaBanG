@@ -65,7 +65,7 @@ class NotificationTests(unittest.TestCase):
         root=Path(__file__).parent/'fixtures'/'notifications'
         for name,expected in (('experience.png',False),('event_result.png',False),
                               ('reward.png',True),('area_unlock.png',True),('costume.png',True),
-                              ('song_achievement.png',True)):
+                              ('song_achievement.png',True),('song_story.png',True)):
             with self.subTest(name=name):
                 image=np.array(Image.open(root/name).convert('RGB'))[:,:,::-1].copy()
                 self.assertEqual(dialog_box(image) is not None,expected)
@@ -89,6 +89,46 @@ class NotificationTests(unittest.TestCase):
             f=self.flow([hit(title,400,160),hit(body,410,300),hit('确定',606,521)])
             self.assertFalse(f.dismiss_notifications())
             f.tap_hit.assert_not_called()
+
+    @patch('notifications.time.sleep')
+    def test_song_story_is_deferred_without_reading_or_clicking_background(self,_):
+        later=hit('稍后再读',440,610,140)
+        f=self.flow([hit('阅读与这首歌曲相关的故事吧！',400,64,450),
+                     later,hit('阅读',739,610),hit('确定',1020,630)])
+        f.image=panel(36,688)
+        self.assertTrue(f.dismiss_notifications())
+        f.tap_hit.assert_called_once_with(later)
+        f.snap.assert_called_once()
+        f.require_clear_notification_overlay()
+
+    def test_song_story_requires_title_and_unique_contained_reading_choices(self):
+        title=hit('阅读与这首歌曲相关的故事吧！',400,64,450)
+        later=hit('稍后再读',440,610,140)
+        read=hit('阅读',739,610)
+        for hits in ([later,read], [title,later], [title,read],
+                     [title,later,later,read], [title,later,read,read],
+                     [title,hit('稍后再读',970,610),read],
+                     [title,later,hit('阅读',250,610)],
+                     [title,hit('稍后再读',440,350),read],
+                     [title,hit('稍后再读',739,610),hit('阅读',440,610)],
+                     [title,later,read,hit('是否消耗星石',440,450)]):
+            with self.subTest(text=[h.text for h in hits]):
+                f=self.flow(hits+[hit('确定',1020,630)])
+                f.image=panel(36,688)
+                self.assertFalse(f.dismiss_notifications())
+                f.tap_hit.assert_not_called()
+                with self.assertRaisesRegex(FlowError,'未识别的弹窗'):
+                    f.require_clear_notification_overlay()
+
+    @patch('notifications.time.sleep')
+    def test_song_story_stuck_after_click_stops_after_three_attempts(self,_):
+        f=self.flow([hit('阅读与这首歌曲相关的故事吧!',400,64,450),
+                     hit('稍后再读',440,610,140),hit('阅读',739,610)])
+        f.image=panel(36,688)
+        f.snap=Mock()
+        with self.assertRaisesRegex(FlowError,'未消失'):
+            f.dismiss_notifications()
+        self.assertEqual(f.tap_hit.call_count,3)
 
     def test_missing_or_ambiguous_button_blocks_background(self):
         for buttons in ([],[hit('下一步',1060,645)], [hit('确认',900,521)]):
