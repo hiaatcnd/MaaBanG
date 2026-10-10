@@ -84,7 +84,9 @@ class CPLiveFlow(ChartLiveFlow):
         self.wait('CP_Dialog')
         if not self.pink(self.image[y-10:y+11,867:888]):
             raise FlowError('未确认所选CP档位')
-        if self.read_integer([772,125,67,34])!=before:
+        # CP balances can exceed five digits; use the same stable reader as
+        # the initial balance check instead of the small-quantity reader.
+        if self.stable_integer([772,125,67,34])!=before:
             raise FlowError('选择CP期间余额发生变化')
         self.tap(770,620)
         self.wait_ready()
