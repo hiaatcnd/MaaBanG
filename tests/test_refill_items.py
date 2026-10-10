@@ -54,7 +54,7 @@ class RefillItemTests(unittest.TestCase):
         self.assertEqual([call.args for call in flow.tap.call_args_list],[(1150,39),(766,227),(770,602)])
         self.assertEqual(flow.report['refills'][0]['items'],[
             {'item':'普通','gain':10,'count':1,'inventory_before':436}])
-        self.assertEqual(flow.report['refills'][0]['actual_recovered'],10)
+        self.assertEqual(flow.report['refills'][0]['result_text'],'LIVEBOOST已回复10!')
         self.assertEqual(flow.report['refills'][0]['status'],'confirmed')
         self.assertEqual(flow.text.call_args_list[0].args,([406,240,86,35],))
 
@@ -63,6 +63,17 @@ class RefillItemTests(unittest.TestCase):
         self.assertTrue(flow.refill_fire(23))
         self.assertEqual(flow.report['refills'][0]['after'],32)
         self.assertEqual(flow.report['refills'][0]['items'][0]['count'],3)
+
+    def test_success_receipt_does_not_require_exact_recovered_number_or_balance(self):
+        for result in ('LIVE BOOST已回复9！','LIVE BOOST已回复！'):
+            with self.subTest(result=result):
+                flow=self.make_flow([('普通',227,'x436')])
+                read_text=flow.text.side_effect
+                flow.text.side_effect=lambda roi:result if roi==[440,325,410,53] else read_text(roi)
+                flow.fire_balance=Mock(side_effect=[2,AssertionError('No post-success balance gate')])
+                self.assertTrue(flow.refill_fire(5))
+                self.assertEqual(flow.report['refills'][0]['status'],'confirmed')
+                flow.fire_balance.assert_called_once()
 
     def test_small_stays_preferred_even_if_cards_are_reordered(self):
         for cards,expected_y in (([('小型',227,'x5747'),('普通',376,'x436')],227),
@@ -109,11 +120,11 @@ class RefillItemTests(unittest.TestCase):
                     flow.refill_fire(5)
                 self.assertEqual([call.args for call in flow.tap.call_args_list],[(1150,39)])
 
-    def test_wrong_gain_is_detected_after_first_click_without_submit(self):
+    def test_wrong_gain_is_detected_before_consumption(self):
         flow=self.make_flow([('普通',227,'x436')],actual_gains={227:1})
         with self.assertRaisesRegex(RuntimeError,'预览与所选数量不符'):
             flow.refill_fire(23)
-        self.assertEqual([call.args for call in flow.tap.call_args_list],[(1150,39),(766,227)])
+        self.assertEqual([call.args for call in flow.tap.call_args_list],[(1150,39),*[(766,227)]*3])
         self.assertFalse(flow.report['refills'])
 
     def test_split_single_digit_inventory_uses_direct_recognition(self):

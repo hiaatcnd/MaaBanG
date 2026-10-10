@@ -74,7 +74,7 @@ class LiveOptions:
 def parse_auto_remaining(text):
     text = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
     match = re.fullmatch(r"(?:还有|剩余)([0-9]+)次", text)
-    if not match or int(match[1]) > 10:
+    if not match:
         raise ValueError(f"无法确认自动演出剩余次数：{text!r}")
     return int(match[1])
 

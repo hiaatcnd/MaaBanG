@@ -1,5 +1,5 @@
 """Free-live FC mining and stage challenge progression."""
-from task_logging import log
+from task_logging import log, record_warning
 from dataclasses import asdict, replace
 import time
 import re
@@ -221,7 +221,11 @@ class MiningLiveFlow(ChartLiveFlow):
                 self.pause(.2)
                 self.snap()
                 if self.song_stars(song) != states:
-                    raise FlowError('歌曲星星状态不稳定')
+                    self.report['skipped'].append({'song_id':song['id'],'difficulty':difficulty,
+                                                   'reason':'unstable_star'})
+                    record_warning(self.report,f'[挖矿 FC] {song["title"]}：星星状态不稳定，跳过当前谱面')
+                    previous = None
+                    continue
                 self.report['scanned'].append({'song_id':song['id'],'stars':states})
                 pending = [ChartSelection.parse(song['id'],d)
                            for d in pending_difficulties(states,(difficulty,))]
@@ -302,7 +306,10 @@ class MiningLiveFlow(ChartLiveFlow):
                         log(f'[挖矿 FC] {selection.song["title"]} / {selection.difficulty.upper()}：FC 已确认', level='success')
                         break
                     if state == 'unknown':
-                        raise FlowError('结算后无法确认星星颜色')
+                        self.report['skipped'].append({**asdict(selection),'reason':'unknown_star_after'})
+                        record_warning(self.report,f'[挖矿 FC] {selection.song["title"]}：演出已完成，'
+                                       '未确认 FC 状态，继续扫描其他谱面')
+                        break
                 else:
                     self.report['skipped'].append({**asdict(selection),'reason':'three_attempts_without_fc'})
                     log(f'[挖矿 FC] {selection.song["title"]}：三次尝试仍未 FC，跳过', level='warn')
@@ -356,19 +363,18 @@ class ChallengeMiningFlow(MiningLiveFlow):
             self.wait('MN_StageSelect')
         else:
             if not attempted:
-                raise FlowError('未找到舞台1，不跳过前面的挑战')
+                record_warning(self.report,'[挖矿挑战] 未识别到舞台 1，从当前可识别关卡继续扫描')
         inspected = set(attempted)
         stagnant = 0
         for _ in range(40):
             hits = self.ocr([35,95,155,475],r'^舞台\s*\d+$')
             levels = sorted({int(re.search(r'\d+',h.text)[0]) for h in hits})
             if not levels:
-                raise FlowError('无法读取舞台列表')
+                record_warning(self.report,'[挖矿挑战] 无法读取舞台列表，跳过当前挑战')
+                return None
             for level in levels:
                 if level in inspected:
                     continue
-                if level != max(inspected,default=0)+1:
-                    raise FlowError('舞台编号识别不连续，不跳过前面的挑战')
                 row=next(h for h in hits if int(re.search(r'\d+',h.text)[0])==level)
                 row_stars=challenge_row_stars(self.image,row.box)
                 if row_stars is not None and not challenge_pending(row_stars,self.mining.challenge_target):
@@ -392,7 +398,11 @@ class ChallengeMiningFlow(MiningLiveFlow):
                     raise FlowError('舞台选择未确认')
                 stars = challenge_star_count(self.image)
                 if stars is None:
-                    raise FlowError('无法确认舞台星数，不自动开演')
+                    inspected.add(level)
+                    attempted.add(level)
+                    self.report['skipped'].append({'stage_level':level,'reason':'unknown_stage_stars'})
+                    record_warning(self.report,f'[挖矿挑战] 第 {level} 关星数无法确认，跳过并继续扫描')
+                    break
                 inspected.add(level)
                 self.report.setdefault('stage_scan',[]).append({'level':level,'stars':stars,
                     'target':self.mining.challenge_target,'source':'detail'})
@@ -422,7 +432,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
 
     def restore_challenge(self):
         # Returning through home resets the challenge category and selection.
-        # Restore both before comparing levels; another band's 30 is not this 9's next stage.
+        # Restore the same challenge before selecting another song.
         self.select_stage_kind()
         for _ in range(5):
             self.swipe(200,210,625)
@@ -433,13 +443,14 @@ class ChallengeMiningFlow(MiningLiveFlow):
                     self.tap(200,y)
                     self.tap(1070,648)
                     self.wait('MN_StageSelect')
-                    return
+                    return True
             before = self.image[160:710,25:340].astype(float)
             self.swipe(200,640,230)
             self.snap()
             if np.mean(np.abs(before-self.image[160:710,25:340])) < 1:
                 break
-        raise FlowError('结算后未找到同一个舞台挑战，不比较其他挑战的等级')
+        record_warning(self.report,'[挖矿挑战] 上一首已结算，原挑战未找到，继续扫描其他挑战')
+        return False
 
     def area_modals(self):
         if self.reco('MN_AreaChanged'):
@@ -466,7 +477,8 @@ class ChallengeMiningFlow(MiningLiveFlow):
         elif getattr(self,'_area_during_start',False) and self.ready():
             self._area_during_start = False
             # A confirmed area change can return to ready instead of starting.
-            if self.fire_preview()[0]-self.fire_preview()[1] != self.settings.fire:
+            before, after = self.fire_preview()
+            if before-after != self.settings.fire:
                 raise FlowError('区域道具更换后火数预览发生变化')
             self.tap(1130,616)
 
@@ -487,10 +499,8 @@ class ChallengeMiningFlow(MiningLiveFlow):
         if not self.reco('LV_AutoOff'):
             raise FlowError('未确认舞台挑战的游戏内置自动已关闭')
         before, after = self.fire_preview()
-        self.pause(.15)
-        self.snap()
         balance = self.fire_balance()
-        if self.fire_preview() != (before,after) or before-after != amount or balance < before:
+        if before-after != amount or balance < amount:
             raise FlowError('舞台挑战火数预览不符')
         return balance
 
@@ -500,26 +510,6 @@ class ChallengeMiningFlow(MiningLiveFlow):
         for hit in self.ocr([35,190,150,40], r'^舞台\s*\d+$'):
             return int(re.search(r'\d+',hit.text)[0])
         raise FlowError('无法读取当前选中舞台等级')
-
-    def advance_level(self, previous):
-        self.wait('MN_StageSelect')
-        current = self.selected_level()
-        if current > previous+1:
-            raise FlowError('结算后舞台等级跨度异常，不自动推进')
-        if current == previous+1:
-            return True
-        for hit in self.ocr([35,98,170,40],r'^舞台\s*\d+$'):
-            level = int(re.search(r'\d+',hit.text)[0])
-            if level != previous+1:
-                continue
-            y = hit.box[1]+hit.box[3]//2
-            if self.reco('MN_StageLock',roi=[218,max(95,y-25),55,55]):
-                return False
-            self.tap_hit(hit)
-            if self.selected_level() != level:
-                raise FlowError('下一舞台选择未确认')
-            return True
-        return False
 
     def recommend(self):
         self.click('MN_Recommend')
@@ -566,16 +556,8 @@ class ChallengeMiningFlow(MiningLiveFlow):
             self.snap()
             if self.result_modals():
                 continue
-            if self.reco('MN_StageSelect'):
-                return
-            if self.reco('CU_HomeBand') or self.reco('LV_Menu'):
-                self.navigate_menu()
-                log('[挖矿挑战] 正在进入舞台挑战并扫描目标关卡')
-                self.click('MN_ChallengeEntry')
-                self.restore_challenge()
-                return
-            if self.reco('MN_ChallengeSelect'):
-                self.restore_challenge()
+            if any(self.reco(node) for node in ('MN_StageSelect','MN_ChallengeSelect','CU_HomeBand','LV_Menu')):
+                self.require_clear_notification_overlay()
                 return
             if self.reco('LV_TalkSkipConfirm'):
                 self.tap(770,448)
@@ -633,9 +615,18 @@ class ChallengeMiningFlow(MiningLiveFlow):
             self.tap(200,target)
             self.tap(1070,648)
             attempted_levels = set()
+            resume = False
             for _ in range(30):
                 if self.limited():
                     break
+                if resume:
+                    self.snap()
+                    if not self.reco('MN_StageSelect'):
+                        if self.reco('CU_HomeBand') or self.reco('LV_Menu'):
+                            self.navigate_menu()
+                            self.click('MN_ChallengeEntry')
+                        if not self.restore_challenge():
+                            break
                 level = self.select_pending_stage(attempted_levels)
                 if level is None:
                     break
@@ -664,11 +655,14 @@ class ChallengeMiningFlow(MiningLiveFlow):
                     return
                 row['stage_level'] = level
                 row['stage_kind'] = self.mining.stage
-                row['next_unlocked'] = self.advance_level(level)
+                row['next_unlocked'] = self.report['next_unlocked']
                 log(f'[挖矿挑战] 第 {level} 关结算已确认')
+                resume = True
             if self.limited():
                 break
-            self.back()
+            self.snap()
+            if self.reco('MN_StageSelect'):
+                self.back()
             self.wait('MN_ChallengeSelect')
         self.report['status'] = 'max_rounds_reached'
         self.home()

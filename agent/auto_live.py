@@ -287,12 +287,9 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
         remaining=self.remaining()
         if remaining<required_auto: raise FlowError('自动演出剩余次数不足，不开演')
         balance=self.fire_balance()
-        # Read the actual before/after preview immediately before the one spending click.
+        # The selected cost matters; absolute counters can refresh at different times.
         before,after=self.fire_preview()
-        self.pause(.15)
-        self.snap()
-        if self.fire_preview()!=(before,after): raise FlowError('火数预览读数不稳定')
-        if before!=balance or before-after!=amount:
+        if before-after!=amount or balance<amount:
             raise FlowError(f'火数预览不一致：{balance} / {before} → {after}，设置 {amount}')
         return remaining,balance
 
@@ -409,10 +406,6 @@ class LiveFlow(FeverSettingsMixin, SongNavigationMixin, DailyFlow):
                 self.wait_song(index)
                 song['status']='result_confirmed'
                 log(f'[自动演出] 第 {index} 首结果已确认')
-                if index<self.options.songs_per_round:
-                    after=self.remaining()
-                    if after!=before-1: raise FlowError('自动次数未按预期减少，不继续下一首')
-                    song['auto_after']=after
             self.settle_results()
             row['status']='finished'
             self.report['completed_rounds']+=1

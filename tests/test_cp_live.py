@@ -42,7 +42,7 @@ class CPTests(unittest.TestCase):
 
     def flow(self,folder,**values):
         return CPLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
-                          ChartOptions.parse(dict(mode='challenge',max_rounds=1,**values)),folder)
+                          ChartOptions.parse({'mode':'challenge','max_rounds':1,**values}),folder)
 
     def test_cp_configuration_ignores_stale_song_and_fire_options(self):
         options=ChartOptions.parse(dict(mode='challenge',song1='not in catalog',fire=99,
@@ -80,8 +80,7 @@ class CPTests(unittest.TestCase):
                 with self.subTest(balance=balance,amount=amount),tempfile.TemporaryDirectory() as folder:
                     flow=self.flow(folder,cp=amount)
                     flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
-                    # Exercise both production number readers, including the
-                    # balance recheck that previously rejected six-digit CP.
+                    # Exercise both production number readers with large balances.
                     flow.text=Mock(side_effect=lambda roi: str(amount) if roi==[489,y-19,67,39]
                                    else f'{amount}消费' if roi==[1020,541,148,38] else str(balance))
                     flow.tap=Mock();flow.pink=Mock(return_value=True)
@@ -90,22 +89,17 @@ class CPTests(unittest.TestCase):
                         self.assertEqual(flow.configure_cp(),balance)
                     self.assertEqual([c.args for c in flow.tap.call_args_list],[(877,y),(770,620)])
 
-    def test_cp_balance_recheck_rejects_changed_unstable_or_invalid_readings(self):
+    def test_cp_selection_does_not_recheck_unchanged_balance(self):
         import numpy as np
-        for readings,error in ((['114872','114872'],'余额发生变化'),
-                               (['115272','115273'],'数字读数不稳定'),
-                               ([''],'不能可靠读取整数'),
-                               (['11527?'],'不能可靠读取整数')):
-            with self.subTest(readings=readings),tempfile.TemporaryDirectory() as folder:
-                flow=self.flow(folder,cp=400)
-                flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
-                flow.text=Mock(side_effect=['115272','115272','400',*readings])
-                flow.tap=Mock();flow.pink=Mock(return_value=True)
-                flow.image=np.zeros((720,1280,3),dtype=np.uint8)
-                with patch('daily_tasks.time.sleep'),self.assertRaisesRegex((RuntimeError,ValueError),error):
-                    flow.configure_cp()
-                flow.tap.assert_called_once_with(877,285)
-                flow.wait_ready.assert_not_called()
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.flow(folder,cp=400)
+            flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
+            flow.text=Mock(side_effect=['115272','115272','400','400消费'])
+            flow.tap=Mock();flow.pink=Mock(return_value=True)
+            flow.image=np.zeros((720,1280,3),dtype=np.uint8)
+            with patch('daily_tasks.time.sleep'):
+                self.assertEqual(flow.configure_cp(),115272)
+            self.assertEqual([c.args for c in flow.tap.call_args_list],[(877,285),(770,620)])
 
     def test_wrong_tier_does_not_accept_dialog(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -129,27 +123,60 @@ class CPTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     flow.verify_chart_start(1,selection,200)
 
-    def test_round_counts_only_confirmed_cp_deduction_and_never_refills(self):
-        for after in (356,355):
-            with self.subTest(after=after),tempfile.TemporaryDirectory() as folder:
+    def test_settled_round_finishes_without_reading_cp_again_or_refilling(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.flow(folder)
+            selection=ChartSelection('774','expert')
+            flow.prepare_round=Mock(return_value=((selection,),[([],{})]))
+            for name in ('play_chart','await_chart_result','settle_results','navigate_menu','open_page','home'):
+                setattr(flow,name,Mock())
+            flow.stable_integer=Mock(side_effect=AssertionError('No post-settlement CP read'))
+            flow.refill_fire=Mock(side_effect=AssertionError('CP must never refill fire'))
+            flow.run()
+            self.assertEqual(flow.report['completed_rounds'],1)
+            self.assertEqual(flow.report['status'],'max_rounds_reached')
+            self.assertEqual(flow.report['rounds'][0]['status'],'finished')
+            flow.play_chart.assert_called_once()
+            flow.stable_integer.assert_not_called()
+            flow.open_page.assert_not_called()
+            flow.home.assert_called_once()
+            flow.refill_fire.assert_not_called()
+
+    def test_next_round_uses_current_balance_without_comparing_deduction(self):
+        for balance,completed,status in ((355,2,'max_rounds_reached'),
+                                         (756,2,'max_rounds_reached'),
+                                         (199,1,'insufficient_cp')):
+            with self.subTest(balance=balance),tempfile.TemporaryDirectory() as folder:
+                flow=self.flow(folder,max_rounds=2)
+                for name in ('navigate_menu','open_page','choose_difficulty_exact','tap',
+                             'play_chart','await_chart_result','settle_results','home'):
+                    setattr(flow,name,Mock())
+                flow.stable_integer=Mock(side_effect=[556,balance])
+                flow.select_event_song=Mock(return_value=ChartSelection('774','expert').song)
+                flow.store.get=Mock(return_value=([],{}))
+                flow.configure_cp=Mock(side_effect=[556,balance])
+                flow.run()
+                self.assertEqual(flow.report['completed_rounds'],completed)
+                self.assertEqual(flow.report['status'],status)
+                self.assertEqual(flow.play_chart.call_count,completed)
+                self.assertTrue(all(row['status']=='finished' for row in flow.report['rounds']))
+                flow.home.assert_called_once()
+
+    def test_unconfirmed_result_or_failed_settlement_does_not_count_round(self):
+        for failed_step in ('await_chart_result','settle_results'):
+            with self.subTest(failed_step=failed_step),tempfile.TemporaryDirectory() as folder:
                 flow=self.flow(folder)
                 selection=ChartSelection('774','expert')
                 flow.prepare_round=Mock(return_value=((selection,),[([],{})]))
-                for name in ('configure_stage','await_chart_result','settle_results','navigate_menu','open_page','home'):
+                for name in ('play_chart','await_chart_result','settle_results','navigate_menu','home'):
                     setattr(flow,name,Mock())
-                flow.play_chart=Mock(side_effect=lambda i,s,m,c,row: row.update(cp_before=556))
-                flow.stable_integer=Mock(return_value=after)
-                flow.refill_fire=Mock(side_effect=AssertionError('CP must never refill fire'))
-                if after==356:
+                getattr(flow,failed_step).side_effect=RuntimeError('settlement incomplete')
+                with self.assertRaisesRegex(RuntimeError,'settlement incomplete'):
                     flow.run()
-                    self.assertEqual(flow.report['completed_rounds'],1)
-                    self.assertEqual(flow.report['status'],'max_rounds_reached')
-                else:
-                    with self.assertRaisesRegex(RuntimeError,'CP扣除数'):
-                        flow.run()
-                    self.assertEqual(flow.report['completed_rounds'],0)
+                self.assertEqual(flow.report['completed_rounds'],0)
+                self.assertEqual(flow.report['rounds'][0]['status'],'running')
                 flow.play_chart.assert_called_once()
-                flow.refill_fire.assert_not_called()
+                flow.home.assert_not_called()
 
     def test_cp_shortage_stops_before_playback(self):
         with tempfile.TemporaryDirectory() as folder:

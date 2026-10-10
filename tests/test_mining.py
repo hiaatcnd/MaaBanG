@@ -87,8 +87,9 @@ class MiningTests(unittest.TestCase):
     def test_ineligible_challenge_is_skipped_before_playing_next_challenge(self):
         f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
         f.mining=MiningOptions.parse({});f.report={'skipped':[]};f.image=np.zeros((720,1280,3))
-        for name in ('navigate_menu','inherit_menu_fire','click','select_stage_kind','swipe','wait','tap','choose_difficulty_exact','wait_ready','back'):
+        for name in ('navigate_menu','inherit_menu_fire','click','select_stage_kind','swipe','wait','tap','choose_difficulty_exact','wait_ready','back','snap'):
             setattr(f,name,Mock())
+        f.reco=Mock(side_effect=lambda node:node=='MN_StageSelect')
         f.limited=Mock(return_value=False)
         f.challenge_cards=Mock(side_effect=[[(200,np.zeros((12,30)),0,90)],[(300,np.full((12,30),30),0,90)]])
         f.selected_level=Mock(return_value=1);f.text=Mock(return_value='BLACK SHOUT')
@@ -261,6 +262,46 @@ class MiningTests(unittest.TestCase):
         self.assertEqual(row['maximum'],50)
         self.assertTrue(row['automatic_training'])
 
+    def test_unreadable_locked_story_is_cancelled_without_spending(self):
+        for texts in (['?'],['1 / 50','?']):
+            flow=StoryMiningFlow.__new__(StoryMiningFlow);flow.report={}
+            flow.text=Mock(side_effect=texts)
+            flow.tap=Mock();flow.snap=Mock();flow.reco=Mock(return_value=True)
+            flow.cancel_story_unlock=Mock();flow.practice=Mock();flow.finish_story=Mock()
+            row={};flow.read_story(True,row)
+            self.assertEqual(row['status'],'story_requirement_unreadable')
+            self.assertTrue(flow.report['warnings'])
+            flow.cancel_story_unlock.assert_called_once()
+            flow.practice.assert_not_called();flow.finish_story.assert_not_called()
+            flow.tap.assert_called_once_with(480,620)
+
+    def test_unknown_practice_conditions_skip_member_without_entering_practice(self):
+        cases=[(['?'],3,False,True,'practice_info_unreadable'),
+               (['1 / 40'],None,False,True,'practice_info_unreadable'),
+               (['1 / 40'],3,True,False,'practice_setup_unconfirmed'),
+               (['1 / 40','?'],3,True,True,'practice_info_unreadable')]
+        for texts,rarity,training,checked,status in cases:
+            with self.subTest(texts=texts,rarity=rarity,checked=checked):
+                flow=StoryMiningFlow.__new__(StoryMiningFlow);flow.report={}
+                flow.mining=MiningOptions.parse({'practice':True,'stars':'3'})
+                flow.text=Mock(side_effect=texts);flow.rarity=Mock(return_value=rarity)
+                flow.hit_text=Mock(return_value=training);flow.checkbox=Mock(return_value=checked)
+                flow.tap=Mock();flow.snap=Mock();flow.click=Mock()
+                row={};self.assertFalse(flow.practice(row,50))
+                self.assertEqual(row['status'],status)
+                self.assertTrue(flow.report['warnings']);flow.click.assert_not_called()
+
+    def test_unreadable_practice_preview_returns_to_member_without_submitting(self):
+        flow=StoryMiningFlow.__new__(StoryMiningFlow);flow.report={}
+        flow.mining=MiningOptions.parse({'practice':True,'stars':'3'})
+        flow.text=Mock(side_effect=['1 / 50','?']);flow.rarity=Mock(return_value=3)
+        flow.hit_text=Mock(return_value=False);flow.reco=Mock(return_value=False)
+        flow.tap=Mock();flow.snap=Mock();flow.click=Mock();flow.wait=Mock();flow.back=Mock()
+        row={};self.assertFalse(flow.practice(row,50))
+        self.assertEqual(row['status'],'practice_info_unreadable')
+        flow.back.assert_called_once();flow.wait.assert_called_with('MN_MemberDetail')
+        flow.tap.assert_called_once_with(830,645)
+
     def test_excluded_star_never_enables_auto_training(self):
         flow=StoryMiningFlow.__new__(StoryMiningFlow)
         flow.mining=MiningOptions.parse({'practice':True,'stars':'1,2,3'})
@@ -286,6 +327,7 @@ class MiningTests(unittest.TestCase):
         from costume_unlock import FlowError
         for actual in (40,39):
             flow=StoryMiningFlow.__new__(StoryMiningFlow)
+            flow.report={}
             states=iter(['MN_PracticeConfirm','MN_PracticeConfirm','MN_PracticeSuccess','MN_PracticePage','MN_MemberDetail'])
             state={}
             flow.snap=lambda:state.update(scene=next(states))
@@ -298,8 +340,23 @@ class MiningTests(unittest.TestCase):
                     self.assertTrue(flow.await_practice(row,40))
                     self.assertEqual(row['practiced_to'],40)
                 else:
-                    with self.assertRaisesRegex(FlowError,'练习后等级不符'):flow.await_practice(row,40)
+                    self.assertFalse(flow.await_practice(row,40))
+                    self.assertEqual(row['practiced_to'],39)
+                    self.assertEqual(row['status'],'level_locked')
+                    self.assertTrue(flow.report['warnings'])
             self.assertEqual([c.args[0] for c in flow.click.call_args_list],['MN_PracticeConfirmOK','MN_PracticeClose'])
+
+    def test_practice_uses_story_requirement_and_skips_unreadable_level(self):
+        for text,allowed in [('39 / 40',True),('?',False)]:
+            flow=StoryMiningFlow.__new__(StoryMiningFlow);flow.report={}
+            flow.snap=Mock();flow.reco=lambda node:node=='MN_MemberDetail'
+            flow.dismiss_notifications=Mock(return_value=False)
+            flow.text=Mock(return_value=text);flow.click=Mock()
+            row={'required':30,'practice_confirmed':True}
+            self.assertEqual(flow.await_practice(row,40),allowed)
+            flow.click.assert_not_called()
+            if not allowed:
+                self.assertEqual(row['status'],'practice_level_unreadable')
 
     def test_real_empty_member_message_finishes_but_unknown_blank_page_does_not(self):
         import re
@@ -626,27 +683,22 @@ class MiningTests(unittest.TestCase):
         self.assertEqual(json.dumps(update(interface),ensure_ascii=False,sort_keys=True),expected)
         self.assertEqual(len([t for t in interface['task'] if t['entry'].startswith('Mine')]),3)
 
-    def test_locked_next_stage_is_not_selected(self):
-        from types import SimpleNamespace
-        flow = ChallengeMiningFlow.__new__(ChallengeMiningFlow)
-        flow.wait = Mock()
-        flow.selected_level = Mock(return_value=8)
-        flow.ocr = Mock(return_value=[SimpleNamespace(text='舞台9',box=[40,108,100,25])])
-        flow.reco = Mock(return_value=True)
-        flow.tap_hit = Mock()
-        self.assertFalse(flow.advance_level(8))
-        flow.tap_hit.assert_not_called()
-
-    def test_unlocked_next_stage_is_selected_and_verified(self):
-        from types import SimpleNamespace
-        flow = ChallengeMiningFlow.__new__(ChallengeMiningFlow)
-        flow.wait = Mock()
-        flow.selected_level = Mock(side_effect=[8,9])
-        flow.ocr = Mock(return_value=[SimpleNamespace(text='舞台9',box=[40,108,100,25])])
-        flow.reco = Mock(return_value=None)
-        flow.tap_hit = Mock()
-        self.assertTrue(flow.advance_level(8))
-        flow.tap_hit.assert_called_once()
+    def test_unknown_post_settlement_stars_skip_song_without_losing_completed_round(self):
+        flow=self.flow(5)
+        first=ChartSelection.parse('306','easy')
+        second=ChartSelection.parse('1','easy')
+        flow.next_song=Mock(side_effect=[[first],[second],[]])
+        flow.song_stars=Mock(return_value={'easy':'unknown'})
+        def perform(selection):
+            flow.report['attempted']+=1
+            flow.report['completed_rounds']+=1
+            return {'full_combo_confirmed':selection==second}
+        flow.perform=Mock(side_effect=perform)
+        flow.run()
+        self.assertEqual(flow.report['completed_rounds'],2)
+        self.assertEqual(flow.report['status'],'scan_finished')
+        self.assertEqual(flow.report['skipped'][0]['reason'],'unknown_star_after')
+        self.assertEqual(flow.report['full_combos'],[{'song_id':'1','difficulty':'easy'}])
 
     def test_post_start_popup_monitor_stops_after_notes_start(self):
         flow = ChallengeMiningFlow.__new__(ChallengeMiningFlow)
@@ -757,7 +809,7 @@ class MiningTests(unittest.TestCase):
         self.assertTrue(all(roi[1]==397 and roi[2]>100 for roi in slots))
         self.assertEqual(material_rois(np.full_like(image,255)),[])
 
-    def test_home_settlement_restores_the_original_challenge(self):
+    def test_home_settlement_finishes_without_reentering_challenge(self):
         flow = ChallengeMiningFlow.__new__(ChallengeMiningFlow)
         flow.snap = Mock()
         flow.result_modals = Mock(return_value=False)
@@ -765,18 +817,11 @@ class MiningTests(unittest.TestCase):
         flow.navigate_menu = Mock()
         flow.click = Mock()
         flow.restore_challenge = Mock()
+        flow.require_clear_notification_overlay = Mock()
         flow.settle_results()
-        flow.navigate_menu.assert_called_once()
-        flow.click.assert_called_once_with('MN_ChallengeEntry')
-        flow.restore_challenge.assert_called_once()
-
-    def test_another_challenge_level_is_not_treated_as_progress(self):
-        from costume_unlock import FlowError
-        flow = ChallengeMiningFlow.__new__(ChallengeMiningFlow)
-        flow.wait = Mock()
-        flow.selected_level = Mock(return_value=30)
-        with self.assertRaises(FlowError):
-            flow.advance_level(9)
+        flow.navigate_menu.assert_not_called()
+        flow.click.assert_not_called()
+        flow.restore_challenge.assert_not_called()
 
 
 if __name__ == '__main__':

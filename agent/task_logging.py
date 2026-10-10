@@ -36,6 +36,10 @@ STATUS_TEXT = {
     'read_reward_unconfirmed': '故事已读，但未确认奖励',
     'practice_disabled_or_ineligible': '未开启练习或成员不符合练习条件，跳过',
     'insufficient_practice_tickets': '练习券不足，跳过',
+    'practice_level_unreadable': '练习已结束，等级无法读取，跳过当前故事',
+    'practice_info_unreadable': '练习条件无法读取，跳过当前故事',
+    'practice_setup_unconfirmed': '练习设置未确认，跳过当前故事',
+    'story_requirement_unreadable': '故事解锁条件无法读取，跳过当前故事',
     'level_locked': '成员等级不足，跳过',
     'material_unlock_disabled': '未开启材料解锁，跳过',
     'insufficient_or_unreadable_materials': '材料不足或无法确认数量，跳过',
@@ -50,6 +54,11 @@ COMPLETE = {'finished', 'target_reached', 'max_rounds_reached',
 
 def status_text(status):
     return STATUS_TEXT.get(status, f'任务结束，状态：{status}')
+
+
+def record_warning(report, message, **details):
+    report.setdefault('warnings', []).append({'message': message, **details})
+    log(message, level='warn')
 
 
 def finish(label, report):
@@ -70,9 +79,11 @@ def finish(label, report):
         text = status_text(status)
     if report.get('inspect_only'):
         details.append('仅检查模式')
+    if report.get('warnings'):
+        details.append(f'提示 {len(report["warnings"])} 项，详见日志')
     if details:
         text += '；' + '，'.join(details)
-    log(f'[{label}] {text}', level='success' if status in COMPLETE else 'warn')
+    log(f'[{label}] {text}', level='success' if status in COMPLETE and not report.get('warnings') else 'warn')
 
 
 def failure(label, error, context):

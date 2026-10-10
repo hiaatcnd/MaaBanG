@@ -162,19 +162,20 @@ class CoopTests(unittest.TestCase):
             flow.tap_hit.assert_called_once_with(button)
             self.assertEqual(flow.report['completed_rounds'],0)
 
-    def test_cost_requires_two_matching_previews_without_top_currency_bar(self):
-        for second,accepted in [((18,18),True),((18,17),False)]:
-            with self.subTest(second=second),tempfile.TemporaryDirectory() as folder:
+    def test_cost_is_checked_without_repeated_counter_comparisons(self):
+        for preview,accepted in [((18,18),True),((18,17),False)]:
+            with self.subTest(preview=preview),tempfile.TemporaryDirectory() as folder:
                 flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
                                     ChartOptions.parse({'mode':'coop','fire':0}),folder)
                 flow.verify_final_selection=Mock();flow.snap=Mock();flow.pause=Mock()
                 flow.reco=Mock(return_value=True)
                 flow.fire_balance=Mock(side_effect=AssertionError('No top counter in coop'))
-                flow.fire_preview=Mock(side_effect=[(18,18),second,(18,18),second])
+                flow.fire_preview=Mock(return_value=preview)
                 if accepted:
                     self.assertEqual(flow.verify_chart_start(1,ChartSelection('91','expert'),0),18)
+                    flow.fire_preview.assert_called_once()
                 else:
-                    with self.assertRaisesRegex(RuntimeError,'读数不稳定'):
+                    with self.assertRaisesRegex(RuntimeError,'火数预览不符'):
                         flow.verify_chart_start(1,ChartSelection('91','expert'),0)
 
     def test_real_coop_pages_song_difficulty_and_zero_fire(self):

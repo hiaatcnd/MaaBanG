@@ -157,6 +157,17 @@ class FlowTests(unittest.TestCase):
         flow.return_home.assert_called_once()
         self.assertEqual(flow.attempts,[])
 
+    def test_post_unlock_reward_collection_does_not_require_progress_number(self):
+        flow=CostumeFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),3)
+        flow.verify_character=Mock();flow.click=Mock();flow.wait=Mock();flow.snap=Mock()
+        label=SimpleNamespace(box=[760,280,120,30])
+        def ocr(roi,pattern):
+            return [label] if pattern in ('演出服装','详细') else []
+        flow.ocr=Mock(side_effect=ocr)
+        flow.stable_ratio=Mock(side_effect=AssertionError('No post-unlock progress gate'))
+        self.assertIsNone(flow.read_count('A',claim_only=True))
+        flow.stable_ratio.assert_not_called()
+
     def test_cancellation_is_honored_before_capture(self):
         flow=SimulatedFlow(3,[],[])
         flow.ctx.tasker.stopping=True

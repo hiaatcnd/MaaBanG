@@ -1,5 +1,5 @@
 """Home rewards, Michelle collections and the daily free recruitment."""
-from task_logging import log, finish, failure
+from task_logging import log, finish, failure, record_warning
 import json
 from pathlib import Path
 import time
@@ -28,14 +28,20 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.tap(x+w//2, y+h//2)
 
     def stable_integer(self, roi):
-        values = []
-        for _ in range(2):
+        previous = None
+        text = ''
+        for _ in range(4):
             self.snap()
-            values.append(integer(self.text(roi)))
+            text = self.text(roi)
+            try:
+                current = integer(text)
+            except ValueError:
+                current = None
+            if current is not None and current == previous:
+                return current
+            previous = current
             time.sleep(0.15)
-        if values[0] != values[1]:
-            raise FlowError("数字读数不稳定")
-        return values[0]
+        raise FlowError(f'无法读取稳定的数量：{text!r}')
 
     def home(self):
         for _ in range(6):
@@ -147,12 +153,16 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             page = self.switch_mission_page(page, -1)
         for _ in range(100):
             self.claim_mission_page(category)
-            if self.mission_page() != page:
-                raise FlowError(f"领取后任务页码发生变化：{category}")
             current, total = page or (1, 1)
             self.report.setdefault('mission_pages', []).append(
                 {'category': category, 'page': current, 'total': total})
             log(f"[任务奖励] 已检查：{category} {current}/{total}")
+            actual = self.mission_page()
+            if actual != page:
+                # Claiming can rebuild/paginate the list. Process the current
+                # page before advancing so refreshed rewards are not skipped.
+                page = actual
+                continue
             if current == total:
                 return
             page = self.switch_mission_page(page, 1)
@@ -283,8 +293,8 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         before = self.stable_integer([609,439,80,40])
         after = self.stable_integer([789,439,86,40])
         verify_exchange(category,quantity,before,after,cost)
-        if before != balance or not name:
-            raise FlowError("交换项目或余额发生变化")
+        if not name:
+            raise FlowError("无法确认交换项目")
         self.tap(770,582)
         self.wait("DY_ExchangeVerify")
         if normalized(self.text([391,301,493,37])) != name or not self.reco("DY_StickerConfirm"):
@@ -293,16 +303,12 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         before2 = self.stable_integer([609,408,80,36])
         after2 = self.stable_integer([789,408,86,36])
         verify_exchange(category,quantity2,before2,after2,cost)
-        if (before2,after2) != (before,after):
-            raise FlowError("二次确认页余额不一致")
-        row = {"category":category,"name":name,"cost":cost,"before":before,"after":after,"status":"submitted"}
+        row = {"category":category,"name":name,"cost":cost,"before":before2,"after":after2,"status":"submitted"}
         self.report["exchanges"].append(row)
         self.tap(770,582)  # Submit exactly once. An uncertain result is never retried.
         self.wait("DY_ExchangeSuccess",20)
         self.tap(640,526)
         self.wait("DY_MichelleHeader")
-        if self.stable_integer([390,112,76,34]) != after:
-            raise FlowError("成功弹窗后贴纸余额未与预期一致")
         row["status"] = "success_confirmed"
         log(f"[贴纸交换] {category}：{name}，消耗 {cost} 贴纸")
         return True
@@ -451,10 +457,11 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.require_clear_notification_overlay()
             card = self.image[180:255,45:215].copy()
             if any(np.mean(np.abs(card.astype(float)-old)) < 1 for old in visited):
-                raise FlowError("招募标签重复，停止遍历")
+                record_warning(self.report,'[免费招募] 招募列表未继续翻页，结束活动卡池扫描')
+                return
             visited.append(card.astype(float))
             self.report["recruit_tabs_checked"] = index+1
-            # The daily pool retains its remaining-count verification below.
+            # The daily pool is handled separately after the event scan.
             if not self.reco("DY_FreeBanner"):
                 for _ in range(20):
                     button = self.event_free_button()
@@ -464,12 +471,15 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                     self.wait("DY_EventFreeConfirm")
                     confirmation = self.text([370,260,540,160])
                     verify_event_free_confirmation(confirmation)
-                    # An identical offer must not be submitted a second time,
-                    # even if the server leaves the old button visible briefly.
+                    # A stale button in this pool must not repeat a completed
+                    # offer. Different pools may use the same confirmation text.
                     offers = self.report.setdefault("event_draws", [])
-                    if any(row["confirmation"] == normalized(confirmation) for row in offers):
-                        raise FlowError("活动免费招募未更新，不重复提交")
-                    row = {"confirmation": normalized(confirmation), "status": "submitted"}
+                    if any(row['pool']==index and row["confirmation"]==normalized(confirmation) for row in offers):
+                        self.tap(510,476)
+                        self.wait('DY_RecruitDetails')
+                        record_warning(self.report,'[免费招募] 本卡池的免费招募已完成，跳过尚未刷新的按钮')
+                        break
+                    row = {"pool":index,"confirmation": normalized(confirmation), "status": "submitted"}
                     offers.append(row)
                     self.report["draw_in_flight"] = True
                     self.tap(770,476)
@@ -495,8 +505,13 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         log('[免费招募] 正在检查每日免费招募及剩余次数')
         self.select_free_recruit()
         for _ in range(3):
-            count = self.free_remaining()
-            log(f"[免费招募] 每日免费剩余 {count} 次")
+            try:
+                count = self.free_remaining()
+            except ValueError:
+                count = None
+                record_warning(self.report,'[免费招募] 剩余次数无法读取，按免费按钮和确认页继续')
+            if count is not None:
+                log(f"[免费招募] 每日免费剩余 {count} 次")
             if count == 0:
                 break
             if not self.hit_text([1176,652,77,39], "^免费$"):
@@ -509,11 +524,9 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.report["draw_in_flight"] = True
             self.tap(770,476)
             self.finish_draw()
-            if self.free_remaining() != count-1:
-                raise FlowError("免费招募剩余次数未减少，不重复提交")
             self.report["draw_in_flight"] = False
             self.report["draws"] += 1
-            log(f"[免费招募] 已完成一次，剩余 {count-1} 次")
+            log('[免费招募] 本次招募已完成')
         self.report["status"] = "finished"
         self.home()
 

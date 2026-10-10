@@ -1,5 +1,5 @@
 """Read filtered member stories, optionally practice and unlock with materials."""
-from task_logging import log, status_text
+from task_logging import log, status_text, record_warning
 import re
 import time
 import numpy as np
@@ -156,15 +156,26 @@ class StoryMiningFlow(DailyFlow):
         # Gold interiors independently cover all five positions; never downgrade
         # a five-star member to an allowed three-star practice candidate.
         count=max(len(ys),gold_member_stars(self.image))
-        if not 1 <= count <= 5:
-            raise FlowError('无法确认成员星级，不练习')
-        return count
+        return count if 1 <= count <= 5 else None
+
+    def skip_story(self, row, status, message):
+        row['status'] = status
+        record_warning(self.report,'[挖矿故事] '+message+'，跳过当前故事')
+        return False
 
     def practice(self, row, required):
-        current,maximum = parse_level(self.text([654,348,150,35]))
+        if not self.mining.practice:
+            row['status'] = 'practice_disabled_or_ineligible'
+            return False
+        try:
+            current,maximum = parse_level(self.text([654,348,150,35]))
+        except ValueError:
+            return self.skip_story(row,'practice_info_unreadable','无法读取练习前的等级')
         rarity = self.rarity()
+        if rarity is None:
+            return self.skip_story(row,'practice_info_unreadable','无法确认成员星级，不提交练习')
         row.update(level=current,maximum=maximum,rarity=rarity,required=required)
-        if not self.mining.practice or rarity not in self.mining.stars or current >= required:
+        if rarity not in self.mining.stars or current >= required:
             row['status'] = 'practice_disabled_or_ineligible'
             return False
         # The game exposes the trained cap immediately when this checkbox is on.
@@ -175,8 +186,11 @@ class StoryMiningFlow(DailyFlow):
                 self.tap(831,331)
             self.snap()
             if not self.checkbox(831,331):
-                raise FlowError('未确认自动特训已开启')
-            current,maximum = parse_level(self.text([654,348,150,35]))
+                return self.skip_story(row,'practice_setup_unconfirmed','未确认自动特训已开启，不提交练习')
+            try:
+                current,maximum = parse_level(self.text([654,348,150,35]))
+            except ValueError:
+                return self.skip_story(row,'practice_info_unreadable','无法读取特训后的等级上限')
             row.update(automatic_training=True,maximum=maximum)
         if not can_practice(self.mining,rarity,current,maximum,required):
             row['status'] = 'practice_disabled_or_ineligible'
@@ -189,7 +203,12 @@ class StoryMiningFlow(DailyFlow):
         self.wait('MN_PracticePage')
         self.tap(830,645)
         self.snap()
-        after,cap = parse_level(self.text([371,457,104,45]))
+        try:
+            after,cap = parse_level(self.text([371,457,104,45]))
+        except ValueError:
+            self.back()
+            self.wait('MN_MemberDetail')
+            return self.skip_story(row,'practice_info_unreadable','无法读取用券预览，不提交练习')
         if after != maximum or cap != maximum:
             self.back()
             self.wait('MN_MemberDetail')
@@ -201,6 +220,7 @@ class StoryMiningFlow(DailyFlow):
 
     def await_practice(self, row, maximum):
         deadline = time.monotonic()+90
+        result_seen = False
         illustration_taps = 0
         last_illustration_tap = time.monotonic()
         while time.monotonic() < deadline:
@@ -226,6 +246,7 @@ class StoryMiningFlow(DailyFlow):
                     self.click('MN_AutoTrainingOK')
                     last_illustration_tap = time.monotonic()
             elif self.reco('MN_TrainingResult'):
+                result_seen = True
                 self.save_frame(f'training_result_{len(self.report["members"])}.png')
                 self.click('MN_TrainingResultOK')
             elif self.reco('MN_PracticeConfirm'):
@@ -233,6 +254,7 @@ class StoryMiningFlow(DailyFlow):
                     row['practice_confirmed'] = True
                     self.click('MN_PracticeConfirmOK')
             elif self.reco('MN_PracticeSuccess'):
+                result_seen = True
                 self.click('MN_PracticeClose')
             elif self.dismiss_notifications():
                 continue
@@ -244,14 +266,21 @@ class StoryMiningFlow(DailyFlow):
                     actual,_ = parse_level(level_text)
                 except ValueError:
                     actual = None
-                if actual == maximum:
+                if result_seen or actual is not None and actual >= row.get('required',maximum):
                     self.back()
                     self.wait('MN_MemberDetail')
             elif self.reco('MN_MemberDetail'):
-                actual,_ = parse_level(self.text([654,348,150,35]))
-                if actual != maximum:
-                    raise FlowError('练习后等级不符，不重复消耗')
+                try:
+                    actual,_ = parse_level(self.text([654,348,150,35]))
+                except ValueError:
+                    row['status'] = 'practice_level_unreadable'
+                    record_warning(self.report,'[挖矿故事] 练习已结束，等级无法读取，跳过当前故事')
+                    return False
                 row['practiced_to'] = actual
+                if actual < row.get('required',maximum):
+                    row['status'] = 'level_locked'
+                    record_warning(self.report,'[挖矿故事] 练习后仍未达到故事解锁等级，跳过当前故事')
+                    return False
                 return True
             elif (row.get('automatic_training_confirmed') and illustration_taps<3
                   and time.monotonic()-last_illustration_tap>=4):
@@ -290,11 +319,18 @@ class StoryMiningFlow(DailyFlow):
         self.tap(480 if memory else 225,620)
         self.snap()
         if self.reco('MN_StoryUnlock'):
-            current,maximum = parse_level(level_text)
+            try:
+                current,maximum = parse_level(level_text)
+            except ValueError:
+                self.cancel_story_unlock()
+                self.skip_story(row,'story_requirement_unreadable','无法读取当前等级，不解锁')
+                return
             text = normalized(self.text([465,444,360,48]))
             match = re.search(r'解锁等级(\d+)级以上',text)
             if not match:
-                raise FlowError('无法确认故事解锁等级')
+                self.cancel_story_unlock()
+                self.skip_story(row,'story_requirement_unreadable','无法读取故事解锁等级，不解锁')
+                return
             required = int(match[1])
             if current < required:
                 self.cancel_story_unlock()
