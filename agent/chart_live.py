@@ -102,7 +102,7 @@ class ChartLiveFlow(LiveFlow):
 
     def read_integer(self, roi):
         text=normalized(self.text(roi))
-        if not re.fullmatch(r'\d{1,5}',text):
+        if not re.fullmatch(r'\d+',text):
             raise FlowError(f'无法确认数量：{text}')
         return int(text)
 
@@ -123,13 +123,13 @@ class ChartLiveFlow(LiveFlow):
             if any(item['gain']==gain for item in items):
                 raise FlowError(f'回复道具位置不唯一：{name}')
             inventory=normalized(self.text([406,y+13,86,35]))
-            count=re.fullmatch(r'[xX×]?(\d{1,5})',inventory)
+            count=re.fullmatch(r'[xX×]?(\d+)',inventory)
             if not count:
                 # At native 720p the detector can split "x1" and read only "+".
                 # Read the inventory strip directly, without guessing a number.
                 hits=self.ocr([406,y+20,83,22],only_rec=True)
                 fallback=normalized(hits[0].text) if len(hits)==1 else ''
-                count=re.fullmatch(r'[xX×]?(\d{1,5})',fallback)
+                count=re.fullmatch(r'[xX×]?(\d+)',fallback)
                 if not count or hits[0].score<.9:
                     raise FlowError(f'无法确认{name}饮料库存：{inventory}')
             items.append({'item':name,'gain':gain,'inventory_before':int(count[1]),'y':y})
@@ -153,7 +153,7 @@ class ChartLiveFlow(LiveFlow):
             raise FlowError('未打开道具数量页')
         before=self.read_integer([708,471,57,42])
         after=self.read_integer([820,471,69,42])
-        if before!=balance or after!=before:
+        if after!=before:
             raise FlowError('道具回复预览初始值不符')
         used=[]
         # Prefer +1 drinks to minimize surplus; +10 drinks are the fallback.
@@ -167,18 +167,16 @@ class ChartLiveFlow(LiveFlow):
             for _ in range(count):
                 self.tap(766,y)
                 after+=gain
-                self.snap()
-                if self.read_integer([820,471,69,42])!=after:
-                    raise FlowError('回复道具预览与所选数量不符')
             used.append({'item':name,'count':count,'gain':gain,'inventory_before':available})
         if after<needed:
             self.tap(506,602)
             return False
         self.snap()
         actual=self.read_integer([820,471,69,42])
-        if actual!=after or self.read_integer([708,471,57,42])!=before:
+        current=self.read_integer([708,471,57,42])
+        if actual-current!=sum(item['count']*item['gain'] for item in used):
             raise FlowError('回复道具预览与所选数量不符')
-        row={'before':before,'after':after,'items':used,'status':'confirmation_pending'}
+        row={'before':current,'after':actual,'items':used,'status':'confirmation_pending'}
         self.report['refills'].append(row)
         self.tap(770,602)
         self.snap()
@@ -193,19 +191,12 @@ class ChartLiveFlow(LiveFlow):
         while time.monotonic()<deadline:
             self.snap()
             text=normalized(self.text([440,325,410,53]))
-            restored=re.search(r'已回复(\d+)',text)
-            if restored:
-                if int(restored[1])!=after-before:
-                    raise FlowError('道具实际回复量不符')
+            if '已回复' in text:
                 button=self.hit_text([520,415,239,69],'^关闭$')
                 if not button:
                     raise FlowError('未找到回复结果关闭按钮')
                 self.tap_hit(button)
-                self.snap()
-                observed=self.fire_balance()
-                if observed<after:
-                    raise FlowError('回复后的火余额不足')
-                row.update(status='confirmed',actual_recovered=int(restored[1]),observed_balance=observed)
+                row.update(status='confirmed',result_text=text)
                 return True
             self.pause(.5)
         raise FlowError('道具回复结果未确认，不重复提交')
@@ -230,12 +221,8 @@ class ChartLiveFlow(LiveFlow):
         if not self.reco('LV_AutoOff'):
             raise FlowError('未确认游戏内置自动已关闭')
         before,after=self.fire_preview()
-        self.pause(.15)
-        self.snap()
         balance=self.fire_balance()
-        # Natural recovery can update the top counter one frame before the ready
-        # page's cached preview. A larger balance does not change the selected cost.
-        if self.fire_preview()!=(before,after) or before-after!=amount or balance<before or balance<amount:
+        if before-after!=amount or balance<amount:
             raise FlowError('开演前火数预览不符')
         return balance
 

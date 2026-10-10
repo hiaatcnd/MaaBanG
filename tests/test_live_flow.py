@@ -66,6 +66,15 @@ class LiveFlowTests(unittest.TestCase):
         f.tap.assert_called_once()
         self.assertEqual(f.report['status'],'insufficient_auto_lives')
 
+    def test_tour_results_do_not_require_auto_counter_deduction(self):
+        f=self.flow(mode='tour',max_rounds='1',fire=1)
+        f.remaining=Mock(side_effect=[3,AssertionError('No post-result quota comparison')])
+        f.verify_start=Mock(return_value=(3,9))
+        f.run()
+        self.assertEqual(f.report['completed_rounds'],1)
+        self.assertEqual(f.tap.call_count,3)
+        f.remaining.assert_called_once()
+
     def test_tour_does_not_begin_if_quota_or_fire_insufficient(self):
         for quota,fire,status in [(2,25,'insufficient_auto_lives'),(3,8,'insufficient_fire')]:
             f=self.flow(mode='tour',fire=3)
@@ -92,12 +101,13 @@ class LiveFlowTests(unittest.TestCase):
         self.assertEqual(f.report['rounds'][0]['songs'][0]['status'],'submitted')
         self.assertEqual(f.report['completed_rounds'],0)
 
-    def test_tour_counter_mismatch_prevents_second_start(self):
-        f=self.flow(mode='tour')
-        f.remaining=Mock(side_effect=[10,10])
-        with self.assertRaises(FlowError): f.run()
-        f.tap.assert_called_once()
-        f.settle_results.assert_not_called()
+    def test_tour_completes_even_when_quota_display_is_stale(self):
+        f=self.flow(mode='tour',max_rounds=1)
+        f.remaining=Mock(return_value=10)
+        f.run()
+        self.assertEqual(f.tap.call_count,3)
+        f.settle_results.assert_called_once()
+        self.assertEqual(f.report['completed_rounds'],1)
 
     def test_preflight_failure_does_not_click_start(self):
         f=self.flow()

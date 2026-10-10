@@ -68,9 +68,20 @@ class EventFreeTests(unittest.TestCase):
     def test_same_free_confirmation_cannot_be_submitted_twice(self):
         f=self.event_flow(['free'],stuck=True)
         from unittest.mock import patch
-        with patch('daily_tasks.time.sleep'), self.assertRaisesRegex(FlowError,'不重复提交'):
+        with patch('daily_tasks.time.sleep'):
             f.recruit_events()
         self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),1)
+        self.assertEqual(f.report['draws'],1)
+        self.assertTrue(f.report['warnings'])
+        self.assertIn((510,476),[c.args for c in f.tap.call_args_list])
+
+    def test_identical_confirmation_in_different_pools_does_not_block_free_draws(self):
+        f=self.event_flow(['free','free'])
+        from unittest.mock import patch
+        with patch('daily_tasks.time.sleep'):
+            f.recruit_events()
+        self.assertEqual(f.report['draws'],2)
+        self.assertEqual([row['pool'] for row in f.report['event_draws']],[0,1])
 
     def test_paid_confirmation_and_uncertain_result_never_retry(self):
         from unittest.mock import patch

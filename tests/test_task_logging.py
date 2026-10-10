@@ -102,6 +102,14 @@ class TaskLoggingTests(unittest.TestCase):
         self.assertTrue(output.getvalue().startswith('warn:'))
         self.assertIn('用户请求停止', output.getvalue())
 
+    def test_completed_task_with_unconfirmed_optional_items_reports_warning(self):
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            finish('任务',{'status':'scan_finished','completed_rounds':2,
+                          'warnings':[{'message':'未确认 FC'}]})
+        self.assertTrue(output.getvalue().startswith('warn:'))
+        self.assertIn('完成轮数 2',output.getvalue())
+        self.assertIn('提示 1 项',output.getvalue())
+
     def run_action(self, action, *, fail=False, status='finished'):
         """Use real entrypoints/exception handlers; replace only game/network flows."""
         flow=SimpleNamespace(report={'status':status}, image=None)

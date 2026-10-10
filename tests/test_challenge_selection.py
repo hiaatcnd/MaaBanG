@@ -1,5 +1,6 @@
 import sys
 import unittest
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -98,5 +99,51 @@ class ChallengeSelectionTests(unittest.TestCase):
             for i,x in enumerate((373,435,498)):
                 image[464:479,x-7:x+8]=(20,200,250) if i<stars else (185,185,185)
             self.assertEqual(challenge_star_count(image),stars)
+
+    def test_missing_stage_number_does_not_block_visible_pending_stage(self):
+        f=self.make_flow('uncleared')
+        f.ocr.return_value=[row for row in f.ocr.return_value if row.text!='舞台2']
+        with patch('mining_policy.challenge_row_stars',return_value=None):
+            self.assertEqual(f.select_pending_stage(set()),3)
+
+    def test_unknown_stage_stars_skip_only_that_stage(self):
+        f=self.make_flow('uncleared');f.report['skipped']=[]
+        with patch('mining_policy.challenge_row_stars',return_value=None),patch(
+                'mining_policy.challenge_star_count',side_effect=[None,0]):
+            self.assertEqual(f.select_pending_stage(set()),2)
+        self.assertEqual(f.report['skipped'],[{'stage_level':1,'reason':'unknown_stage_stars'}])
+
+    def test_locked_stage_is_not_selected(self):
+        f=self.make_flow('uncleared')
+        f.reco=Mock(return_value=True)
+        with patch('mining_policy.challenge_row_stars',return_value=None):
+            self.assertIsNone(f.select_pending_stage(set()))
+        f.tap_hit.assert_not_called()
+
+    def test_settled_challenge_rescans_actual_stages_without_increment_check(self):
+        with tempfile.TemporaryDirectory() as folder:
+            f=ChallengeMiningFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+                                  MiningOptions.parse({'max_rounds':'2'}),folder)
+            for name in ('navigate_menu','inherit_menu_fire','click','select_stage_kind','swipe',
+                         'wait','tap','wait_ready','choose_difficulty_exact','snap','home',
+                         'play_chart','await_chart_result','settle_results'):
+                setattr(f,name,Mock())
+            f.challenge_cards=Mock(return_value=[(200,np.zeros((12,30)),0,90)])
+            f.select_pending_stage=Mock(side_effect=[1,7])
+            f.text=Mock(return_value='306');f.title_matches=lambda text,song:song['id']==text
+            f.store.get=Mock(return_value=([],{}));f.refill_fire=Mock(return_value=True)
+            f.recommend=Mock(return_value=True);f.reco=Mock(side_effect=lambda node:node=='MN_StageSelect')
+            f.selected_level=Mock(side_effect=AssertionError('No post-result level gate'))
+            f.run()
+            self.assertEqual(f.report['completed_rounds'],2)
+            self.assertEqual([row['stage_level'] for row in f.report['rounds']],[1,7])
+            self.assertEqual(f.report['status'],'max_rounds_reached')
+
+    def test_missing_original_challenge_is_a_warning_after_settlement(self):
+        f=self.make_flow('uncleared')
+        f.select_stage_kind=Mock();f.challenge_cards=Mock(return_value=[])
+        f.restore_challenge_result=f.restore_challenge()
+        self.assertFalse(f.restore_challenge_result)
+        self.assertTrue(f.report['warnings'])
 
 if __name__=='__main__':unittest.main()

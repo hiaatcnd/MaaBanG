@@ -191,7 +191,7 @@ class CostumeFlow:
         if expected not in value:
             raise FlowError(f"角色身份不匹配：期望 {character}，识别到 {value}")
 
-    def read_count(self, character):
+    def read_count(self, character, *, claim_only=False):
         self.count_is_lower_bound = False
         self.verify_character(character)
         self.click("CU_TasksTab")
@@ -207,6 +207,8 @@ class CostumeFlow:
             for label in labels:
                 details = self.ocr([1060, max(245, label.box[1]-25), 140, 105], "详细")
                 if details:
+                    if claim_only:
+                        return None
                     x, y, w, h = details[0].box
                     self.tap(x+w//2, y+h//2)
                     self.wait("CU_TaskDetail")
@@ -217,12 +219,6 @@ class CostumeFlow:
                     return count
                 claims = self.ocr([1060, max(245, label.box[1]-25), 140, 105], "^领取$")
                 if claims:
-                    ratios = self.ocr([765, label.box[1]+20, 295, 80], r"\d+\s*/\s*\d+")
-                    if len(ratios) != 1:
-                        raise FlowError("已达成收集任务的进度无法识别")
-                    lower_bound, milestone = parse_ratio(ratios[0].text)
-                    if lower_bound < milestone:
-                        raise FlowError("领取状态与进度不一致")
                     x,y,w,h = claims[0].box
                     self.tap(x+w//2,y+h//2)
                     self.click("CU_RewardConfirm")
@@ -237,7 +233,8 @@ class CostumeFlow:
                 self.swipe(1000, 607, 315)
                 continue
             continue
-        raise FlowError(f"{character}：未找到默认3D服装进度，不能推断数量")
+        if not claim_only:
+            raise FlowError(f"{character}：未找到默认3D服装进度，不能推断数量")
 
     def goto_costumes(self, character):
         self.snap()
@@ -427,7 +424,7 @@ class CostumeFlow:
     def collect_after_unlock(self, character):
         # Once per member after the entire batch, never between purchases.
         self.reopen_rating_character(character)
-        self.read_count(character)  # Claims all reached default-3D milestones.
+        self.read_count(character, claim_only=True)
 
     def finish_character(self, character, row):
         if self.costume_character == character:

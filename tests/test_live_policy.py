@@ -38,7 +38,8 @@ class LivePolicyTests(unittest.TestCase):
 
     def test_auto_counter_is_strict(self):
         self.assertEqual(parse_auto_remaining('还有 ４ 次'),4)
-        for text in ('还有11次','还有-1次','4','自动演出 开','还有4次 付费'):
+        self.assertEqual(parse_auto_remaining('还有11次'),11)
+        for text in ('还有-1次','4','自动演出 开','还有4次 付费'):
             with self.assertRaises(ValueError): parse_auto_remaining(text)
 
     def test_special_falls_back_only_if_missing(self):

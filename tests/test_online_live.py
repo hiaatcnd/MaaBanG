@@ -157,7 +157,7 @@ class OnlineFlowTests(unittest.TestCase):
             f.tap.assert_not_called()
 
     def test_fire_check_rejects_persistent_mismatch_and_wrong_cost(self):
-        for preview,balance in (((9,6),6),((6,6),6),((2,0),2)):
+        for preview,balance in (((9,6),2),((6,6),6),((2,0),2)):
             with self.subTest(preview=preview),tempfile.TemporaryDirectory() as folder:
                 f=self.make_flow(folder)
                 f.verify_final_selection=Mock()

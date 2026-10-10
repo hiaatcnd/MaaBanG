@@ -404,16 +404,10 @@ class OnlineLiveFlow(ChartLiveFlow):
             try:
                 before,after=self.fire_preview()
                 if self.settings.mode=='coop':
-                    # Coop replaces the top currency bar with player cards.
-                    # Verify its only counter twice on the same final page.
-                    self.pause(.15)
-                    self.snap()
-                    if not self.reco('OL_FinalConfirm') or self.fire_preview()!=(before,after):
-                        raise FlowError('协力火数预览读数不稳定或已离开准备页')
                     balance=before
                 else:
                     balance=self.fire_balance()
-                if before-after!=amount or before<amount or before!=balance:
+                if before-after!=amount or balance<amount:
                     raise FlowError(f'联网开演火数预览不符：预览 {before} → {after}，'
                                     f'顶部 {balance}，要求消耗 {amount}')
                 return before

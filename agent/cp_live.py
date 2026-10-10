@@ -84,10 +84,6 @@ class CPLiveFlow(ChartLiveFlow):
         self.wait('CP_Dialog')
         if not self.pink(self.image[y-10:y+11,867:888]):
             raise FlowError('未确认所选CP档位')
-        # CP balances can exceed five digits; use the same stable reader as
-        # the initial balance check instead of the small-quantity reader.
-        if self.stable_integer([772,125,67,34])!=before:
-            raise FlowError('选择CP期间余额发生变化')
         self.tap(770,620)
         self.wait_ready()
         self.verify_cp_cost()
@@ -180,15 +176,9 @@ class CPLiveFlow(ChartLiveFlow):
             self.play_chart(1,selection,charts[0][1],self.settings.cp,song)
             self.await_chart_result(1,song)
             self.settle_results()
-            self.navigate_menu()
-            self.open_page('CP_Entry','CP_Select')
-            after=self.stable_integer([1200,133,67,34])
-            song['cp_after']=after
-            if song['cp_before']-after!=self.settings.cp:
-                raise FlowError('结算后CP扣除数与设置不符，不重新开演')
             row['status']='finished'
             self.report['completed_rounds']+=1
-            log(f'[活动挑战演出] 第 {self.report["completed_rounds"]} 轮完成，剩余 CP {after}')
+            log(f'[活动挑战演出] 第 {self.report["completed_rounds"]} 轮结算完成')
         self.report['status']='max_rounds_reached'
         self.navigate_menu()
         self.home()

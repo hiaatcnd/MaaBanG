@@ -263,11 +263,11 @@ class DailyFlowTests(unittest.TestCase):
             f.tap.assert_called_once()
 
     def test_mission_page_change_after_claim_is_not_silently_skipped(self):
-        f=self.flow(); f.mission_page=Mock(side_effect=[(1,3),(2,3)])
-        f.claim_mission_page=Mock(); f.switch_mission_page=Mock()
-        with self.assertRaisesRegex(FlowError,'领取后任务页码发生变化'):
-            f.claim_mission_category('任务')
-        f.switch_mission_page.assert_not_called()
+        f=self.flow(); f.mission_page=Mock(side_effect=[(1,3),(2,3),(2,3),(3,3)])
+        f.claim_mission_page=Mock(); f.switch_mission_page=Mock(return_value=(3,3))
+        f.claim_mission_category('任务')
+        self.assertEqual(f.claim_mission_page.call_count,3)
+        f.switch_mission_page.assert_called_once_with((2,3),1)
 
     def test_missions_require_selected_tab_before_claiming(self):
         f=self.flow(); f.click=Mock(); f.claim_mission_category=Mock()
@@ -330,7 +330,7 @@ class DailyFlowTests(unittest.TestCase):
         f.home.assert_called_once()
 
     def test_remaining_counts_control_exact_number_of_submissions(self):
-        f=self.flow(); f.free_remaining=Mock(side_effect=[2,1,1,0,0]); f.finish_draw=Mock()
+        f=self.flow(); f.free_remaining=Mock(side_effect=[2,1,0]); f.finish_draw=Mock()
         f.recruit()
         self.assertEqual(f.report['draws'],2)
         self.assertEqual(f.finish_draw.call_count,2)
@@ -362,11 +362,28 @@ class DailyFlowTests(unittest.TestCase):
         self.assertTrue(f.report['draw_in_flight'])
         f.home.assert_not_called()
 
-    def test_remaining_count_must_decrease(self):
+    def test_successful_draws_do_not_require_counter_decrement(self):
         f=self.flow(); f.free_remaining=Mock(return_value=2); f.finish_draw=Mock()
-        with self.assertRaises(FlowError): f.recruit()
-        self.assertEqual(f.report['draws'],0)
+        f.recruit()
+        self.assertEqual(f.report['draws'],3)
+        self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),3)
+        self.assertFalse(f.report['draw_in_flight'])
+        f.home.assert_called_once()
+
+    def test_unreadable_daily_quota_does_not_block_verified_free_draw(self):
+        f=self.flow();f.free_remaining=Mock(side_effect=[ValueError('blank'),0]);f.finish_draw=Mock()
+        f.recruit()
+        self.assertEqual(f.report['draws'],1)
+        self.assertTrue(f.report['warnings'])
         self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),1)
+
+    def test_unreadable_daily_quota_does_not_allow_paid_confirmation(self):
+        f=self.flow();f.free_remaining=Mock(side_effect=ValueError('blank'));f.finish_draw=Mock()
+        f.text.return_value='每日最多3次免费！演出招募 消耗100星石'
+        with self.assertRaisesRegex(ValueError,'收费信息'):
+            f.recruit()
+        f.finish_draw.assert_not_called()
+        self.assertNotIn((770,476),[c.args for c in f.tap.call_args_list])
 
     def test_exchange_empty_top_finishes_each_category_without_scrolling(self):
         f=self.flow(); f.open_exchange=Mock(); f.select_exchange_category=Mock()
@@ -636,6 +653,28 @@ class DailyFlowTests(unittest.TestCase):
         self.assertEqual(f.report['exchanges'][0]['status'],'submitted')
         self.assertEqual([c.args for c in f.tap.call_args_list],[(770,582),(770,582)])
         f.home.assert_not_called()
+
+    def test_exchange_success_is_not_gated_on_post_purchase_balance(self):
+        f=self.flow(); f.tap_hit=Mock(); f.reco=Mock(return_value=True)
+        f.text=Mock(return_value='日菜的房间')
+        # Valid cost on both pages; refreshed balances need not be identical.
+        f.stable_integer=Mock(side_effect=[80,100,1,120,40,1,130,50])
+        self.assertTrue(f.exchange_item('背景',SimpleNamespace(box=[980,490,48,24])))
+        self.assertEqual(f.report['exchanges'][0]['status'],'success_confirmed')
+        self.assertEqual(f.stable_integer.call_count,8)
+
+    @patch('daily_tasks.time.sleep')
+    def test_required_number_read_retries_transient_blank_or_changing_ocr(self,_):
+        for readings in (['','12','12'],['11','12','12']):
+            f=self.flow();f.snap=Mock();f.text=Mock(side_effect=readings)
+            self.assertEqual(f.stable_integer([0,0,10,10]),12)
+
+    @patch('daily_tasks.time.sleep')
+    def test_required_number_read_still_rejects_persistent_invalid_data(self,_):
+        f=self.flow();f.snap=Mock();f.text=Mock(return_value='?')
+        with self.assertRaisesRegex(FlowError,'无法读取稳定的数量'):
+            f.stable_integer([0,0,10,10])
+        self.assertEqual(f.text.call_count,4)
 
 
 if __name__=='__main__': unittest.main()

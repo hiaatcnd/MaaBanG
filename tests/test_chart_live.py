@@ -187,6 +187,12 @@ class ChartLiveTests(unittest.TestCase):
             self.assertEqual(f.report['status'],'insufficient_fire')
             f.play_chart.assert_not_called();f.configure_fire.assert_not_called()
 
+    def test_quantity_reader_accepts_large_integer_without_arbitrary_digit_limit(self):
+        with tempfile.TemporaryDirectory() as folder:
+            f=self.make_flow(folder)
+            f.text=Mock(return_value='115272')
+            self.assertEqual(f.read_integer([0,0,10,10]),115272)
+
     def test_uncertain_result_stops_without_restarting(self):
         with tempfile.TemporaryDirectory() as folder:
             f=self.make_flow(folder,max_rounds=2)
@@ -203,13 +209,13 @@ class ChartLiveTests(unittest.TestCase):
             f.fire_balance=Mock(side_effect=[14,15])
             f.hit_text=Mock(return_value=object())
             f.refill_items=Mock(return_value=[{'item':'小型','gain':1,'inventory_before':5462,'y':227}])
-            f.read_integer=Mock(side_effect=[14,14,15,15,14])
+            f.read_integer=Mock(side_effect=[14,14,15,14])
             f.text=Mock(side_effect=['将要回复LIVE BOOST。 确认吗？','LIVE BOOST已回复1！'])
             self.assertTrue(f.refill_fire(15))
             self.assertEqual([c.args for c in f.tap.call_args_list],[(1150,39),(766,227),(770,602)])
             self.assertEqual(f.tap_hit.call_count,3)  # item entry, final confirm, result close
             row=f.report['refills'][0]
-            self.assertEqual(row['actual_recovered'],1)
+            self.assertEqual(row['result_text'],'LIVEBOOST已回复1!')
             self.assertEqual(row['items'][0]['inventory_before'],5462)
             self.assertEqual(row['status'],'confirmed')
 
@@ -221,7 +227,7 @@ class ChartLiveTests(unittest.TestCase):
             f.fire_balance=Mock(return_value=14)
             f.hit_text=Mock(return_value=object())
             f.refill_items=Mock(return_value=[{'item':'小型','gain':1,'inventory_before':5462,'y':227}])
-            f.read_integer=Mock(side_effect=[14,14,15,15,14])
+            f.read_integer=Mock(side_effect=[14,14,15,14])
             f.text=Mock(return_value='unexpected popup')
             with self.assertRaisesRegex(RuntimeError,'确认框'):
                 f.refill_fire(15)
@@ -260,17 +266,17 @@ class ChartLiveTests(unittest.TestCase):
             f.fire_balance=Mock(return_value=13)
             self.assertEqual(f.verify_chart_start(1,ChartSelection('306','expert'),0),13)
 
-    def test_lower_balance_or_wrong_cost_is_rejected(self):
+    def test_wrong_cost_or_insufficient_balance_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
-            for balance,preview in [(11,(12,12)),(13,(12,11))]:
-                f=self.make_flow(folder,fire=0)
+            for balance,preview in [(2,(12,9)),(13,(12,11))]:
+                f=self.make_flow(folder,fire=3)
                 f.snap=Mock();f.pause=Mock()
                 f.text=Mock(side_effect=['SAVIOR OF SONG','EXPERT'])
                 f.reco=Mock(side_effect=lambda name:name=='LV_AutoOff')
                 f.fire_preview=Mock(return_value=preview)
                 f.fire_balance=Mock(return_value=balance)
                 with self.assertRaisesRegex(RuntimeError,'火数预览'):
-                    f.verify_chart_start(1,ChartSelection('306','expert'),0)
+                    f.verify_chart_start(1,ChartSelection('306','expert'),3)
 
     def test_long_ready_title_with_real_ocr_preserves_song_and_difficulty_checks(self):
         if not all((ROOT/'assets/resource/model/ocr'/name).is_file() for name in ('det.onnx','rec.onnx','keys.txt')):
