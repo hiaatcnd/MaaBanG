@@ -75,16 +75,37 @@ class CPTests(unittest.TestCase):
 
     def test_all_cp_tiers_verified_before_dialog_acceptance(self):
         import numpy as np
-        for amount,y in ((200,212),(400,285),(800,358),(1600,431)):
-            with self.subTest(amount=amount),tempfile.TemporaryDirectory() as folder:
-                flow=self.flow(folder,cp=amount)
-                flow.wait=Mock();flow.wait_ready=Mock();flow.verify_cp_cost=Mock()
-                flow.stable_integer=Mock(return_value=2000)
-                flow.read_integer=Mock(side_effect=[amount,2000])
+        for balance in (2000,99999,100000,115272,1000000):
+            for amount,y in ((200,212),(400,285),(800,358),(1600,431)):
+                with self.subTest(balance=balance,amount=amount),tempfile.TemporaryDirectory() as folder:
+                    flow=self.flow(folder,cp=amount)
+                    flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
+                    # Exercise both production number readers, including the
+                    # balance recheck that previously rejected six-digit CP.
+                    flow.text=Mock(side_effect=lambda roi: str(amount) if roi==[489,y-19,67,39]
+                                   else f'{amount}消费' if roi==[1020,541,148,38] else str(balance))
+                    flow.tap=Mock();flow.pink=Mock(return_value=True)
+                    flow.image=np.zeros((720,1280,3),dtype=np.uint8)
+                    with patch('daily_tasks.time.sleep'):
+                        self.assertEqual(flow.configure_cp(),balance)
+                    self.assertEqual([c.args for c in flow.tap.call_args_list],[(877,y),(770,620)])
+
+    def test_cp_balance_recheck_rejects_changed_unstable_or_invalid_readings(self):
+        import numpy as np
+        for readings,error in ((['114872','114872'],'余额发生变化'),
+                               (['115272','115273'],'数字读数不稳定'),
+                               ([''],'不能可靠读取整数'),
+                               (['11527?'],'不能可靠读取整数')):
+            with self.subTest(readings=readings),tempfile.TemporaryDirectory() as folder:
+                flow=self.flow(folder,cp=400)
+                flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
+                flow.text=Mock(side_effect=['115272','115272','400',*readings])
                 flow.tap=Mock();flow.pink=Mock(return_value=True)
                 flow.image=np.zeros((720,1280,3),dtype=np.uint8)
-                self.assertEqual(flow.configure_cp(),2000)
-                self.assertEqual([c.args for c in flow.tap.call_args_list],[(877,y),(770,620)])
+                with patch('daily_tasks.time.sleep'),self.assertRaisesRegex((RuntimeError,ValueError),error):
+                    flow.configure_cp()
+                flow.tap.assert_called_once_with(877,285)
+                flow.wait_ready.assert_not_called()
 
     def test_wrong_tier_does_not_accept_dialog(self):
         with tempfile.TemporaryDirectory() as folder:
