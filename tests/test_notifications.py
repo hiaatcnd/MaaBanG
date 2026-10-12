@@ -1,3 +1,4 @@
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -22,7 +23,81 @@ def hit(text,x,y,w=100,h=30):
     return SimpleNamespace(text=text,box=[x,y,w,h])
 
 
+def inheritance_notice():
+    from PIL import Image
+    root=Path(__file__).parent/'fixtures/notifications'
+    frame=np.array(Image.open(root/'recruit_inheritance.png').convert('RGB'))[:,:,::-1].copy()
+    hits=[SimpleNamespace(**row) for row in json.loads(
+        (root/'recruit_inheritance.json').read_text(encoding='utf-8'))]
+    return frame,hits
+
+
 class NotificationTests(unittest.TestCase):
+    @patch('notifications.time.sleep')
+    def test_recorded_recruit_inheritance_result_is_acknowledged(self,_):
+        frame,hits=inheritance_notice()
+        f=self.flow(hits); f.image=frame
+        self.assertTrue(f.dismiss_notifications())
+        f.tap_hit.assert_called_once_with(next(h for h in hits if h.text=='确定'))
+        f.snap.assert_called_once()
+        f.require_clear_notification_overlay()
+
+    def test_inheritance_requires_result_markers_and_own_button(self):
+        for missing in ('继承','继承结果如下。','招募贴纸','确定'):
+            with self.subTest(missing=missing):
+                frame,hits=inheritance_notice()
+                f=self.flow([h for h in hits if h.text!=missing]); f.image=frame
+                self.assertFalse(f.dismiss_notifications())
+                f.tap_hit.assert_not_called()
+                with self.assertRaisesRegex(FlowError,'未识别的弹窗'):
+                    f.require_clear_notification_overlay()
+
+    def test_inheritance_result_does_not_allow_transaction_choices(self):
+        for text in ('是否继承','取消','消耗2500星石','购买','花费','交换','兑换',
+                     '恢复体力','继续演出','进行招募','确认吗','使用招募券','付费','有偿'):
+            with self.subTest(text=text):
+                frame,hits=inheritance_notice()
+                f=self.flow(hits+[hit(text,440,450)]); f.image=frame
+                self.assertFalse(f.dismiss_notifications())
+                f.tap_hit.assert_not_called()
+
+    @patch('notifications.time.sleep')
+    def test_real_inheritance_result_ocr(self,_):
+        root=Path(__file__).resolve().parents[1]
+        if not (root/'assets/resource/model/ocr/rec.onnx').is_file():
+            self.skipTest('Local OCR models required')
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+        from daily_tasks import DailyFlow
+        frame,_hits=inheritance_notice()
+        class Controller(CustomController):
+            def connect(self): return True
+            def request_uuid(self): return 'inheritance-result-fixture'
+            def screencap(self): return frame
+        resource=Resource(); self.assertTrue(resource.post_bundle(root/'assets/resource').wait().succeeded)
+        controller=Controller(); self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker(); tasker.bind(resource,controller)
+        case=self; errors=[]
+        class Check(CustomAction):
+            def run(self,ctx,argv):
+                try:
+                    f=DailyFlow(ctx); f.image=frame
+                    f.tap=Mock()
+                    f.snap=Mock(side_effect=lambda:setattr(f,'image',np.zeros_like(frame)))
+                    case.assertTrue(f.dismiss_notifications())
+                    f.tap.assert_called_once()
+                    x,y=f.tap.call_args.args
+                    case.assertTrue(522<=x<=758 and 569<=y<=635,(x,y))
+                    f.require_clear_notification_overlay()
+                    return True
+                except Exception as exc:
+                    errors.append(repr(exc)); return False
+        resource.register_custom_action('InheritanceCheck',Check())
+        self.assertTrue(tasker.post_task('InheritanceCheck',{'InheritanceCheck':{
+            'action':'Custom','custom_action':'InheritanceCheck'}}).wait().succeeded,errors)
+
     def test_loading_comic_is_not_a_dialog(self):
         from PIL import Image
         path=Path(__file__).parent/'fixtures'/'coop'/'loading.png'

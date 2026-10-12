@@ -101,6 +101,38 @@ class MiningTests(unittest.TestCase):
         self.assertEqual(f.report['skipped'][0]['reason'],'insufficient_eligible_members')
         self.assertEqual(f.back.call_count,2)
 
+    def test_challenge_reads_song_only_after_entering_ready_page(self):
+        from costume_unlock import FlowError
+        for title in ('STAR BEAT!～ホシノコドウ～', '无法识别的歌曲'):
+            with self.subTest(title=title):
+                f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
+                f.mining=MiningOptions.parse({});f.report={'skipped':[]}
+                for name in ('navigate_menu','inherit_menu_fire','click','select_stage_kind',
+                             'swipe','wait','tap','choose_difficulty_exact','wait_ready'):
+                    setattr(f,name,Mock())
+                f.limited=Mock(return_value=False)
+                f.challenge_cards=Mock(return_value=[(200,np.zeros((12,30)),0,90)])
+                f.select_pending_stage=Mock(return_value=12)
+                f.store=Mock();f.recommend=Mock(return_value=True);f.perform=Mock(return_value=None)
+                def read_title(roi):
+                    f.wait_ready.assert_called_once_with()
+                    f.choose_difficulty_exact.assert_called_once_with('expert')
+                    self.assertEqual(f.tap.call_args.args,(1070,648))
+                    self.assertEqual(roi,[220,541,570,38])
+                    return title
+                f.text=Mock(side_effect=read_title)
+                if title=='无法识别的歌曲':
+                    with self.assertRaisesRegex(FlowError,'舞台准备页歌曲无法唯一识别'):
+                        f.run()
+                    f.recommend.assert_not_called();f.perform.assert_not_called()
+                else:
+                    f.run()
+                    selection=f.perform.call_args.args[0]
+                    self.assertEqual(selection.song['title'],'STAR BEAT!〜ホシノコドウ〜')
+                    self.assertEqual(selection.difficulty,'expert')
+                f.text.assert_called_once()
+                f.store.get.assert_not_called()
+
     def test_recommendation_cannot_return_through_a_stuck_modal(self):
         from costume_unlock import FlowError
         f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)

@@ -79,8 +79,16 @@ class NotificationMixin:
             titles = [normalized(hit.text) for hit in hits
                       if hit.box[1] < y+min(115,h*.3)]
             title = ' '.join(titles) or '提示'
-            text = ' '.join(normalized(hit.text) for hit in hits)
-            if TRANSACTION.search(text):
+            lines = [normalized(hit.text) for hit in hits]
+            text = ' '.join(lines)
+            # Inheritance is already complete. Pool names and the item label
+            # contain "recruit", but this result only acknowledges the transfer.
+            inheritance = ('继承' in titles and '招募贴纸' in lines
+                           and any(re.fullmatch(r'继承结果如下[。.!！]?', line)
+                                   for line in titles)
+                           and not re.search(r'进行|确认吗|使用|付费|有偿', text))
+            if any(match.group() != '招募' or not inheritance
+                   for match in TRANSACTION.finditer(text)):
                 return handled
             footer = [hit for hit in hits if hit.box[1] > y+h*.55
                        and x <= hit.box[0] and hit.box[0]+hit.box[2] <= x+w

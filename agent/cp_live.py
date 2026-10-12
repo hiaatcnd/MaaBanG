@@ -66,11 +66,35 @@ class CPLiveFlow(ChartLiveFlow):
             self.swipe(420,570 if attempt<4 else 220,220 if attempt<4 else 570)
         raise FlowError('指定歌曲不在当前活动歌单中：'+requested['title'])
 
+    def open_cp_dialog(self, from_ready=False):
+        source='CP_Ready' if from_ready else 'CP_Select'
+        roi=[796,620,122,64] if from_ready else [950,615,245,75]
+        expected=r'^(?:CP\s*)?设[定置]$' if from_ready else '^确定$'
+        for attempt in range(3):
+            self.snap()
+            if self.reco('CP_Dialog'):
+                return
+            self.require_clear_notification_overlay()
+            if not self.reco('CP_Header') or not self.reco(source):
+                raise FlowError('打开CP设置前页面已改变，停止重试')
+            button=self.hit_text(roi,expected)
+            if not button:
+                raise FlowError('未识别到打开CP设置的按钮')
+            if attempt:
+                log(f'[活动挑战演出] CP设置尚未打开，重新点击（{attempt+1}/3）')
+            # These buttons only open settings. Reconfirm the source page and
+            # button on every retry; never retry a live-start or CP submission.
+            self.tap_hit(button)
+            deadline=time.monotonic()+4
+            while time.monotonic()<deadline:
+                self.snap()
+                if self.reco('CP_Dialog'):
+                    return
+                self.pause(.25)
+        raise FlowError('CP设置点击3次后仍未打开，保留现场')
+
     def configure_cp(self, from_ready=False):
-        if from_ready:
-            self.wait_ready()
-            self.tap(857,650)
-        self.wait('CP_Dialog')
+        self.open_cp_dialog(from_ready)
         before=self.stable_integer([772,125,67,34])
         if before<self.settings.cp:
             self.tap(510,620)
@@ -108,7 +132,6 @@ class CPLiveFlow(ChartLiveFlow):
         self.choose_difficulty_exact(selection.difficulty)
         # Fetch and validate before touching the CP dialog or start button.
         charts=[self.store.get(selection,self.check_stop)]
-        self.tap(1070,648)
         balance=self.configure_cp()
         if balance is None:
             self.report['status']='insufficient_cp'

@@ -13,6 +13,91 @@ from cp_live import CPLiveFlow
 
 
 class CPTests(unittest.TestCase):
+    def dialog_flow(self,folder,source='CP_Ready',opens_after=1,delay=0):
+        flow=self.flow(folder)
+        state={'page':source,'clock':0.,'clicks':0,'clicked_at':None}
+        button=SimpleNamespace(box=[840,635,60,30] if source=='CP_Ready' else [1030,627,80,40])
+        def snap():
+            if (state['clicks']>=opens_after and state['clicked_at'] is not None
+                    and state['clock']-state['clicked_at']>=delay):
+                state['page']='CP_Dialog'
+        def click(hit):
+            self.assertIs(hit,button)
+            state['clicks']+=1
+            state['clicked_at']=state['clock']
+        flow.snap=Mock(side_effect=snap)
+        flow.reco=Mock(side_effect=lambda node: node==state['page'] or
+                       (node=='CP_Header' and state['page'] in ('CP_Select','CP_Ready')))
+        flow.hit_text=Mock(return_value=button)
+        flow.tap_hit=Mock(side_effect=click)
+        flow.tap=Mock(side_effect=AssertionError('No direct start or CP submission'))
+        flow.pause=Mock(side_effect=lambda seconds:state.update(clock=state['clock']+seconds))
+        return flow,state
+
+    def test_cp_dialog_retries_ignored_navigation_from_select_and_ready(self):
+        for source in ('CP_Select','CP_Ready'):
+            with self.subTest(source=source),tempfile.TemporaryDirectory() as folder:
+                flow,state=self.dialog_flow(folder,source,opens_after=2)
+                with patch('cp_live.time.monotonic',side_effect=lambda:state['clock']):
+                    flow.open_cp_dialog(from_ready=source=='CP_Ready')
+                self.assertEqual(state['page'],'CP_Dialog')
+                self.assertEqual(flow.tap_hit.call_count,2)
+                flow.tap.assert_not_called()
+
+    def test_cp_dialog_waits_for_delayed_open_without_second_click(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow,state=self.dialog_flow(folder,delay=3)
+            with patch('cp_live.time.monotonic',side_effect=lambda:state['clock']):
+                flow.open_cp_dialog(from_ready=True)
+            flow.tap_hit.assert_called_once()
+            self.assertEqual(state['page'],'CP_Dialog')
+
+    def test_cp_dialog_already_open_is_not_clicked_again(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow,state=self.dialog_flow(folder,source='CP_Dialog')
+            flow.open_cp_dialog()
+            flow.tap_hit.assert_not_called()
+            flow.hit_text.assert_not_called()
+
+    def test_cp_dialog_stuck_source_stops_after_three_clicks(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow,state=self.dialog_flow(folder,opens_after=99)
+            with patch('cp_live.time.monotonic',side_effect=lambda:state['clock']):
+                with self.assertRaisesRegex(RuntimeError,'点击3次'):
+                    flow.open_cp_dialog(from_ready=True)
+            self.assertEqual(flow.tap_hit.call_count,3)
+            flow.tap.assert_not_called()
+
+    def test_cp_dialog_changed_page_or_overlay_prevents_second_click(self):
+        from test_notifications import panel
+        for changed in ('CP_Select','unknown','overlay'):
+            with self.subTest(changed=changed),tempfile.TemporaryDirectory() as folder:
+                flow,state=self.dialog_flow(folder,opens_after=99)
+                click=flow.tap_hit.side_effect
+                def change(hit):
+                    click(hit)
+                    if changed=='overlay': flow.image=panel()
+                    else: state['page']=changed
+                flow.tap_hit.side_effect=change
+                with patch('cp_live.time.monotonic',side_effect=lambda:state['clock']):
+                    with self.assertRaises(RuntimeError):
+                        flow.open_cp_dialog(from_ready=True)
+                flow.tap_hit.assert_called_once()
+                flow.tap.assert_not_called()
+
+    def test_cp_dialog_requires_button_and_honors_user_stop(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow,state=self.dialog_flow(folder)
+            flow.hit_text.return_value=None
+            with self.assertRaisesRegex(RuntimeError,'按钮'):
+                flow.open_cp_dialog(from_ready=True)
+            flow.tap_hit.assert_not_called()
+            flow,state=self.dialog_flow(folder,opens_after=99)
+            flow.pause.side_effect=RuntimeError('任务已被用户停止')
+            with self.assertRaisesRegex(RuntimeError,'用户停止'):
+                flow.open_cp_dialog(from_ready=True)
+            flow.tap_hit.assert_called_once()
+
     def test_reward_animation_waits_without_clicking_background(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.flow(folder)
@@ -67,7 +152,7 @@ class CPTests(unittest.TestCase):
     def test_insufficient_cp_cancels_dialog_without_accepting(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.flow(folder,cp=800)
-            flow.wait=Mock();flow.stable_integer=Mock(return_value=556)
+            flow.open_cp_dialog=Mock();flow.wait=Mock();flow.stable_integer=Mock(return_value=556)
             flow.tap=Mock();flow.read_integer=Mock()
             self.assertIsNone(flow.configure_cp())
             flow.tap.assert_called_once_with(510,620)
@@ -79,6 +164,7 @@ class CPTests(unittest.TestCase):
             for amount,y in ((200,212),(400,285),(800,358),(1600,431)):
                 with self.subTest(balance=balance,amount=amount),tempfile.TemporaryDirectory() as folder:
                     flow=self.flow(folder,cp=amount)
+                    flow.open_cp_dialog=Mock()
                     flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
                     # Exercise both production number readers with large balances.
                     flow.text=Mock(side_effect=lambda roi: str(amount) if roi==[489,y-19,67,39]
@@ -93,6 +179,7 @@ class CPTests(unittest.TestCase):
         import numpy as np
         with tempfile.TemporaryDirectory() as folder:
             flow=self.flow(folder,cp=400)
+            flow.open_cp_dialog=Mock()
             flow.wait=Mock();flow.wait_ready=Mock();flow.snap=Mock()
             flow.text=Mock(side_effect=['115272','115272','400','400消费'])
             flow.tap=Mock();flow.pink=Mock(return_value=True)
@@ -104,7 +191,7 @@ class CPTests(unittest.TestCase):
     def test_wrong_tier_does_not_accept_dialog(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.flow(folder)
-            flow.wait=Mock();flow.stable_integer=Mock(return_value=556)
+            flow.open_cp_dialog=Mock();flow.wait=Mock();flow.stable_integer=Mock(return_value=556)
             flow.read_integer=Mock(return_value=400);flow.tap=Mock()
             with self.assertRaisesRegex(RuntimeError,'档位数值'):
                 flow.configure_cp()
@@ -208,7 +295,8 @@ class CPTests(unittest.TestCase):
         from maa.resource import Resource
         from maa.tasker import Tasker
         frames={name:np.asarray(Image.open(ROOT/f'tests/fixtures/cp/{name}.png').convert('RGB'))[:,:,::-1].copy()
-                for name in ('select','dialog','ready','menu','achievement_animation','achievement_receipt','achievement_summary')}
+                for name in ('select','dialog','ready','menu','achievement_animation','achievement_receipt','achievement_summary',
+                             'ready_cp_timeout','select_cp_timeout')}
         current=[frames['select']]
         class Controller(CustomController):
             def connect(self): return True
@@ -246,6 +334,21 @@ class CPTests(unittest.TestCase):
                             flow.tap_hit.reset_mock()
                             case.assertTrue(flow.dismiss_notifications(),name)
                             flow.tap_hit.assert_called_once()
+                        for name,from_ready in (('ready_cp_timeout',True),('select_cp_timeout',False)):
+                            current[0]=frames[name]
+                            elapsed=[0.]
+                            def click(hit):
+                                x,y,w,h=hit.box
+                                case.assertTrue(796<=x<x+w<=918 if from_ready else 950<=x<x+w<=1195,hit.box)
+                                case.assertGreaterEqual(y,615)
+                                # Reproduce a lost first click on the actual failed frame.
+                                if flow.tap_hit.call_count==2: current[0]=frames['dialog']
+                            flow.tap_hit=Mock(side_effect=click)
+                            flow.pause=Mock(side_effect=lambda seconds:elapsed.__setitem__(0,elapsed[0]+seconds))
+                            with patch('cp_live.time.monotonic',side_effect=lambda:elapsed[0]):
+                                flow.open_cp_dialog(from_ready)
+                            case.assertEqual(flow.tap_hit.call_count,2)
+                            case.assertTrue(flow.reco('CP_Dialog'))
                         return True
                     except Exception as exc:
                         observed['error']=repr(exc);return False
