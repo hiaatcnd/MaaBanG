@@ -17,6 +17,56 @@ FREE = '黄金周纪念1日1次免费10连招募 进行招募。确认吗？ ※
 
 
 class EventFreeTests(unittest.TestCase):
+    def test_inheritance_during_entry_rewind_and_pool_switch_preserves_scan(self):
+        from unittest.mock import patch
+        from test_notifications import inheritance_notice
+        for when in ('entry','rewind','switch'):
+            with self.subTest(when=when):
+                f=self.event_flow(['paid','free','ticket'])
+                frame,hits=inheritance_notice()
+                state={'pending':when=='entry','shown':False}
+                refresh=f.wait.side_effect
+                def snap(*args):
+                    refresh()
+                    if state['pending']: f.image=frame.copy()
+                def show():
+                    if not state['shown']: state['pending']=True
+                def acknowledge(button):
+                    if state['pending']:
+                        self.assertEqual(button.text,'确定')
+                        state.update(pending=False,shown=True)
+                tap=f.tap.side_effect
+                def change_pool(x,y):
+                    self.assertFalse(state['pending'],'Must close the notice before background clicks')
+                    tap(x,y)
+                    if when=='switch' and (x,y)==(130,318): show()
+                def rewind(*args):
+                    self.assertFalse(state['pending'],'Must close the notice before scrolling')
+                    if when=='rewind': show()
+                f.wait.side_effect=snap; f.snap=Mock(side_effect=snap)
+                f.tap.side_effect=change_pool; f.swipe.side_effect=rewind
+                f.ocr=Mock(return_value=hits); f.tap_hit.side_effect=acknowledge
+                with patch('daily_tasks.time.sleep'):
+                    f.recruit_events()
+                self.assertTrue(state['shown'])
+                self.assertEqual(f.report['recruit_tabs_checked'],3)
+                self.assertEqual(f.report['draws'],1)
+                self.assertEqual(f.report['event_draws'][0]['pool'],1)
+                self.assertEqual([c.args for c in f.tap.call_args_list].count((770,476)),1)
+
+    def test_unrecognized_recruit_overlay_blocks_scrolling_and_drawing(self):
+        from test_notifications import inheritance_notice
+        f=self.event_flow(['free'])
+        frame,hits=inheritance_notice()
+        f.wait.side_effect=lambda *_:setattr(f,'image',frame.copy())
+        f.ocr=Mock(return_value=[h for h in hits if h.text!='继承结果如下。'])
+        with self.assertRaisesRegex(FlowError,'未识别的弹窗'):
+            f.recruit_events()
+        f.swipe.assert_not_called()
+        f.tap.assert_not_called()
+        f.tap_hit.assert_not_called()
+        f.event_free_button.assert_not_called()
+
     def test_confirmation_requires_free_offer_and_explicit_zero_cost(self):
         verify_event_free_confirmation(FREE)
         verify_event_free_confirmation(FREE.replace('10', '１０'))

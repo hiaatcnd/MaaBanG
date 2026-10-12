@@ -351,9 +351,11 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         previous = None
         for _ in range(30):
             self.snap()
+            self.dismiss_notifications()
+            self.require_clear_notification_overlay()
             if self.reco("DY_FreeTab"):
                 self.click("DY_FreeTab")
-                self.wait("DY_FreeBanner")
+                self.wait_recruit_page("DY_FreeBanner")
                 return
             # The bottom-left promotion is fixed over the scrollable tabs.
             # Neither start a gesture there nor include it in movement checks.
@@ -436,25 +438,32 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 return hit
         return None
 
+    def wait_recruit_page(self, node="DY_RecruitDetails"):
+        self.wait(node)
+        # The page label can remain visible behind a sticker inheritance result.
+        # Clear it before scrolling, comparing cards, or checking draw buttons.
+        if self.dismiss_notifications():
+            self.wait(node)
+        self.require_clear_notification_overlay()
+
     def recruit_events(self):
         log('[免费招募] 正在检查活动免费招募')
         self.home()
         self.click("DY_RecruitEntry")
-        self.wait("DY_RecruitDetails")
+        self.wait_recruit_page()
         # Selecting a tab centers it at y=218. Scroll back to the first pool.
         for _ in range(30):
             before = self.image[100:565,28:229].astype(float)
             self.swipe(130,310,520)
             time.sleep(.8)
-            self.wait("DY_RecruitDetails")
+            self.wait_recruit_page()
             if np.mean(np.abs(self.image[100:565,28:229].astype(float)-before)) < 1:
                 break
         else:
             raise FlowError("招募列表未回到顶部")
         visited = []
         for index in range(60):
-            self.wait("DY_RecruitDetails")
-            self.require_clear_notification_overlay()
+            self.wait_recruit_page()
             card = self.image[180:255,45:215].copy()
             if any(np.mean(np.abs(card.astype(float)-old)) < 1 for old in visited):
                 record_warning(self.report,'[免费招募] 招募列表未继续翻页，结束活动卡池扫描')
@@ -476,7 +485,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                     offers = self.report.setdefault("event_draws", [])
                     if any(row['pool']==index and row["confirmation"]==normalized(confirmation) for row in offers):
                         self.tap(510,476)
-                        self.wait('DY_RecruitDetails')
+                        self.wait_recruit_page()
                         record_warning(self.report,'[免费招募] 本卡池的免费招募已完成，跳过尚未刷新的按钮')
                         break
                     row = {"pool":index,"confirmation": normalized(confirmation), "status": "submitted"}

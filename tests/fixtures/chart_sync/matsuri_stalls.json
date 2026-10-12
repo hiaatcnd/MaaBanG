@@ -1,0 +1,897 @@
+{
+  "source": "MATSURI BAYASHI / EXPERT, chart 774; real scheduler stalls on 2026-10-12. Note positions in tests are simulated, not recorded frames.",
+  "chart": [
+    {
+      "type": "BPM",
+      "bpm": 153,
+      "beat": 0
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 8
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 8.25
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 8.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 8.75
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 9.5
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 9.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 10
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 10
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 11,
+      "flick": true
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 11,
+      "flick": true
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 12
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 12
+    },
+    {
+      "type": "Single",
+      "lane": 3,
+      "beat": 12.75
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 12.75
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 13.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 13.5
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 14,
+      "flick": true
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 3,
+          "beat": 14
+        },
+        {
+          "lane": 1,
+          "beat": 15
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 15
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 15.25
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 15.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 15.75
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 16,
+      "flick": true
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 16.25
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 16.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 1,
+          "beat": 16.75
+        },
+        {
+          "lane": 1,
+          "beat": 17.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 17.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 17.75
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 18
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 2,
+          "beat": 18.25
+        },
+        {
+          "lane": 2,
+          "beat": 19
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 19
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 19.25
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 19.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 1,
+          "beat": 19.75
+        },
+        {
+          "lane": 1,
+          "beat": 20.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 20.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 20.75
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 21
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 21.25
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 21.5
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 22,
+      "skill": true
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 2,
+          "beat": 22
+        },
+        {
+          "lane": 1,
+          "beat": 22.5
+        },
+        {
+          "lane": 0,
+          "beat": 23
+        }
+      ]
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 4,
+          "beat": 23
+        },
+        {
+          "lane": 5,
+          "beat": 23.5
+        },
+        {
+          "lane": 6,
+          "beat": 24
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 24
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 24.25
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 24.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 4,
+          "beat": 24.75
+        },
+        {
+          "lane": 4,
+          "beat": 25.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 25.5
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 25.75
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 26
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 6,
+          "beat": 26.25
+        },
+        {
+          "lane": 6,
+          "beat": 27
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 3,
+      "beat": 27
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 27.25
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 27.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 5,
+          "beat": 27.75
+        },
+        {
+          "lane": 5,
+          "beat": 28.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 28.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 29
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 29
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 30,
+      "flick": true
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 30
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 30.5
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 30.75
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 31
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 31.25
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 31.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 32
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 32.25
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 32.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 5,
+          "beat": 32.75
+        },
+        {
+          "lane": 5,
+          "beat": 33.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 33.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 33.75
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 34
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 4,
+          "beat": 34.25
+        },
+        {
+          "lane": 4,
+          "beat": 35
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 35
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 35.25
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 35.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 5,
+          "beat": 35.75
+        },
+        {
+          "lane": 5,
+          "beat": 36.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 36.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 36.75
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 37
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 37.25
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 37.5
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 38
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 4,
+          "beat": 38
+        },
+        {
+          "lane": 5,
+          "beat": 38.5
+        },
+        {
+          "lane": 6,
+          "beat": 39
+        }
+      ]
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 2,
+          "beat": 39
+        },
+        {
+          "lane": 1,
+          "beat": 39.5
+        },
+        {
+          "lane": 0,
+          "beat": 40
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 40
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 40.25
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 40.5
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 2,
+          "beat": 40.75
+        },
+        {
+          "lane": 2,
+          "beat": 41.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 41.5
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 41.75
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 42
+    },
+    {
+      "type": "Long",
+      "connections": [
+        {
+          "lane": 1,
+          "beat": 42.25
+        },
+        {
+          "lane": 1,
+          "beat": 43
+        }
+      ]
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 3,
+          "beat": 43
+        },
+        {
+          "lane": 4,
+          "beat": 43.25
+        },
+        {
+          "lane": 5,
+          "beat": 43.5
+        },
+        {
+          "lane": 6,
+          "beat": 43.75
+        },
+        {
+          "lane": 5,
+          "beat": 44
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 44
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 44.75
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 44.75
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 1,
+          "beat": 45.5
+        },
+        {
+          "lane": 0,
+          "beat": 47
+        }
+      ]
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 5,
+          "beat": 45.5
+        },
+        {
+          "lane": 6,
+          "beat": 47
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 47.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 47.75
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 48,
+      "flick": true
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 48.5,
+      "skill": true
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 49
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 49.5
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 50
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 50.75
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 50.75
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 51.5
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 51.75
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 52
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 52.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 53
+    },
+    {
+      "type": "Slide",
+      "connections": [
+        {
+          "lane": 2,
+          "beat": 53.5
+        },
+        {
+          "lane": 0,
+          "beat": 54.5
+        }
+      ]
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 54.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 55.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 55.75
+    },
+    {
+      "type": "Single",
+      "lane": 6,
+      "beat": 56
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 56.5
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 57
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 57.5
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 58
+    },
+    {
+      "type": "Single",
+      "lane": 2,
+      "beat": 58.75
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 58.75
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 59.5
+    },
+    {
+      "type": "Single",
+      "lane": 4,
+      "beat": 59.75
+    },
+    {
+      "type": "Single",
+      "lane": 0,
+      "beat": 60
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 60.5
+    },
+    {
+      "type": "Single",
+      "lane": 1,
+      "beat": 60.75
+    },
+    {
+      "type": "Single",
+      "lane": 5,
+      "beat": 61
+    },
+    {
+      "type": "BPM",
+      "bpm": 155,
+      "beat": 144
+    },
+    {
+      "type": "BPM",
+      "bpm": 153,
+      "beat": 204
+    }
+  ],
+  "stalls": [
+    {
+      "run": "20261012-200609",
+      "round": 10,
+      "event": {
+        "time": 3.357938945934534,
+        "priority": 3,
+        "contact": 0,
+        "lane": 5.0,
+        "action": "up",
+        "y": 589.6527935248188,
+        "dx": -0.4360965610724778
+      },
+      "late_ms": 179.80802431702614,
+      "phase_before_ms": 0.0,
+      "skipped_events": 3,
+      "error": "检测到暂停或演出失败，停止触控"
+    },
+    {
+      "run": "20261012-022711",
+      "round": 4,
+      "event": {
+        "time": 15.41741600947089,
+        "priority": 2,
+        "contact": 0,
+        "lane": 1.3599999999999999,
+        "action": "move",
+        "y": 592.6256799827584,
+        "dx": -3.108663304894346
+      },
+      "late_ms": 162.8601864213124,
+      "phase_before_ms": 4.502097999938995,
+      "skipped_events": 36,
+      "error": "检测到暂停或演出失败，停止触控"
+    }
+  ]
+}

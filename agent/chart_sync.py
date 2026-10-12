@@ -266,6 +266,81 @@ class ChartPhaseTracker:
                 'notes':len(inliers),'samples':len(samples),'window':window}
 
 
+class PhaseReacquirer:
+    """Recheck song time from fresh notes while stalled input is released.
+
+    A host stall does not tell us whether the game kept playing or also paused.
+    Search both the old phase and a bounded game delay, requiring an unambiguous
+    multi-note match before the caller changes its origin and seeks future heads.
+    """
+    timeout = 1.25
+
+    def __init__(self, tracker, started, correction, stall):
+        if not all(np.isfinite(v) for v in (started, correction, stall)) or not 0 < stall <= 2:
+            raise ValueError('Invalid phase recovery')
+        self.tracker = tracker
+        self.started = started
+        self.low = correction-.050
+        self.high = correction+min(.500, max(.250, stall+.150))
+        self.rows = []
+        self.result = None
+        self.last_stamp = float('-inf')
+
+    def observe_positions(self, timestamp, positions):
+        if (timestamp < self.started or timestamp-self.started > self.timeout or
+                timestamp <= self.last_stamp):
+            return None
+        self.last_stamp = timestamp
+        if self.result is not None:
+            return self.result
+        # Capture each lane once per frame, even if a diagnostic caller supplies
+        # duplicate positions. Duplicates must not manufacture extra evidence.
+        for lane, y in dict(positions).items():
+            if y is None or not 160 < y < 430 or not len(self.tracker.notes[lane]):
+                continue
+            crossing = timestamp+self.tracker.travel_scale*np.log(590/y)
+            errors = crossing-self.tracker.notes[lane]-self.tracker.phase_reference
+            ids = np.where((errors >= self.low) & (errors <= self.high))[0]
+            self.rows.append((timestamp, lane, [(int(i), float(errors[i])) for i in ids]))
+        self.rows = [r for r in self.rows if timestamp-r[0] <= 1.]
+        # Do not borrow pre-stall samples: they can otherwise keep reporting a
+        # reassuring old correction for several seconds after synchronization is lost.
+        if len(self.rows) < 6 or len({r[0] for r in self.rows}) < 4:
+            return None
+        fits = []
+        centers = {error for _, _, candidates in self.rows for _, error in candidates}
+        for center in centers:
+            samples = []
+            for stamp, lane, candidates in self.rows:
+                matches = [(i, error) for i, error in candidates if abs(error-center) <= .018]
+                if len(matches) == 1:
+                    i, error = matches[0]
+                    samples.append((stamp, lane, i, error))
+            if (not ChartPhaseTracker._supported(samples, 6, 4) or
+                    len(samples) < len(self.rows)*.75):
+                continue
+            grouped = {}
+            for _, lane, i, error in samples:
+                grouped.setdefault((lane, i), []).append(error)
+            errors = np.array([np.median(v) for v in grouped.values()])
+            estimate = float(np.median(errors))
+            mad = float(np.median(np.abs(errors-estimate)))
+            if mad > .009 or np.max(np.abs(errors-estimate)) > .020:
+                continue
+            fits.append({'correction':estimate, 'mad_ms':mad*1000,
+                         'notes':len(grouped), 'samples':len(samples),
+                         'frames':len({s[0] for s in samples})})
+        if not fits:
+            return None
+        best = max(fits, key=lambda f:(f['samples'], f['notes'], -f['mad_ms']))
+        # Repeating patterns may support two different song positions. A wider
+        # search is useful only if it resolves that ambiguity rather than guessing.
+        if any(abs(f['correction']-best['correction']) > .040 for f in fits):
+            return None
+        self.result = best
+        return best
+
+
 class SlewedClock:
     """Bounded continuous phase adjustment; event order remains monotonic."""
     def __init__(self, rate=.010, limit=.100):

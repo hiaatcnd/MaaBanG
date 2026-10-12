@@ -632,15 +632,16 @@ class ChallengeMiningFlow(MiningLiveFlow):
                     break
                 attempted_levels.add(level)
                 log(f'[挖矿挑战] 正在准备第 {level} 关')
-                title = self.text([460,124,480,44])
-                songs = [s for s in BY_ID.values() if self.title_matches(title,s)]
-                if len(songs) != 1:
-                    raise FlowError(f'舞台歌曲无法唯一识别：{title}')
-                selection = ChartSelection.parse(songs[0]['id'],'expert')
                 self.choose_difficulty_exact('expert')
-                self.store.get(selection)
                 self.tap(1070,648)
                 self.wait_ready()
+                # The stage fixes the song. Read the wider final preparation
+                # title instead of making the stage list's clipped title a gate.
+                title = self.text([220,541,570,38])
+                songs = [s for s in BY_ID.values() if self.title_matches(title,s)]
+                if len(songs) != 1:
+                    raise FlowError(f'舞台准备页歌曲无法唯一识别：{title}')
+                selection = ChartSelection.parse(songs[0]['id'],'expert')
                 if not self.recommend():
                     self.report['skipped'].append({**asdict(selection), 'stage_level':level,
                                                   'stage_kind':self.mining.stage,

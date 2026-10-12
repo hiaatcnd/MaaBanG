@@ -32,7 +32,8 @@ def play(config_path):
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
     from maa.define import MaaAdbScreencapMethodEnum, MaaAdbInputMethodEnum
-    from chart_sync import FirstNoteLock, locate_note_y, stage_state, ChartPhaseTracker, SlewedClock
+    from chart_sync import (FirstNoteLock, locate_note_y, stage_state,
+                            ChartPhaseTracker, PhaseReacquirer, SlewedClock)
     import chart_sync
     import numpy as np
 
@@ -56,6 +57,7 @@ def play(config_path):
     first_note_lock_frame = None
     last_start_frame = None
     start_trace = []
+    phase_trace = []
 
     def stopped():
         if (output/'stop').exists():
@@ -186,6 +188,9 @@ def play(config_path):
         if origin is None:
             raise RuntimeError('未锁定首键')
         report['status'] = 'playing'
+        phase_guard = threading.Lock()
+        phase_recovery = None
+        phase_reset_at = 0.
 
         def observe():
             nonlocal popup_frame
@@ -206,14 +211,27 @@ def play(config_path):
                                 from PIL import Image
                                 Image.fromarray(frame[:,:,::-1]).save(output/'interruption.png')
                                 return
-                        if after-before < .040:
-                            estimate = tracker.observe((before+after)/2-origin,
-                                                       frame,clock.value)
-                            if estimate and clock.update(estimate['correction']):
-                                report['phase_updates'].append({**estimate,
-                                    'observed_at':(before+after)/2-origin,
-                                    'clock_ms':clock.value*1000})
-                    observer_stop.wait(.12)
+                        stamp = (before+after)/2
+                        positions = ([(lane,locate_note_y(frame,lane)) for lane in range(7)]
+                                     if after-before < .040 else None)
+                        with phase_guard:
+                            # A capture already in flight when the origin changes
+                            # cannot contribute to the new phase history.
+                            if stamp >= phase_reset_at:
+                                phase_trace.append({'time':stamp-origin,
+                                    'capture_ms':(after-before)*1000, 'positions':positions,
+                                    'recovering':phase_recovery is not None})
+                                del phase_trace[:-64]
+                                if positions is not None:
+                                    if phase_recovery is not None:
+                                        phase_recovery.observe_positions(stamp-origin,positions)
+                                    else:
+                                        estimate = tracker.observe_positions(stamp-origin,positions,clock.value)
+                                        if estimate and clock.update(estimate['correction']):
+                                            report['phase_updates'].append({**estimate,
+                                                'observed_at':stamp-origin,
+                                                'clock_ms':clock.value*1000})
+                    observer_stop.wait(.04 if phase_recovery is not None else .12)
             except Exception as exc:
                 report['observer_error'] = str(exc)
                 observer_failed.set()
@@ -223,19 +241,22 @@ def play(config_path):
         recovery = GestureRecovery()
         report['recoveries'] = []
         recovery_times = []
-        for event in events:
-            if recovery.skip(event):
-                report['recoveries'][-1]['skipped_events'] += 1
-                continue
+
+        def wait_event(event):
             while True:
                 stopped()
                 now = time.perf_counter()
                 correction = clock.advance(now)
                 target = origin+event.time+correction
                 if now>=target:
-                    break
+                    return now,target,correction
                 time.sleep(min(target-now,.005))
-            sent = time.perf_counter()
+
+        for event in events:
+            if recovery.skip(event):
+                report['recoveries'][-1]['skipped_events'] += 1
+                continue
+            sent,target,correction = wait_event(event)
             if sent-target>.15:
                 missed={'event':asdict(event),'late_ms':(sent-target)*1000,
                         'skipped_events':0,'released_contacts':sorted(active)}
@@ -245,20 +266,44 @@ def play(config_path):
                     report['deadline_miss']=missed
                     raise RuntimeError('持续或过长的调度阻塞，无法安全恢复演奏')
                 recovery_times.append(sent)
-                # The game keeps advancing during a host/API stall. Release
-                # held gestures and seek future heads, never replay the backlog
-                # or move the song origin by the duration of the stall.
+                # Release first, then measure whether the game advanced with
+                # the host clock. Neither the stall duration nor stale phase
+                # samples are evidence that it is safe to resume blind input.
+                released = set(active)
                 for contact in sorted(active):
                     stopped()
                     if not controller.post_touch_up(contact).wait().succeeded:
                         raise RuntimeError('恢复时释放触点失败')
+                active.clear()
+                requested = time.perf_counter()
+                with phase_guard:
+                    phase_recovery = PhaseReacquirer(tracker,requested-origin,clock.value,sent-target)
+                while True:
+                    stopped()
+                    with phase_guard:
+                        synced = phase_recovery.result
+                        if synced is not None:
+                            missed['resync'] = {**synced, 'requested_at':requested-origin,
+                                'wait_ms':(time.perf_counter()-requested)*1000}
+                            # All contacts are up and past events are discarded.
+                            # Rebase once from fresh visual evidence; normal small
+                            # corrections retain the original bounded slewed clock.
+                            origin += synced['correction']
+                            tracker = ChartPhaseTracker(chart)
+                            clock = SlewedClock()
+                            phase_reset_at = time.perf_counter()
+                            phase_recovery = None
+                            break
+                    if time.perf_counter()-requested > PhaseReacquirer.timeout:
+                        raise RuntimeError('卡顿后无法重新确认谱面同步，停止触控并保留现场')
+                    time.sleep(.005)
                 now = time.perf_counter()
                 correction = clock.advance(now)
-                recovery.begin(now-origin-correction,active)
-                active.clear()
+                recovery.begin(now-origin-correction,released)
                 if recovery.skip(event):
                     missed['skipped_events'] += 1
                     continue
+                sent,target,correction = wait_event(event)
             x,y = round(197+147.7*event.lane+event.dx),round(event.y)
             if event.action=='down':
                 active.add(event.contact)
@@ -304,6 +349,8 @@ def play(config_path):
                 controller.post_touch_up(contact).wait()
         if thread:
             thread.join(timeout=3)
+        if report['status']=='error' or report.get('recoveries'):
+            report['phase_trace'] = phase_trace
         if controller and started and report['status']=='error' and not observer_failed.is_set() and not online:
             controller.post_click(1240,50).wait()
         # Defer encoding until all touches are released; diagnostics must not
