@@ -6,7 +6,7 @@ from chart_live import ChartLive, ChartLiveFlow
 from chart_policy import ChartOptions
 from costume_unlock import FlowError
 
-OPTION_DEFAULTS = dict(song1='306', difficulty1='expert', jitter='small')
+OPTION_DEFAULTS = dict(song1='306', difficulty1='expert', jitter='small', avoid_full_combo=False)
 OPTION_NODES = {key: 'DL_'+key for key in OPTION_DEFAULTS}
 
 

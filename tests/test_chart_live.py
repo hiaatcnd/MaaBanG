@@ -315,9 +315,9 @@ class ChartLiveTests(unittest.TestCase):
                         flow.reco=lambda name,**kw: original_reco(name,**kw) if name=='CU_OCR' else name=='LV_AutoOff'
                         flow.fire_preview=Mock(return_value=(19,18))
                         flow.fire_balance=Mock(return_value=19)
-                        # The old crop drops the final s; a prefix match must remain invalid.
+                        # A missing final s can resolve uniquely through fuzzy matching.
                         truncated=flow.text([220,541,440,38])
-                        case.assertFalse(flow.title_matches(truncated,BY_ID['25']))
+                        case.assertTrue(flow.title_matches(truncated,BY_ID['25']))
                         case.assertEqual(flow.verify_chart_start(1,ChartSelection('25','easy'),1),19)
                         with case.assertRaisesRegex(RuntimeError,'歌曲与谱面不一致'):
                             flow.verify_chart_start(1,ChartSelection('24','easy'),1)

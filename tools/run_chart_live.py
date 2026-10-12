@@ -39,8 +39,6 @@ def main():
     task_name='DirectChartLive' if args.direct else 'ChartLive'
     if args.direct:
         from direct_chart_live import OPTION_NODES
-        if args.avoid_full_combo:
-            parser.error('--avoid-full-combo is supported by Maa代打演出 only')
         if args.mode!='free':
             parser.error('--direct uses the current prepared page; omit --mode')
     if args.package and args.prepare_only:

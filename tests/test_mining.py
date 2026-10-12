@@ -103,7 +103,13 @@ class MiningTests(unittest.TestCase):
 
     def test_challenge_reads_song_only_after_entering_ready_page(self):
         from costume_unlock import FlowError
-        for title in ('STAR BEAT!～ホシノコドウ～', '无法识别的歌曲'):
+        for title,expected in (
+                ('STAR BEAT!～ホシノコドウ～','STAR BEAT!〜ホシノコドウ〜'),
+                # Stage 21 screenshot: OCR omitted the final long vowel mark.
+                ('ルカルカ★ナイトフィーバ','ルカルカ★ナイトフィーバー'),
+                ('ルカルカ★ナィトフィーバ','ルカルカ★ナイトフィーバー'),
+                ('ルカルカ★ナイト',None),
+                ('无法识别的歌曲',None)):
             with self.subTest(title=title):
                 f=ChallengeMiningFlow.__new__(ChallengeMiningFlow)
                 f.mining=MiningOptions.parse({});f.report={'skipped':[]}
@@ -121,14 +127,14 @@ class MiningTests(unittest.TestCase):
                     self.assertEqual(roi,[220,541,570,38])
                     return title
                 f.text=Mock(side_effect=read_title)
-                if title=='无法识别的歌曲':
+                if expected is None:
                     with self.assertRaisesRegex(FlowError,'舞台准备页歌曲无法唯一识别'):
                         f.run()
                     f.recommend.assert_not_called();f.perform.assert_not_called()
                 else:
                     f.run()
                     selection=f.perform.call_args.args[0]
-                    self.assertEqual(selection.song['title'],'STAR BEAT!〜ホシノコドウ〜')
+                    self.assertEqual(selection.song['title'],expected)
                     self.assertEqual(selection.difficulty,'expert')
                 f.text.assert_called_once()
                 f.store.get.assert_not_called()

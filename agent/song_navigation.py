@@ -25,7 +25,7 @@ def title_key(text):
         'ぁぃぅぇぉゃゅょっァィゥェォャュョッ〜へべぺ',
         'あいうえおやゆよつアイウエオヤユヨツ~ヘベペ'))
     # OCR varies between straight/curly quotes and may repeat boundary quotes.
-    # Keep the title body and punctuation exact; never accept a fuzzy prefix.
+    # Keep the title body and punctuation here; fuzzy scoring is a later step.
     return key.translate(str.maketrans({'‘':"'", '’':"'", '“':'"', '”':'"'})).strip("\"'")
 
 

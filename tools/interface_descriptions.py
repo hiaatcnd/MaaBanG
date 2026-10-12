@@ -34,6 +34,7 @@ TASK_DESCRIPTIONS = {
     ),
     'DirectChartLive': (
         '在你准备好的最后演出准备页，按指定谱面直接演奏一首。\n\n'
+        '可开启“避免 Full Combo”，跳过最后一个非长条音符；此选项默认关闭。\n\n'
         '**运行前**\n\n'
         '- 在游戏中选好歌曲、难度和编组，停在点击“演出开始”即可打歌的页面。\n'
         '- 本任务的歌曲、难度必须与游戏一致；任务只检查开始按钮，不识别或核对曲名、难度。\n'
@@ -160,6 +161,7 @@ OPTION_DESCRIPTIONS = {
 }
 OPTION_DESCRIPTIONS['演出从收藏选择'] = OPTION_DESCRIPTIONS['谱面从收藏选择']
 OPTION_DESCRIPTIONS['直接演出随机偏差'] = OPTION_DESCRIPTIONS['谱面随机偏差']
+OPTION_DESCRIPTIONS['直接演出避免FullCombo'] = OPTION_DESCRIPTIONS['谱面避免FullCombo']
 
 INPUT_DESCRIPTIONS = {
     ('最大演出次数', '次数'): '自由演出一首计一次，巡演完整三首计一次。\n\n留空表示不限次数；自动额度或火数不足时仍会停止。',

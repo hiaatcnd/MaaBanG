@@ -12,7 +12,9 @@
 
 歌曲和难度必须由用户保证与游戏一致。演出速度、皮肤、镜像、火数、Fever、内置自动和 MV 等设置全部沿用当前页面；请提前运行 **演出预先设置** 应用代打推荐设定，并关闭内置自动、MV、3D 演出及 3D Cut in。本任务不修改设置、不补火；消耗按游戏当前显示执行。选曲列表仍仅提供中国服已开放的歌曲和难度。
 
-开发验证：`tools/run_chart_live.py --direct --song1 773 --difficulty1 easy`，同时传入 `--adb` 和 `--address`。加 `--prepare-only` 只校验准备页和获取谱面，不开演。
+可开启 **避免 Full Combo**（默认关闭），跳过最后一个非长条音符；长条和滑条完整演奏，同押只跳过其中一个非长条音符。若谱面全是长条或滑条，则在开演前停止并提示。
+
+开发验证：`tools/run_chart_live.py --direct --song1 773 --difficulty1 easy`，同时传入 `--adb` 和 `--address`。加 `--avoid-full-combo` 开启避免 Full Combo；加 `--prepare-only` 只校验准备页和获取谱面，不开演。
 
 ### 常规代打演出
 
