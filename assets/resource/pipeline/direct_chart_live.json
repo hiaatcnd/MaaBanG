@@ -17,5 +17,10 @@
         "attach": {
             "value": "small"
         }
+    },
+    "DL_avoid_full_combo": {
+        "attach": {
+            "value": false
+        }
     }
 }

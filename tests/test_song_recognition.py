@@ -27,7 +27,7 @@ class SongRecognitionTests(unittest.TestCase):
                for i,title in enumerate(('Melody dawn','Melody down','Wonderful Melody'))}
         flow=SongNavigationMixin()
         with patch('online_policy.RECOGNITION_BY_ID',songs):
-            for title in ('Melody d0wn','Wonderful Melo','random unknown song'):
+            for title in ('Melody d0wn','Wonderful Mel','random unknown song'):
                 for song in songs.values():
                     self.assertFalse(flow.title_matches(title,song),(title,song['id']))
             self.assertTrue(flow.title_matches('Wonderfu1 Melody',songs['2']))
@@ -67,10 +67,20 @@ class SongRecognitionTests(unittest.TestCase):
         songs={'a':{'id':'a','title':'Wonderful Melody','aliases':[], 'band':'A','band_aliases':[]},
                'b':{'id':'b','title':'Unrelated Anthem','aliases':[], 'band':'B','band_aliases':[]}}
         with patch('online_policy.RECOGNITION_BY_ID',songs):
-            for title in ('Wonderfu1 Melody', 'Wonderul Melody', 'Womderful Me1ody'):
+            for title in ('Wonderfu1 Melody', 'Wonderul Melody', 'Womderful Me1ody',
+                          'Wonderful Melod', 'Wonderful Melo', 'onderful Melody'):
                 self.assertEqual(final_song(title)['id'],'a')
-            for title in ('Wonderful Melo', 'random unknown song', 'Wonderful'):
+            for title in ('Wonderful Mel', 'random unknown song', 'Wonderful'):
                 with self.assertRaises(ValueError): final_song(title)
+
+    def test_missing_boundary_characters_still_reject_near_ties(self):
+        from unittest.mock import patch
+        songs={str(i):{'id':str(i),'title':title,'aliases':[], 'band':str(i),'band_aliases':[]}
+               for i,title in enumerate(('Wonderful Melody','Wonderful Melon'))}
+        with patch('online_policy.RECOGNITION_BY_ID',songs):
+            for title in ('Wonderful Melo','Wonderful Melod'):
+                with self.subTest(title=title), self.assertRaises(ValueError):
+                    final_song(title)
 
     def test_near_ties_and_punctuation_collisions_are_not_guessed(self):
         from unittest.mock import patch
@@ -107,8 +117,17 @@ class SongRecognitionTests(unittest.TestCase):
                     self.assertEqual(final_song(variant)['id'], sid)
                     self.assertTrue(SongNavigationMixin().title_matches(variant, BY_ID[sid]))
 
-    def test_unreviewed_truncations_and_similar_titles_are_not_guessed(self):
-        for title in ('Jump', 'CiRCLE THANKS', 'Singing OUR', 'Second to Non'):
+    def test_minor_boundary_omissions_match_without_song_specific_aliases(self):
+        for title,sid in (('ルカルカ★ナイトフィーバ','260'),
+                          ('ルカルカ★ナィトフィーバ','260'),
+                          ('Singing OUR','350'), ('Second to Non','690')):
+            with self.subTest(title=title):
+                self.assertNotIn(title_key(title),{title_key(v) for v in recognition_titles(BY_ID[sid])})
+                self.assertEqual(final_song(title)['id'],sid)
+                self.assertTrue(SongNavigationMixin().title_matches(title,BY_ID[sid]))
+
+    def test_short_or_heavily_truncated_titles_are_not_guessed(self):
+        for title in ('Jump', 'CiRCLE THANKS', 'ルカルカ★ナイト'):
             with self.subTest(title=title), self.assertRaises(ValueError):
                 final_song(title)
 

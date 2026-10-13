@@ -55,9 +55,8 @@ def final_song(title, band=''):
     matches = [song for song, names in candidates if key in names]
     if matches:
         return disambiguate(matches)
-    # A short or visibly truncated title has too little evidence for typo matching.
-    if len(key)<6 or any(key != name and (name.startswith(key) or name.endswith(key))
-                         for _, names in candidates for name in names):
+    # Missing boundary characters use the same typo scoring as interior errors.
+    if len(key)<6:
         raise ValueError(error)
     ranked = []
     for song, names in candidates:

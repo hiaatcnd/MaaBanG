@@ -1,11 +1,12 @@
 from interface_test_support import load_interface
+import copy
 import json
 from pathlib import Path
 import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
@@ -18,16 +19,20 @@ from song_catalog import BY_ID, available_difficulties
 
 
 class DirectChartLiveTests(unittest.TestCase):
+    def prepare_flow(self, flow):
+        flow.snap=Mock()
+        flow.hit_text=Mock(return_value=object())
+        for method in ('text','title_matches','select_song','navigate_menu','home',
+                       'refill_fire','inherit_menu_fire','configure_stage','configure_fire','settle_results',
+                       'await_chart_result'):
+            setattr(flow,method,Mock(side_effect=AssertionError('direct task must not call '+method)))
+        return flow
+
     def flow(self, folder):
         context=SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False))
         flow=DirectChartLiveFlow(context,ChartOptions.parse(
             dict(song1='773',difficulty1='easy',max_rounds=9,shortage='items')),folder)
-        flow.snap=Mock()
-        flow.hit_text=Mock(return_value=object())
-        for method in ('text','title_matches','select_song','navigate_menu','home',
-                       'refill_fire','inherit_menu_fire','configure_stage','configure_fire','settle_results'):
-            setattr(flow,method,Mock(side_effect=AssertionError('direct task must not call '+method)))
-        return flow
+        return self.prepare_flow(flow)
 
     def test_preparation_loads_exact_chart_without_song_ocr_or_navigation(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -101,6 +106,87 @@ class DirectChartLiveTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 DirectChartLive().create_flow(flow.ctx,dict(values,song1='not a song'),folder)
 
+    def test_avoid_full_combo_defaults_and_strict_boolean(self):
+        self.assertIs(OPTION_DEFAULTS['avoid_full_combo'],False)
+        self.assertEqual(OPTION_NODES['avoid_full_combo'],'DL_avoid_full_combo')
+        context=SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False))
+        with tempfile.TemporaryDirectory() as folder:
+            for enabled in (False,True):
+                flow=DirectChartLive().create_flow(context,dict(OPTION_DEFAULTS,avoid_full_combo=enabled),folder)
+                self.assertIs(flow.settings.avoid_full_combo,enabled)
+                self.assertIs(flow.report['options']['avoid_full_combo'],enabled)
+            for value in ('false','true',0,1,None):
+                with self.subTest(value=value),self.assertRaisesRegex(ValueError,'避免 Full Combo'):
+                    DirectChartLive().create_flow(context,dict(OPTION_DEFAULTS,avoid_full_combo=value),folder)
+
+    def test_ui_avoid_full_combo_reaches_worker_without_changing_direct_task_boundaries(self):
+        option=load_interface()['option']['直接演出避免FullCombo']
+        self.assertEqual(option['default_case'],'关')
+        self.assertEqual([c['pipeline_override']['DL_avoid_full_combo']['attach']['value']
+                          for c in option['cases']],[False,True])
+        pipeline=json.loads((ROOT/'assets/resource/pipeline/direct_chart_live.json').read_text(encoding='utf8'))
+        for choice in ('default','legacy','关','开'):
+            with self.subTest(choice=choice),tempfile.TemporaryDirectory() as folder:
+                enabled=choice=='开'
+                nodes=copy.deepcopy(pipeline)
+                if choice=='legacy':nodes.pop('DL_avoid_full_combo')
+                for case in option['cases']:
+                    if case['name']==choice:nodes.update(copy.deepcopy(case['pipeline_override']))
+                # Other tasks' switches must never influence the direct task.
+                for prefix in ('CL','MN'):
+                    nodes[prefix+'_avoid_full_combo']={'attach':{'value':not enabled}}
+                context=SimpleNamespace(get_node_data=nodes.get,tasker=SimpleNamespace(
+                    controller=SimpleNamespace(info={}),stopping=False))
+                action=DirectChartLive()
+                create_flow=action.create_flow
+                flows=[];configs=[]
+                def capture_flow(ctx,values,destination):
+                    flow=self.prepare_flow(create_flow(ctx,values,destination))
+                    flow.store.get=Mock(return_value=([],{'duration':120}))
+                    flow.save_frame=Mock()
+                    flows.append(flow)
+                    return flow
+                def worker(args,**kwargs):
+                    config_path=Path(args[-1])
+                    configs.append(json.loads(config_path.read_text(encoding='utf8')))
+                    (config_path.parent/'armed').write_text('ready')
+                    (config_path.parent/'playback.json').write_text('{"status":"input_complete"}')
+                    return SimpleNamespace(poll=lambda:0,returncode=0)
+                with patch('chart_live.Path',side_effect=lambda path:Path(folder) if path=='debug' else Path(path)), \
+                        patch.object(action,'create_flow',side_effect=capture_flow), \
+                        patch('chart_live.subprocess.Popen',side_effect=worker):
+                    self.assertTrue(action.run(context,None))
+                self.assertEqual(len(configs),1)
+                self.assertIs(configs[0]['avoid_full_combo'],enabled)
+                self.assertEqual(configs[0]['chart']['duration'],120)
+                self.assertEqual(configs[0]['start_mode'],'click')
+                self.assertEqual(len(flows),1)
+                self.assertIs(flows[0].report['options']['avoid_full_combo'],enabled)
+                self.assertEqual(flows[0].report['completed_rounds'],1)
+                self.assertEqual(flows[0].report['status'],'finished')
+                self.assertEqual(flows[0].report['rounds'][0]['songs'][0]['status'],'input_complete')
+                flows[0].await_chart_result.assert_not_called()
+
+    def test_direct_cli_passes_avoid_full_combo_to_independent_node(self):
+        from run_chart_live import main
+        for enabled in (False,True):
+            with self.subTest(enabled=enabled),tempfile.TemporaryDirectory() as folder:
+                resource=Mock()
+                tasker=Mock()
+                tasker.post_task.return_value=SimpleNamespace(done=True,succeeded=True)
+                args=['run_chart_live.py','--adb','test-adb','--address','test-device','--direct']
+                if enabled:args.append('--avoid-full-combo')
+                with patch.object(sys,'argv',args),patch.dict('os.environ',{}), \
+                        patch('run_chart_live.Path.home',return_value=Path(folder)), \
+                        patch('maa.controller.AdbController'),patch('maa.resource.Resource',return_value=resource), \
+                        patch('maa.tasker.Tasker',return_value=tasker),patch('maa.toolkit.Toolkit.init_option'):
+                    self.assertEqual(main(),0)
+                self.assertIsInstance(resource.register_custom_action.call_args.args[1],DirectChartLive)
+                name,overrides=tasker.post_task.call_args.args
+                self.assertEqual(name,'DirectChartLive')
+                self.assertIs(overrides['DL_avoid_full_combo']['attach']['value'],enabled)
+                self.assertNotIn('CL_avoid_full_combo',overrides)
+
     def test_generated_ui_is_idempotent_and_exposes_exact_cn_difficulties(self):
         interface=load_interface()
         from song_interface import compact_interface
@@ -108,7 +194,7 @@ class DirectChartLiveTests(unittest.TestCase):
         self.assertEqual(compact, update(json.loads(json.dumps(compact))))
         task=next(t for t in interface['task'] if t['entry']=='DirectChartLive')
         self.assertFalse(task['default_check'])
-        self.assertEqual(task['option'],['直接演出歌曲','直接演出随机偏差'])
+        self.assertEqual(task['option'],['直接演出歌曲','直接演出随机偏差','直接演出避免FullCombo'])
         options=interface['option']
         cases=options['直接演出歌曲']['cases']
         self.assertEqual(len(cases),len(BY_ID))
