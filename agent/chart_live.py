@@ -234,7 +234,9 @@ class ChartLiveFlow(LiveFlow):
         online=self.settings.mode in ('team','coop')
         if not online:
             self.wait_ready(index)
-        self.disable_mv()
+            self.disable_mv()
+        # Online selection already disables Cut in; the final verification below
+        # checks it again without repeating generic MV/page detection.
         start_mode=self.playback_start_mode()
         destination=self.output/(f'attempt{self.report["attempts"]}_playback' if online else
                                  f'round{self.report["completed_rounds"]+1}_song{index}')

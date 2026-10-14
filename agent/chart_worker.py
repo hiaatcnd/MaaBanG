@@ -13,6 +13,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 
 from chart_policy import JITTER_PROFILES
 from chart_timing import compile_chart, first_anchor, GestureRecovery
+from online_errors import room_error
 from playback_controller import controller_config
 
 
@@ -23,6 +24,60 @@ def start_authorized_stage(controller, mode):
         raise ValueError('未知开演方式')
     if not controller.post_click(1130,616).wait().succeeded:
         raise RuntimeError('开演输入未确认，不重试')
+
+
+def check_overlay(tasker):
+    # This recognition-only action needs no default 200 ms action delays.
+    completed=tasker.post_task('ChartWorkerOverlayCheck',{
+        'ChartWorkerOverlayCheck':{'action':'Custom','custom_action':'ChartWorkerOverlayCheck',
+                                   'pre_delay':0,'post_delay':0}}).wait()
+    if not completed.succeeded:
+        raise RuntimeError('演出弹窗检查失败，停止触控')
+    return completed
+
+
+def capture_observer_frame(observer, online):
+    if observer.post_screencap().wait().succeeded:
+        return observer.cached_image
+    if online:
+        raise RuntimeError('联网演出监视截图失败，停止触控')
+    return None
+
+
+def check_playback_overlay(context, frame, report, observer_failed, online):
+    """Check one captured frame and stop input on fatal, exit or pause dialogs."""
+    def recognize(name, **override):
+        result=context.run_recognition(name,frame,{name:override} if override else {})
+        return result if result and result.hit else None
+
+    waiting_members=False
+    if online:
+        error=room_error(context,recognize)
+        if error:
+            name,text=error
+            if name=='OL_Fatal':
+                report['fatal']=True
+                report['observer_error']='联网演出无法继续：'+text
+            else:
+                report['interrupted']=True
+                report['observer_error']='联网房间退出：'+text
+            observer_failed.set()
+            return False
+        for node in ('CU_HomeBand','LV_Menu','OL_RoomPage','OL_TeamHome'):
+            if recognize(node):
+                report['observer_error']='联网房间退出：'+node
+                report['interrupted']=True
+                observer_failed.set()
+                return False
+        # Only the first-note loop consumes this flag; playback never uses it.
+        if report['status']=='preparing':
+            waiting_members=bool(recognize('OL_WaitingMembers'))
+    if recognize('ChartWorkerOverlay',recognition='OCR',roi=[190,180,910,230],
+                 expected=(['^暂停$','中断演出返回主页'] if online else
+                           ['演出失败','^暂停$','中断演出返回主页'])):
+        report['observer_error']='检测到暂停或演出失败，停止触控'
+        observer_failed.set()
+    return waiting_members
 
 
 def play(config_path):
@@ -102,23 +157,7 @@ def play(config_path):
         class CheckOverlay(CustomAction):
             def run(self,context,argv):
                 nonlocal waiting_members
-                if online:
-                    waiting=context.run_recognition('OL_WaitingMembers',popup_frame)
-                    waiting_members=bool(waiting and waiting.hit)
-                    for node in ('OL_Disconnected','CU_HomeBand','LV_Menu','OL_RoomPage','OL_TeamHome'):
-                        result=context.run_recognition(node,popup_frame)
-                        if result and result.hit:
-                            report['observer_error']='联网房间退出：'+node
-                            report['interrupted']=True
-                            observer_failed.set()
-                            return True
-                hit=context.run_recognition('ChartWorkerOverlay',popup_frame,{
-                    'ChartWorkerOverlay':{'recognition':'OCR','roi':[190,180,910,230],
-                       'expected':(['^暂停$','中断演出返回主页'] if online else
-                                   ['演出失败','^暂停$','中断演出返回主页'])}})
-                if hit and hit.hit:
-                    report['observer_error']='检测到暂停或演出失败，停止触控'
-                    observer_failed.set()
+                waiting_members=check_playback_overlay(context,popup_frame,report,observer_failed,online)
                 return True
         resource.register_custom_action('ChartWorkerOverlayCheck',CheckOverlay())
         popup_tasker=Tasker();popup_tasker.bind(resource,observer)
@@ -150,16 +189,14 @@ def play(config_path):
             state = stage_state(frame)
             if online and state is not None and np.mean(np.all(frame[425:525,385:895]>220,axis=2))>.65:
                 popup_frame=frame
-                popup_tasker.post_task('ChartWorkerOverlayCheck',{
-                    'ChartWorkerOverlayCheck':{'action':'Custom','custom_action':'ChartWorkerOverlayCheck'}}).wait()
+                check_overlay(popup_tasker)
                 if waiting_members:
                     continue
             if state is None:
                 if online and after-last_start_check>.5:
                     popup_frame=frame
                     last_start_check=after
-                    popup_tasker.post_task('ChartWorkerOverlayCheck',{
-                        'ChartWorkerOverlayCheck':{'action':'Custom','custom_action':'ChartWorkerOverlayCheck'}}).wait()
+                    check_overlay(popup_tasker)
                 continue
             if stage_seen is None:
                 stage_seen = after
@@ -195,22 +232,25 @@ def play(config_path):
         def observe():
             nonlocal popup_frame
             last_popup_check=0.
+            observer_ready=False
             try:
                 while not observer_stop.is_set():
                     before = time.perf_counter()
-                    if observer.post_screencap().wait().succeeded:
+                    frame=capture_observer_frame(observer,online)
+                    if frame is not None:
                         after = time.perf_counter()
-                        frame=observer.cached_image
                         if after-last_popup_check>.5 and (online or np.mean(np.all(frame[260:385,350:930]>220,axis=2))>.65):
                             popup_frame=frame
                             last_popup_check=after
-                            popup_tasker.post_task('ChartWorkerOverlayCheck',{
-                                'ChartWorkerOverlayCheck':{'action':'Custom',
-                                                         'custom_action':'ChartWorkerOverlayCheck'}}).wait()
+                            check_overlay(popup_tasker)
                             if observer_failed.is_set():
                                 from PIL import Image
                                 Image.fromarray(frame[:,:,::-1]).save(output/'interruption.png')
                                 return
+                            if online and not observer_ready:
+                                # Hand over only after the observer has checked a real frame.
+                                (output/'observer_ready').write_text('ready')
+                                observer_ready=True
                         stamp = (before+after)/2
                         positions = ([(lane,locate_note_y(frame,lane)) for lane in range(7)]
                                      if after-before < .040 else None)

@@ -71,6 +71,10 @@ class TaskLoggingTests(unittest.TestCase):
                     self.assertEqual(Path(worker_streams[0].name).read_text(encoding='utf8'),
                                      'worker output\n')
                     flow.verify_chart_start.assert_called_once_with(1,selection,0)
+                    if mode in ('team','coop'):
+                        flow.disable_mv.assert_not_called()
+                    else:
+                        flow.disable_mv.assert_called_once_with()
                     process.terminate.assert_not_called()
 
     def test_protocol_prefixes_each_line_and_flushes(self):
