@@ -226,19 +226,25 @@ class ChartLiveFlow(LiveFlow):
             raise FlowError('开演前火数预览不符')
         return balance
 
+    def playback_start_mode(self):
+        return 'online' if self.settings.mode in ('team','coop') else 'click'
+
     def play_chart(self, index, selection, metadata, amount, row):
         log(f'[谱面演出] {selection.song["title"]} / {selection.difficulty.upper()}：正在准备演奏进程')
         online=self.settings.mode in ('team','coop')
         if not online:
             self.wait_ready(index)
-        self.disable_mv()
+            self.disable_mv()
+        # Online selection already disables Cut in; the final verification below
+        # checks it again without repeating generic MV/page detection.
+        start_mode=self.playback_start_mode()
         destination=self.output/(f'attempt{self.report["attempts"]}_playback' if online else
                                  f'round{self.report["completed_rounds"]+1}_song{index}')
         destination.mkdir()
         config={'controller':self.controller.info,'chart':metadata,
                 'jitter':self.settings.jitter,'seed':secrets.randbits(32),
                 'avoid_full_combo':self.settings.avoid_full_combo,
-                'start_mode':'online' if online else 'click'}
+                'start_mode':start_mode}
         (destination/'config.json').write_text(json.dumps(config),encoding='utf8')
         worker_log=(destination/'worker.log').open('w',encoding='utf8')
         process=subprocess.Popen([sys.executable,'-X','utf8',str(Path(__file__).with_name('chart_worker.py')),
@@ -268,7 +274,7 @@ class ChartLiveFlow(LiveFlow):
             log('[谱面演出] 已发送开演指令，等待谱面输入完成')
             if online:
                 self.submit_online_ready(selection)
-            deadline=time.monotonic()+metadata['duration']+(270 if online else 90)
+            deadline=time.monotonic()+metadata['duration']+(270 if start_mode in ('online','online_click') else 90)
             next_progress=time.monotonic()+30
             while process.poll() is None:
                 if time.monotonic()>=next_progress:

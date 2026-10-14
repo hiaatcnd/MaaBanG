@@ -10,7 +10,7 @@ from threading import Event
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'agent'))
 from chart_policy import ChartOptions, ChartSelection
 from online_policy import RoomClock, RoomInterrupted, retry_delay, final_selection, final_song
-from online_live import OnlineLiveFlow
+from online_live import OnlineFatal, OnlineLiveFlow
 from song_catalog import BY_ID
 from chart_worker import start_authorized_stage
 from chart_store import ChartStore
@@ -228,12 +228,13 @@ class OnlineFlowTests(unittest.TestCase):
             flow.text.assert_called_once()
 
     def make_flow(self,folder):
-        flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+        flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False),
+                                           get_node_data=lambda name:None),
                             ChartOptions.parse({'mode':'team','fire':0,'max_rounds':1}),folder)
         selection=ChartSelection.parse('306','expert')
         flow.store.prepare_online=Mock(side_effect=AssertionError('must not prefetch the song pool'))
         flow.prepare_final_chart=Mock(return_value={'duration':1,'cache_hit':True})
-        for name in ('prepare_settings','await_final','save_frame','settle_online','home','recover_room','pause'):
+        for name in ('prepare_settings','await_final','save_frame','save_error_frame','settle_online','home','recover_room','pause'):
             setattr(flow,name,Mock())
         flow.read_final_selection=Mock(return_value=selection)
         def join():
@@ -342,6 +343,22 @@ class OnlineFlowTests(unittest.TestCase):
             flow.recover_room.assert_not_called()
             self.assertEqual(flow.report['completed_rounds'],0)
 
+    def test_worker_fatal_never_recovers_even_if_diagnostic_capture_fails(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.save_error_frame=OnlineLiveFlow.save_error_frame.__get__(flow)
+            flow.reco=Mock(return_value=None)  # The parent's old ready frame is irrelevant.
+            flow.play_chart.side_effect=lambda *args: flow.handle_online_playback_error(
+                {'fatal':True,'observer_error':'maintenance'})
+            with patch('online_live.ChartLiveFlow.snap',side_effect=RuntimeError('capture failed')):
+                with self.assertRaisesRegex(OnlineFatal,'maintenance'):
+                    flow.run()
+            flow.recover_room.assert_not_called()
+            flow.reco.assert_not_called()
+            self.assertEqual(flow.report['completed_rounds'],0)
+            self.assertEqual(flow.current_attempt['reason'],'maintenance')
+            self.assertEqual(flow.current_attempt['error_frame_error'],'capture failed')
+
     def test_chart_is_requested_only_after_final_selection(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
@@ -369,15 +386,18 @@ class OnlineFlowTests(unittest.TestCase):
     def test_on_demand_gets_exact_selected_chart_and_rechecks_page(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
-            flow.snap=Mock()
-            flow.reco=Mock(return_value=True)
+            observed=[]
+            flow.snap=Mock(side_effect=lambda:observed.append('snap'))
+            flow.reco=Mock(side_effect=lambda name:observed.append('reco') or True)
             flow.store.get=Mock(return_value=([],{'path':'selected.json','cache_hit':True}))
             selection=flow.read_final_selection.return_value
             metadata=OnlineLiveFlow.prepare_final_chart(flow,selection)
             self.assertEqual(metadata['path'],'selected.json')
             self.assertEqual(flow.store.get.call_count,1)
             self.assertEqual(flow.store.get.call_args.args[0],selection)
-            self.assertGreaterEqual(flow.snap.call_count,2)
+            # Every page check uses a fresh frame, even for an immediate cache hit.
+            self.assertGreaterEqual(flow.snap.call_count,1)
+            self.assertEqual(observed,['snap','reco']*flow.snap.call_count)
             self.assertEqual(set(flow.charts),{(selection.song_id,selection.difficulty)})
             flow.store.prepare_online.assert_not_called()
 
@@ -396,7 +416,7 @@ class OnlineFlowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
             flow.snap=Mock()
-            flow.reco=Mock(side_effect=[True,False])
+            flow.reco=Mock(return_value=False)
             flow.store.get=Mock(return_value=([],{'path':'selected.json'}))
             with self.assertRaisesRegex(RuntimeError,'页面已离开'):
                 OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)

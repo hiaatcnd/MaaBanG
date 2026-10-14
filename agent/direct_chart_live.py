@@ -15,8 +15,20 @@ class DirectChartLiveFlow(ChartLiveFlow):
         # The user owns song, difficulty and stage settings. Only inspect the
         # start button; never route through ready-page title/difficulty checks.
         self.snap()
-        if not self.hit_text([1010,595,235,75], '^演出开始$'):
-            raise FlowError('请停在点击“演出开始”即可打歌的最后准备页')
+        if self.hit_text([1010,595,235,75], '^演出开始$'):
+            mode='click'
+        elif self.hit_text([1010,580,225,105], '^准备(?:开始|完毕)[！!]?$'):
+            mode='online_click'
+        else:
+            raise FlowError('请停在有“演出开始”或协力“准备开始 / 准备完毕”按钮的最后准备页')
+        # Keep the worker's synchronization mode consistent with the page that
+        # was inspected before chart loading and controller initialization.
+        if getattr(self,'_start_mode',mode)!=mode:
+            raise FlowError('最后准备页的开演方式已变化，请重新启动任务')
+        self._start_mode=mode
+
+    def playback_start_mode(self):
+        return self._start_mode
 
     def disable_mv(self):
         # Direct mode must not change the user's prepared screen or settings.

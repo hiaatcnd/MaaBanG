@@ -11,9 +11,14 @@ from chart_live import ChartLiveFlow
 from chart_policy import COOP_ROOMS, COOP_ROOM_GROUPS
 from costume_unlock import FlowError, normalized
 from online_policy import RoomClock, RoomInterrupted, retry_delay, final_song, final_selection
+from online_errors import room_error as recognize_room_error
 from notifications import dialog_box
 from song_catalog import resolve_song
 from chart_sync import stage_state
+
+
+class OnlineFatal(FlowError):
+    """A confirmed fatal dialog must never trigger room recovery input."""
 
 
 class OnlineLiveFlow(ChartLiveFlow):
@@ -54,21 +59,33 @@ class OnlineLiveFlow(ChartLiveFlow):
         else:
             fatal=self.reco('OL_Fatal')
             if fatal:
-                raise FlowError('联网演出无法继续：'+str(fatal.best_result.text))
+                raise OnlineFatal('联网演出无法继续：'+str(fatal.best_result.text))
         return image
 
-    def guard_room(self):
+    def save_error_frame(self,name):
+        # The worker owns playback screenshots. Refresh once after it stops;
+        # diagnostics must not reclassify or replace the original failure.
+        try:
+            super().snap()
+            self.save_frame(name)
+        except Exception as exc:
+            self.current_attempt['error_frame_error']=str(exc)
+
+    def check_foreground(self):
         if time.monotonic()-self._last_foreground_check>1:
             self._last_foreground_check=time.monotonic()
             foreground=self.foreground_package()
             if foreground and foreground!='com.bilibili.star.bili':
                 raise RoomInterrupted('游戏已切到后台')
-        fatal=self.reco('OL_Fatal')
-        if fatal:
-            raise FlowError('联网演出无法继续：'+str(fatal.best_result.text))
-        lost=self.reco('OL_Disconnected')
-        if lost:
-            raise RoomInterrupted(str(lost.best_result.text))
+
+    def guard_room(self):
+        self.check_foreground()
+        error=self.room_error()
+        if error:
+            name,text=error
+            if name=='OL_Fatal':
+                raise OnlineFatal('联网演出无法继续：'+text)
+            raise RoomInterrupted(text)
         if self.reco('CU_HomeBand') or self.reco('LV_Menu'):
             raise RoomInterrupted('已返回主界面或演出菜单')
         entry=bool(self.reco(self.home_node))
@@ -78,6 +95,9 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.left_entry=True
         if self.room_clock and self.room_clock.expired(time.monotonic()):
             raise RoomInterrupted('房间3分钟未开演')
+
+    def room_error(self):
+        return recognize_room_error(self.ctx,self.reco)
 
     def foreground_package(self):
         info=self.controller.info
@@ -301,7 +321,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                     raise FlowError('联网房间出现未知页面超过30秒')
             self.pause(.25)
 
-    def read_final_song(self):
+    def read_final_song(self,expected_id=None):
         # The header appears before the title finishes its entrance animation.
         deadline=time.monotonic()+5
         previous=None
@@ -317,11 +337,17 @@ class OnlineLiveFlow(ChartLiveFlow):
                 previous=None
                 error=str(exc)
             else:
-                if previous==song['id']:
+                # An already confirmed song needs one fresh matching read;
+                # initial discovery and a different title still need stability.
+                if song['id']==expected_id or previous==song['id']:
                     return song
                 previous=song['id']
             self.pause(.2)
         raise FlowError(error)
+
+    def difficulty_selected(self,x):
+        area=self.image[self.difficulty_y-20:self.difficulty_y+12,x-15:x+15].astype(float)
+        return (area.max(2)-area.min(2)>75).mean()>=.25
 
     def read_final_selection(self):
         song=self.read_final_song()
@@ -331,14 +357,14 @@ class OnlineLiveFlow(ChartLiveFlow):
         selection=final_selection(song,self.settings.difficulties[0],special)
         if selection.difficulty not in centers:
             raise FlowError('未找到目标难度按钮：'+selection.difficulty)
-        self.quick_tap(centers[selection.difficulty],self.difficulty_y)
-        self.snap()
-        if not self.reco('OL_FinalConfirm'):
-            raise FlowError('未能在倒计时内确认难度')
         x=centers[selection.difficulty]
-        area=self.image[self.difficulty_y-20:self.difficulty_y+12,x-15:x+15].astype(float)
-        if (area.max(2)-area.min(2)>75).mean()<.25:
-            raise FlowError('联网难度未选中：'+selection.difficulty)
+        if not self.difficulty_selected(x):
+            self.quick_tap(x,self.difficulty_y)
+            self.snap()
+            if not self.reco('OL_FinalConfirm'):
+                raise FlowError('未能在倒计时内确认难度')
+            if not self.difficulty_selected(x):
+                raise FlowError('联网难度未选中：'+selection.difficulty)
         # Cut-in checkbox is separate per mode; disable it before ready submission.
         if self.pink(self.image[637:663,487:513]):
             self.quick_tap(500,650)
@@ -368,7 +394,10 @@ class OnlineLiveFlow(ChartLiveFlow):
         # The worker has no controller access and checks cancellation before saving.
         worker=Thread(target=download,name='final-song-chart',daemon=True)
         try:
-            started=False
+            # Selection just verified this frame. Start loading now, then always
+            # take a fresh frame before accepting even an immediate cache hit.
+            self.check_stop()
+            worker.start()
             while True:
                 self.check_stop()
                 if time.monotonic()>=deadline:
@@ -376,11 +405,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 self.snap()
                 if not self.reco('OL_FinalConfirm'):
                     raise FlowError('谱面准备期间最终确认页面已离开，停止开演')
-                if not started:
-                    worker.start()
-                    started=True
-                # Recheck the page even when a cache hit completes immediately.
-                elif future.done():
+                if future.done():
                     try:
                         _,metadata=future.result()
                     except Exception as exc:
@@ -417,25 +442,25 @@ class OnlineLiveFlow(ChartLiveFlow):
                 self.pause(.25)
 
     def verify_final_selection(self,selection):
-        self.snap()
-        if not self.reco('OL_FinalConfirm'):
-            raise FlowError('联网确认页面已离开，不能确认开演配置')
-        if self.read_final_song()['id']!=selection.song_id:
+        if self.read_final_song(expected_id=selection.song_id)['id']!=selection.song_id:
             raise FlowError('联网最终歌曲发生变化')
         labels=self.ocr([540,550,452,65],'EASY|NORMAL|HARD|EXPERT|SPECIAL')
         target=next((h for h in labels if h.text.strip().lower()==selection.difficulty),None)
         if target is None:
             raise FlowError('开演前联网难度按钮消失')
         x=target.box[0]+target.box[2]//2
-        area=self.image[self.difficulty_y-20:self.difficulty_y+12,x-15:x+15].astype(float)
-        if (area.max(2)-area.min(2)>75).mean()<.25:
+        if not self.difficulty_selected(x):
             raise FlowError('开演前联网难度发生变化')
+        if self.pink(self.image[637:663,487:513]):
+            raise FlowError('开演前联网3D Cut in未关闭')
 
     def submit_online_ready(self,selection):
         self.snap()
-        if not self.reco('OL_FinalConfirm'):
+        final=self.reco('OL_FinalConfirm')
+        if not final:
             raise FlowError('准备提交前联网确认页面已离开')
-        ready=self.hit_text([1010,580,225,105],'^准备完毕[！!]?$')
+        # Coop final confirmation already recognizes this exact ready button.
+        ready=final if self.settings.mode=='coop' else self.hit_text([1010,580,225,105],'^准备完毕[！!]?$')
         if not ready:
             raise FlowError('未找到联网准备完毕按钮')
         self.quick_tap(ready.box[0]+ready.box[2]//2,ready.box[1]+ready.box[3]//2)
@@ -447,9 +472,18 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.state('谱面代打中')
         if time.monotonic()-self._last_worker_check>=.5:
             self._last_worker_check=time.monotonic()
-            self.snap()
+            if (destination/'observer_ready').exists():
+                # The worker owns visual checks after its first monitored frame. Keep the
+                # parent's foreground check and timeout measured from room entry.
+                self.check_foreground()
+                if self.room_clock and self.room_clock.expired(time.monotonic()):
+                    raise RoomInterrupted('房间3分钟未开演')
+            else:
+                self.snap()
 
     def handle_online_playback_error(self,playback):
+        if playback.get('fatal'):
+            raise OnlineFatal(playback.get('observer_error','联网演出无法继续'))
         if playback.get('interrupted'):
             raise RoomInterrupted(playback.get('observer_error','联网演出中断'))
         self.snap()  # A confirmed room exit is retryable; sync/input errors are not.
@@ -613,7 +647,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 self.room_active=False
                 self.current_attempt.update(status='interrupted',reason=str(exc),
                     room_elapsed_seconds=time.monotonic()-self.room_clock.entered if self.room_clock else None)
-                self.save_frame(f'interrupted_attempt{self.report["attempts"]}.png')
+                self.save_error_frame(f'interrupted_attempt{self.report["attempts"]}.png')
                 failures+=1
                 delay=retry_delay(failures)
                 self.report['retries'].append({'attempt':self.report['attempts'],'reason':str(exc),'delay':delay})
@@ -623,8 +657,8 @@ class OnlineLiveFlow(ChartLiveFlow):
             except (FlowError,ValueError) as exc:
                 self.current_attempt.update(status='failed',reason=str(exc))
                 # A failed final confirmation must not leave a timed room to auto-start.
-                self.save_frame(f'failed_attempt{self.report["attempts"]}.png')
-                if self.room_active and not self.ctx.tasker.stopping and not self.reco('OL_Fatal'):
+                self.save_error_frame(f'failed_attempt{self.report["attempts"]}.png')
+                if self.room_active and not self.ctx.tasker.stopping and not isinstance(exc,OnlineFatal):
                     try:
                         self.recover_room()
                     except Exception as recovery_error:
