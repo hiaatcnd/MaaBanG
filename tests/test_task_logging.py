@@ -40,11 +40,14 @@ class TaskLoggingTests(unittest.TestCase):
                                  'submit_online_ready','handle_online_playback_error'):
                         setattr(flow,name,Mock())
                     flow.verify_chart_start=Mock(return_value=0)
+                    flow.playback_start_mode=lambda:ChartLiveFlow.playback_start_mode(flow)
                     process=Mock(returncode=0 if worker_ok else 1)
                     process.poll.return_value=process.returncode
                     worker_streams=[]
                     def spawn(command, **kwargs):
                         destination=Path(command[-1]).parent
+                        config=json.loads(Path(command[-1]).read_text(encoding='utf8'))
+                        self.assertEqual(config['start_mode'],'online' if mode in ('team','coop') else 'click')
                         (destination/'armed').touch()
                         (destination/'playback.json').write_text(json.dumps({
                             'status':'input_complete' if worker_ok else 'error',

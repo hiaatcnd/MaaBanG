@@ -1,6 +1,7 @@
 from interface_test_support import load_interface
 import copy
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -55,6 +56,113 @@ class DirectChartLiveTests(unittest.TestCase):
             flow.store.get=Mock();flow.play_chart=Mock()
             with self.assertRaisesRegex(FlowError,'最后准备页'):flow.run()
             flow.store.get.assert_not_called();flow.play_chart.assert_not_called()
+
+    def test_ready_labels_select_worker_mode_and_reject_unready_states(self):
+        cases=[('演出开始','click'),('准备开始','online_click'),
+               ('准备开始！','online_click'),('准备完毕!','online_click'),
+               ('准备完毕','online_click'),('准备中',None),('取消准备',None),
+               ('等待其他成员',None),('以2人开始演出',None)]
+        for label,mode in cases:
+            with self.subTest(label=label),tempfile.TemporaryDirectory() as folder:
+                flow=self.flow(folder)
+                flow.hit_text.side_effect=lambda roi,pattern:re.search(pattern,label)
+                flow.store.get=Mock(return_value=([],{'duration':100}))
+                if mode is None:
+                    with self.assertRaisesRegex(FlowError,'最后准备页'):
+                        flow.prepare_round()
+                    flow.store.get.assert_not_called()
+                else:
+                    flow.prepare_round()
+                    self.assertEqual(flow.playback_start_mode(),mode)
+                    self.assertEqual(flow.settings.mode,'free')
+
+    def test_coop_waits_for_members_without_running_automatic_online_flow(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.flow(folder)
+            flow.controller=SimpleNamespace(info={})
+            flow.hit_text.side_effect=lambda roi,pattern:re.search(pattern,'准备开始')
+            flow.store.get=Mock(return_value=([],{'duration':1}))
+            flow.save_frame=Mock()
+            for name in ('monitor_online_worker','submit_online_ready','handle_online_playback_error'):
+                setattr(flow,name,Mock(side_effect=AssertionError('direct task must not call '+name)))
+            elapsed=[0.]
+            flow.pause=lambda seconds:elapsed.__setitem__(0,elapsed[0]+60)
+            configs=[]
+            def worker(args,**kwargs):
+                config_path=Path(args[-1]);destination=config_path.parent
+                configs.append(json.loads(config_path.read_text(encoding='utf8')))
+                self.assertFalse((destination/'start').exists())
+                (destination/'armed').write_text('ready')
+                (destination/'playback.json').write_text('{"status":"input_complete"}')
+                return SimpleNamespace(returncode=0,poll=lambda:0 if elapsed[0]>=180 else None)
+            with patch('chart_live.subprocess.Popen',side_effect=worker), \
+                    patch('chart_live.time.monotonic',side_effect=lambda:elapsed[0]):
+                flow.run()
+            self.assertEqual(len(configs),1)
+            self.assertEqual(configs[0]['start_mode'],'online_click')
+            self.assertEqual(flow.report['completed_rounds'],1)
+            self.assertEqual(flow.report['rounds'][0]['songs'][0]['status'],'input_complete')
+            flow.await_chart_result.assert_not_called()
+
+    def test_page_change_after_worker_preparation_never_authorizes_start(self):
+        for changed_label in ('演出开始','等待其他成员'):
+            with self.subTest(label=changed_label),tempfile.TemporaryDirectory() as folder:
+                flow=self.flow(folder)
+                flow.controller=SimpleNamespace(info={})
+                label=['准备开始']
+                flow.hit_text.side_effect=lambda roi,pattern:re.search(pattern,label[0])
+                flow.store.get=Mock(return_value=([],{'duration':100}))
+                flow.save_frame=Mock()
+                destinations=[]
+                process=Mock(returncode=0)
+                process.poll.return_value=None
+                def worker(args,**kwargs):
+                    destination=Path(args[-1]).parent
+                    destinations.append(destination)
+                    (destination/'armed').write_text('ready')
+                    label[0]=changed_label
+                    return process
+                with patch('chart_live.subprocess.Popen',side_effect=worker):
+                    with self.assertRaisesRegex(FlowError,'最后准备页'):
+                        flow.run()
+                self.assertFalse((destinations[0]/'start').exists())
+                self.assertTrue((destinations[0]/'stop').exists())
+                self.assertEqual(flow.report['completed_rounds'],0)
+
+    def test_real_coop_ready_button_is_accepted_without_song_or_difficulty_ocr(self):
+        if not (ROOT/'assets/resource/model/ocr/rec.onnx').is_file():
+            self.skipTest('Local OCR models required')
+        import numpy as np
+        from PIL import Image
+        from maa.controller import CustomController
+        from maa.custom_action import CustomAction
+        from maa.resource import Resource
+        from maa.tasker import Tasker
+        frame=np.asarray(Image.open(ROOT/'tests/fixtures/coop/ready.png').convert('RGB'))[:,:,::-1].copy()
+        class Controller(CustomController):
+            def connect(self):return True
+            def request_uuid(self):return 'direct-coop-ready-fixture'
+            def screencap(self):return frame
+        resource=Resource();self.assertTrue(resource.post_bundle(ROOT/'assets/resource').wait().succeeded)
+        controller=Controller();self.assertTrue(controller.post_connection().wait().succeeded)
+        tasker=Tasker();tasker.bind(resource,controller)
+        observed={};case=self
+        with tempfile.TemporaryDirectory() as folder:
+            class Check(CustomAction):
+                def run(self,context,argv):
+                    try:
+                        flow=DirectChartLiveFlow(context,ChartOptions.parse(OPTION_DEFAULTS),folder)
+                        flow.text=Mock(side_effect=AssertionError('must not read song/difficulty'))
+                        flow.wait_ready()
+                        case.assertEqual(flow.playback_start_mode(),'online_click')
+                        case.assertIsNone(flow.verify_chart_start(1,flow.settings.selections[0],None))
+                        return True
+                    except Exception as exc:
+                        observed['error']=repr(exc);return False
+            resource.register_custom_action('DirectCoopCheck',Check())
+            job=tasker.post_task('DirectCoopCheck',{'DirectCoopCheck':{
+                'action':'Custom','custom_action':'DirectCoopCheck'}}).wait()
+            self.assertTrue(job.succeeded,observed)
 
     def test_download_failure_and_stop_never_start(self):
         for error in (ValueError('谱面音符数与目录不符'),FlowError('任务已被用户停止')):

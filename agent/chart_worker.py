@@ -19,7 +19,7 @@ from playback_controller import controller_config
 def start_authorized_stage(controller, mode):
     if mode == 'online':
         return
-    if mode != 'click':
+    if mode not in ('click','online_click'):
         raise ValueError('未知开演方式')
     if not controller.post_click(1130,616).wait().succeeded:
         raise RuntimeError('开演输入未确认，不重试')
@@ -39,7 +39,7 @@ def play(config_path):
 
     config_path = Path(config_path)
     cfg = json.loads(config_path.read_text(encoding='utf8'))
-    online = cfg.get('start_mode') == 'online'
+    online = cfg.get('start_mode') in ('online','online_click')
     output = config_path.parent
     Toolkit.init_option(str(output))
     report = {'status':'preparing','events':[], 'phase_updates':[]}
