@@ -44,6 +44,25 @@ def capture_observer_frame(observer, online):
     return None
 
 
+def initialize_playback_backend(controllers, resource, bundle):
+    """Overlap independent queues, validating every backend before arming."""
+    resource_job=resource.post_bundle(bundle)
+    pending=[]
+    for controller in controllers:
+        controller.set_screenshot_target_short_side(720)
+        connection=controller.post_connection()
+        # Each controller preserves its own order: capture follows connection.
+        capture=controller.post_screencap()
+        pending.append((controller,connection,capture))
+    for controller,connection,capture in pending:
+        if not connection.wait().succeeded or not capture.wait().succeeded:
+            raise RuntimeError('演奏控制器连接或增强截图失败，请检查当前设备的截图增强和 MaaTouch 支持')
+        if controller.cached_image.shape != (720,1280,3):
+            raise RuntimeError('演奏画面比例必须为 16:9')
+    if not resource_job.wait().succeeded:
+        raise RuntimeError('演出弹窗识别资源加载失败')
+
+
 def check_playback_overlay(context, frame, report, observer_failed, online):
     """Check one captured frame and stop input on fatal, exit or pause dialogs."""
     def recognize(name, **override):
@@ -81,6 +100,7 @@ def check_playback_overlay(context, frame, report, observer_failed, online):
 
 
 def play(config_path):
+    startup_started=time.perf_counter()
     from maa.controller import AdbController
     from maa.custom_action import CustomAction
     from maa.resource import Resource
@@ -97,7 +117,7 @@ def play(config_path):
     online = cfg.get('start_mode') in ('online','online_click')
     output = config_path.parent
     Toolkit.init_option(str(output))
-    report = {'status':'preparing','events':[], 'phase_updates':[]}
+    report = {'status':'preparing','events':[], 'phase_updates':[], 'startup_timings_ms':{}}
     report['implementation']={name:{'path':str(path),
         'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
         for name,path in (('worker',Path(__file__).resolve()),
@@ -127,9 +147,11 @@ def play(config_path):
         chart = json.loads(raw)
         jitter, position = JITTER_PROFILES[cfg['jitter']]
         avoid_full_combo = cfg.get('avoid_full_combo', False)
+        compile_started=time.perf_counter()
         events = compile_chart(chart,seed=cfg['seed'],jitter_ms=jitter,position_jitter=position,
                                avoid_full_combo=avoid_full_combo)
         anchor_time, lane, color = first_anchor(chart, online=online)
+        report['startup_timings_ms']['chart_compile']=(time.perf_counter()-compile_started)*1000
         report.update(seed=cfg['seed'],jitter_ms=jitter,position_jitter=position,
                       avoid_full_combo=avoid_full_combo,
                       chart=cfg['chart'],anchor=[anchor_time,lane,color],
@@ -139,19 +161,16 @@ def play(config_path):
                                    input_methods=MaaAdbInputMethodEnum.Maatouch,config=settings)
         observer = AdbController(adb,address,screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
                                  input_methods=MaaAdbInputMethodEnum.AdbShell,config=settings)
-        for c in (controller,observer):
-            c.set_screenshot_target_short_side(720)
-            if not c.post_connection().wait().succeeded or not c.post_screencap().wait().succeeded:
-                raise RuntimeError('演奏控制器连接或增强截图失败，请检查当前设备的截图增强和 MaaTouch 支持')
-            if c.cached_image.shape != (720,1280,3):
-                raise RuntimeError('演奏画面比例必须为 16:9')
         # Only recognize actual interruption dialogs. Skill effects can recolor the
         # judgment line for several seconds and must not be treated as a lost stage.
         resource=Resource()
         root=Path(__file__).resolve().parent.parent
         bundle=root/'resource' if (root/'resource').is_dir() else root/'assets/resource'
-        if not resource.post_bundle(bundle).wait().succeeded:
-            raise RuntimeError('演出弹窗识别资源加载失败')
+        backend_started=time.perf_counter()
+        try:
+            initialize_playback_backend((controller,observer),resource,bundle)
+        finally:
+            report['startup_timings_ms']['controllers_and_resource']=(time.perf_counter()-backend_started)*1000
         popup_frame=None
         waiting_members=False
         class CheckOverlay(CustomAction):
@@ -161,6 +180,8 @@ def play(config_path):
                 return True
         resource.register_custom_action('ChartWorkerOverlayCheck',CheckOverlay())
         popup_tasker=Tasker();popup_tasker.bind(resource,observer)
+        # Total from entering play, including its imports; no real-time timing work.
+        report['startup_timings_ms']['ready_total']=(time.perf_counter()-startup_started)*1000
         (output/'armed').write_text('ready')
         deadline = time.perf_counter()+60
         while not (output/'start').exists():

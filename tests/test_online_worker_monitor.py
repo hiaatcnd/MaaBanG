@@ -112,25 +112,51 @@ class ParentWorkerMonitorTests(unittest.TestCase):
         flow.foreground_package=Mock(return_value='com.bilibili.star.bili')
         return flow
 
-    def test_before_authorization_parent_still_checks_the_full_frame(self):
+    def test_before_worker_armed_parent_checks_foreground_without_extra_frames(self):
         flow=self.flow()
         with tempfile.TemporaryDirectory() as folder,patch('online_live.time.monotonic',return_value=10):
             flow.monitor_online_worker(Path(folder))
-        flow.snap.assert_called_once_with()
+        flow.snap.assert_not_called()
+        flow.foreground_package.assert_called_once_with()
 
     def test_authorization_keeps_parent_visual_checks_until_observer_is_ready(self):
         flow=self.flow()
         with tempfile.TemporaryDirectory() as folder,patch('online_live.time.monotonic',return_value=10):
             destination=Path(folder)
+            (destination/'armed').write_text('ready')
             (destination/'start').write_text('start')
             (destination/'stage_started').write_text('started')
             flow.monitor_online_worker(destination)
         flow.snap.assert_called_once_with()
 
+    def test_armed_worker_without_observer_still_gets_parent_visual_checks(self):
+        flow=self.flow()
+        with tempfile.TemporaryDirectory() as folder,patch('online_live.time.monotonic',return_value=10):
+            destination=Path(folder)
+            (destination/'armed').write_text('ready')
+            flow.monitor_online_worker(destination)
+        flow.snap.assert_called_once_with()
+
+    def test_setup_still_aborts_on_background_switch(self):
+        flow=self.flow()
+        flow.foreground_package.return_value='com.mumu.launcher'
+        with tempfile.TemporaryDirectory() as folder,patch('online_live.time.monotonic',return_value=10):
+            with self.assertRaisesRegex(RoomInterrupted,'切到后台'):
+                flow.monitor_online_worker(Path(folder))
+        flow.snap.assert_not_called()
+
+    def test_setup_keeps_absolute_room_deadline(self):
+        flow=self.flow()
+        with tempfile.TemporaryDirectory() as folder,patch('online_live.time.monotonic',return_value=181):
+            with self.assertRaisesRegex(RoomInterrupted,'3分钟未开演'):
+                flow.monitor_online_worker(Path(folder))
+        flow.snap.assert_not_called()
+
     def test_ready_observer_owns_frames_but_foreground_check_is_preserved(self):
         flow=self.flow()
         with tempfile.TemporaryDirectory() as folder:
             destination=Path(folder)
+            (destination/'armed').write_text('ready')
             (destination/'observer_ready').write_text('ready')
             for stamp in (10.,10.3,10.8,11.4):
                 with patch('online_live.time.monotonic',return_value=stamp):

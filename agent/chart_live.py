@@ -230,6 +230,8 @@ class ChartLiveFlow(LiveFlow):
         return 'online' if self.settings.mode in ('team','coop') else 'click'
 
     def play_chart(self, index, selection, metadata, amount, row):
+        preparation_started=time.perf_counter()
+        timings=row['startup_timings_ms']={}
         log(f'[谱面演出] {selection.song["title"]} / {selection.difficulty.upper()}：正在准备演奏进程')
         online=self.settings.mode in ('team','coop')
         if not online:
@@ -251,6 +253,8 @@ class ChartLiveFlow(LiveFlow):
                                   str(destination/'config.json')],stdout=worker_log,stderr=subprocess.STDOUT,
                                   creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         try:
+            spawned_at=time.perf_counter()
+            timings['before_worker_spawn']=(spawned_at-preparation_started)*1000
             deadline=time.monotonic()+60
             while not (destination/'armed').exists():
                 self.check_stop()
@@ -264,16 +268,24 @@ class ChartLiveFlow(LiveFlow):
                         pass
                     raise FlowError(f'演奏进程准备失败{("："+detail) if detail else ""}，详见 {destination}/worker.log')
                 self.pause(.1)
+            ready_at=time.perf_counter()
+            timings['wait_worker_ready']=(ready_at-spawned_at)*1000
             balance=self.verify_chart_start(index,selection,amount)
+            verified_at=time.perf_counter()
+            timings['final_verification']=(verified_at-ready_at)*1000
             if balance is not None:
                 row['cp_before' if self.settings.mode=='challenge' else 'fire_before']=balance
             row['status']='submitted'
             self.save_frame(f'ready_attempt{self.report["attempts"]}.png' if online else
                             f'ready_{self.report["completed_rounds"]+1}_{index}.png')
             (destination/'start').write_text('start')
+            authorized_at=time.perf_counter()
+            timings['save_and_authorize']=(authorized_at-verified_at)*1000
+            timings['total_to_authorize']=(authorized_at-preparation_started)*1000
             log('[谱面演出] 已发送开演指令，等待谱面输入完成')
             if online:
                 self.submit_online_ready(selection)
+                timings['submit_online_ready']=(time.perf_counter()-authorized_at)*1000
             deadline=time.monotonic()+metadata['duration']+(270 if start_mode in ('online','online_click') else 90)
             next_progress=time.monotonic()+30
             while process.poll() is None:
