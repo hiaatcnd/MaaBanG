@@ -387,38 +387,44 @@ class OnlineLiveFlow(ChartLiveFlow):
                 raise TimeoutError('最终歌曲谱面准备超过12秒')
         def download():
             try:
-                future.set_result(self.store.get(selection,check_download,timeout=3))
+                loaded_at=time.perf_counter()
+                chart,metadata=self.store.get(selection,check_download,timeout=3)
+                future.set_result((chart,{**metadata,'load_seconds':time.perf_counter()-loaded_at}))
             except Exception as exc:
                 future.set_exception(exc)
         # A stalled network read must never hold the game UI or room recovery.
         # The worker has no controller access and checks cancellation before saving.
         worker=Thread(target=download,name='final-song-chart',daemon=True)
         try:
-            # Selection just verified this frame. Start loading now, then always
-            # take a fresh frame before accepting even an immediate cache hit.
+            # Cache validation usually takes milliseconds. No input is sent
+            # until verify_chart_start rechecks the current page after setup.
             self.check_stop()
             worker.start()
             while True:
                 self.check_stop()
                 if time.monotonic()>=deadline:
                     raise FlowError('最终歌曲谱面准备超过12秒，退出房间')
-                self.snap()
-                if not self.reco('OL_FinalConfirm'):
-                    raise FlowError('谱面准备期间最终确认页面已离开，停止开演')
-                if future.done():
-                    try:
-                        _,metadata=future.result()
-                    except Exception as exc:
-                        raise FlowError(f'最终歌曲谱面准备失败：{exc}') from exc
-                    self.charts[(selection.song_id,selection.difficulty)]=metadata
-                    self.report['cached_charts']=len(self.charts)
-                    return metadata
                 try:
-                    future.result(timeout=.2)
+                    _,metadata=future.result(timeout=.05)
                 except FutureTimeout:
-                    pass
-                except Exception:
-                    pass  # Report errors after the next room/stop check.
+                    if future.done():
+                        error=future.exception()
+                        if error is not None:
+                            raise FlowError(f'最终歌曲谱面准备失败：{error}') from error
+                        continue
+                    # Keep room monitoring while a download really is pending.
+                    self.snap()
+                    if not self.reco('OL_FinalConfirm'):
+                        raise FlowError('谱面准备期间最终确认页面已离开，停止开演')
+                    continue
+                except Exception as exc:
+                    raise FlowError(f'最终歌曲谱面准备失败：{exc}') from exc
+                self.check_stop()
+                if time.monotonic()>=deadline:
+                    raise FlowError('最终歌曲谱面准备超过12秒，退出房间')
+                self.charts[(selection.song_id,selection.difficulty)]=metadata
+                self.report['cached_charts']=len(self.charts)
+                return metadata
         finally:
             cancelled.set()
 
@@ -472,9 +478,9 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.state('谱面代打中')
         if time.monotonic()-self._last_worker_check>=.5:
             self._last_worker_check=time.monotonic()
-            if (destination/'observer_ready').exists():
-                # The worker owns visual checks after its first monitored frame. Keep the
-                # parent's foreground check and timeout measured from room entry.
+            if not (destination/'armed').exists() or (destination/'observer_ready').exists():
+                # Setup cannot send input, and gets a fresh final check before
+                # authorization. During playback the observer owns visual checks.
                 self.check_foreground()
                 if self.room_clock and self.room_clock.expired(time.monotonic()):
                     raise RoomInterrupted('房间3分钟未开演')

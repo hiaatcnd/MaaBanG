@@ -383,7 +383,7 @@ class OnlineFlowTests(unittest.TestCase):
             self.assertEqual(flow.report['rounds'][0]['status'],'failed')
             self.assertEqual(flow.report['completed_rounds'],0)
 
-    def test_on_demand_gets_exact_selected_chart_and_rechecks_page(self):
+    def test_cached_chart_gets_exact_selection_without_an_extra_frame(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
             observed=[]
@@ -391,13 +391,15 @@ class OnlineFlowTests(unittest.TestCase):
             flow.reco=Mock(side_effect=lambda name:observed.append('reco') or True)
             flow.store.get=Mock(return_value=([],{'path':'selected.json','cache_hit':True}))
             selection=flow.read_final_selection.return_value
-            metadata=OnlineLiveFlow.prepare_final_chart(flow,selection)
+            with patch('online_live.Thread',side_effect=lambda **kw:SimpleNamespace(start=kw['target'])):
+                metadata=OnlineLiveFlow.prepare_final_chart(flow,selection)
             self.assertEqual(metadata['path'],'selected.json')
             self.assertEqual(flow.store.get.call_count,1)
             self.assertEqual(flow.store.get.call_args.args[0],selection)
-            # Every page check uses a fresh frame, even for an immediate cache hit.
-            self.assertGreaterEqual(flow.snap.call_count,1)
-            self.assertEqual(observed,['snap','reco']*flow.snap.call_count)
+            # Preparation sends no input. The fresh final check belongs to
+            # play_chart after its worker is armed, not this cache-only step.
+            flow.snap.assert_not_called()
+            flow.reco.assert_not_called()
             self.assertEqual(set(flow.charts),{(selection.song_id,selection.difficulty)})
             flow.store.prepare_online.assert_not_called()
 
@@ -412,14 +414,55 @@ class OnlineFlowTests(unittest.TestCase):
                     OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
                 self.assertFalse(flow.charts)
 
-    def test_on_demand_does_not_accept_chart_after_page_changes(self):
+    def test_pending_download_aborts_when_final_page_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             flow=self.make_flow(folder)
             flow.snap=Mock()
             flow.reco=Mock(return_value=False)
-            flow.store.get=Mock(return_value=([],{'path':'selected.json'}))
-            with self.assertRaisesRegex(RuntimeError,'页面已离开'):
-                OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            with patch('online_live.Thread'):
+                with self.assertRaisesRegex(RuntimeError,'页面已离开'):
+                    OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            flow.snap.assert_called_once_with()
+            flow.reco.assert_called_once_with('OL_FinalConfirm')
+            self.assertFalse(flow.charts)
+
+    def test_cached_chart_is_not_accepted_if_user_stops_during_load(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.snap=Mock()
+            flow.store.get=Mock(return_value=([],{'path':'selected.json','cache_hit':True}))
+            flow.check_stop=Mock(side_effect=[None,None,RuntimeError('user stopped')])
+            with patch('online_live.Thread',side_effect=lambda **kw:SimpleNamespace(start=kw['target'])):
+                with self.assertRaisesRegex(RuntimeError,'user stopped'):
+                    OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            self.assertFalse(flow.charts)
+            flow.snap.assert_not_called()
+
+    def test_cached_chart_is_not_accepted_after_preparation_deadline(self):
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.snap=Mock()
+            flow.store.get=Mock(return_value=([],{'path':'selected.json','cache_hit':True}))
+            with patch('online_live.Thread',side_effect=lambda **kw:SimpleNamespace(start=kw['target'])), \
+                    patch('online_live.time.monotonic',side_effect=[0,0,13]):
+                with self.assertRaisesRegex(RuntimeError,'超过12秒'):
+                    OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            self.assertFalse(flow.charts)
+            flow.snap.assert_not_called()
+
+    def test_pending_download_network_timeout_keeps_its_error(self):
+        # concurrent.futures.TimeoutError aliases built-in TimeoutError. A
+        # completed network failure must not be mistaken for a pending wait.
+        from concurrent.futures import Future
+        future=Future()
+        with tempfile.TemporaryDirectory() as folder:
+            flow=self.make_flow(folder)
+            flow.reco=Mock(return_value=True)
+            flow.snap=Mock(side_effect=lambda:future.set_exception(TimeoutError('network read failed')))
+            with patch('online_live.Future',return_value=future),patch('online_live.Thread'):
+                with self.assertRaisesRegex(RuntimeError,'最终歌曲谱面准备失败：network read failed'):
+                    OnlineLiveFlow.prepare_final_chart(flow,flow.read_final_selection.return_value)
+            flow.snap.assert_called_once_with()
             self.assertFalse(flow.charts)
 
     def test_slow_download_does_not_block_room_exit_or_user_stop(self):
