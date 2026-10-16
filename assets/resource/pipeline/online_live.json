@@ -1,4 +1,10 @@
 {
+    "OL_VersusEntry": {
+        "recognition": "OCR",
+        "expected": "^竞演演出$",
+        "roi": [680, 180, 510, 365],
+        "threshold": 0.85
+    },
     "OL_CoopGroupResult": {"recognition":"OCR","expected":"^总分数$","roi":[135,95,130,50],"threshold":0.85},
     "OL_CoopFinalConfirm": {
         "recognition": "OCR",
@@ -144,7 +150,7 @@
             "通讯错误",
             "网络连接失败",
             "连接失败",
-            "即将返回团队演出主页",
+            "即将返回(?:团队|竞演)演出主页",
             "连接超时",
             "匹配失败",
             "将返回房间选择界面"

@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-10-07T05:54:07.289661+00:00",
+  "fetched_at": "2026-10-15T13:00:04.146164+00:00",
   "sources": [
     "https://bestdori.com/api/songs/all.7.json",
     "https://bestdori.com/api/bands/all.1.json"
   ],
-  "source_sha256": "5bc03af8f8fa8516fef7ef2874f92ca86aca13df461864e640cc22d56196a0f7",
+  "source_sha256": "cd6b39ab868bbf9892bc642ad4c851e9d35491ed3a5f5234365c246a4a801fdb",
   "bands_source_sha256": "b7739d0139d3ffd29bd872b774336c6428f24b51536bf9c1171481df84f97ea6",
   "server": "cn",
   "server_index": 3,
@@ -165,7 +165,7 @@
           "level": 27,
           "notes": 979,
           "published_at": 1792040400000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -1452,7 +1452,7 @@
           "level": 26,
           "notes": 781,
           "published_at": 1791781200000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -5699,7 +5699,7 @@
           "level": 28,
           "notes": 819,
           "published_at": 1791435600000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -13862,7 +13862,7 @@
           "level": 26,
           "notes": 857,
           "published_at": 1791867600000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -15759,7 +15759,7 @@
           "level": 26,
           "notes": 753,
           "published_at": 1791954000000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -18377,7 +18377,7 @@
           "level": 27,
           "notes": 789,
           "published_at": 1791608400000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -29263,7 +29263,7 @@
           "level": 29,
           "notes": 955,
           "published_at": 1791694800000,
-          "available": false
+          "available": true
         }
       },
       "jacket_images": [
@@ -37710,6 +37710,116 @@
         "782_game_changer"
       ],
       "url": "https://bestdori.com/info/songs/782"
+    },
+    {
+      "id": "783",
+      "title": "COMIC PANIC!!!(平行歌曲)",
+      "aliases": [
+        "COMIC PANIC!!!(パラレルver.)",
+        "COMIC PANIC!!! (Parallel ver.)",
+        "COMIC PANIC!!!(平行歌曲)"
+      ],
+      "band_id": 105,
+      "band": "PINKISH!!!!",
+      "band_aliases": [
+        "PINKISH!!!!"
+      ],
+      "tag": "normal",
+      "length_seconds": 110.352,
+      "published_at": 1791435600000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 11,
+          "notes": 215,
+          "published_at": 1791435600000,
+          "available": true
+        },
+        "normal": {
+          "level": 15,
+          "notes": 346,
+          "published_at": 1791435600000,
+          "available": true
+        },
+        "hard": {
+          "level": 21,
+          "notes": 523,
+          "published_at": 1791435600000,
+          "available": true
+        },
+        "expert": {
+          "level": 26,
+          "notes": 729,
+          "published_at": 1791435600000,
+          "available": true
+        },
+        "special": {
+          "level": 28,
+          "notes": 819,
+          "published_at": 1791435600000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "783_comic_p"
+      ],
+      "url": "https://bestdori.com/info/songs/783"
+    },
+    {
+      "id": "784",
+      "title": "灼熱 Bonfire!(平行歌曲)",
+      "aliases": [
+        "灼熱 Bonfire!(パラレルver.)",
+        "Blazing Bonfire! (Parallel ver.)",
+        "灼熱 Bonfire!(平行歌曲)"
+      ],
+      "band_id": 106,
+      "band": "GO OUR WAYS！",
+      "band_aliases": [
+        "GO OUR WAYS！"
+      ],
+      "tag": "normal",
+      "length_seconds": 105.36,
+      "published_at": 1791522000000,
+      "closed_at": 4122072000000,
+      "active": true,
+      "difficulties": {
+        "easy": {
+          "level": 7,
+          "notes": 143,
+          "published_at": 1791522000000,
+          "available": true
+        },
+        "normal": {
+          "level": 13,
+          "notes": 251,
+          "published_at": 1791522000000,
+          "available": true
+        },
+        "hard": {
+          "level": 21,
+          "notes": 508,
+          "published_at": 1791522000000,
+          "available": true
+        },
+        "expert": {
+          "level": 26,
+          "notes": 695,
+          "published_at": 1791522000000,
+          "available": true
+        },
+        "special": {
+          "level": 27,
+          "notes": 738,
+          "published_at": 1791522000000,
+          "available": true
+        }
+      },
+      "jacket_images": [
+        "784_bon_fire_p"
+      ],
+      "url": "https://bestdori.com/info/songs/784"
     },
     {
       "id": "786",

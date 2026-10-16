@@ -1,4 +1,4 @@
-"""Team live state machine. A room attempt is distinct from a completed song."""
+"""Online live state machine. A room attempt is distinct from a completed song."""
 from task_logging import log
 from dataclasses import asdict
 from concurrent.futures import Future, TimeoutError as FutureTimeout, CancelledError
@@ -8,7 +8,7 @@ import subprocess
 import time
 
 from chart_live import ChartLiveFlow
-from chart_policy import COOP_ROOMS, COOP_ROOM_GROUPS
+from chart_policy import COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS
 from costume_unlock import FlowError, normalized
 from online_policy import RoomClock, RoomInterrupted, retry_delay, final_song, final_selection
 from online_errors import room_error as recognize_room_error
@@ -34,21 +34,34 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.charts={}
         self.current_attempt=None
         self._last_foreground_check=0.
-        self.entry_node='OL_CoopEntry' if options.mode=='coop' else 'OL_TeamEntry'
-        self.home_node='OL_RoomPage' if options.mode=='coop' else 'OL_TeamHome'
-        self.difficulty_y=594 if options.mode=='coop' else 574
+        self.entry_node={'coop':'OL_CoopEntry','team':'OL_TeamEntry','versus':'OL_VersusEntry'}[options.mode]
+        self.home_node='OL_TeamHome' if options.mode=='team' else 'OL_RoomPage'
+        self.difficulty_y=574 if options.mode=='team' else 594
         self.coop_song_submitted=False
 
+    @property
+    def chooses_song(self):
+        return self.settings.mode=='coop' or (self.settings.mode=='versus' and self.settings.versus_room=='free')
+
+    @property
+    def requested_song(self):
+        if self.settings.mode=='coop':
+            return self.settings.coop_song
+        return self.settings.versus_song if self.chooses_song else ''
+
+    @property
+    def online_label(self):
+        return {'coop':'协力演出','team':'团队演出','versus':'竞演演出'}[self.settings.mode]
+
     def reco(self, name, **override):
-        if name=='OL_FinalConfirm' and self.settings.mode=='coop':
+        if name=='OL_FinalConfirm' and self.settings.mode in ('coop','versus'):
             name='OL_CoopFinalConfirm'
         return super().reco(name,**override)
 
     def state(self, value):
         if self.report['state']!=value:
             self.report['state']=value
-            label='协力演出' if self.settings.mode=='coop' else '团队演出'
-            log(f'[{label}] {value}')
+            log(f'[{self.online_label}] {value}')
             if self.current_attempt is not None:
                 self.current_attempt.setdefault('states',[]).append(value)
 
@@ -142,6 +155,9 @@ class OnlineLiveFlow(ChartLiveFlow):
         return False
 
     def result_modals(self):
+        if (self.hit_text([165,50,430,55],'^每日演出报酬$') and
+                self.hit_text([160,110,400,50],'^请选择道具')):
+            raise FlowError('请先在游戏中选择每日演出报酬，再启动演出任务')
         if self.hit_text([450,280,390,120],'没有达到.*基准|活动点数为0'):
             button=self.hit_text([510,480,260,100],'^关闭$')
             if button:
@@ -161,15 +177,15 @@ class OnlineLiveFlow(ChartLiveFlow):
         raise FlowError('返回演出菜单未收敛')
 
     def prepare_settings(self):
-        if self.settings.mode!='coop' or not self.settings.coop_song:
+        if not self.requested_song:
             return
-        self.state('检查协力选曲')
+        self.state('检查选曲')
         self.navigate_menu()
         self.open_page('LV_FreeEntry','LV_SongPage')
-        if self.settings.mode=='coop' and self.settings.coop_song:
+        if self.requested_song:
             # Check that the song is unlocked before entering a timed room.
-            # Cooperative live keeps its own selection and filter state.
-            requested=resolve_song(self.settings.coop_song)
+            # Song-picking rooms keep their own selection and filter state.
+            requested=resolve_song(self.requested_song)
             self.find_song(requested)
             self.save_frame('coop_song_prepared.png')
         self.navigate_menu()
@@ -219,6 +235,39 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.report['coop_room_verified']={'type':current,'group':group,'power':power,'minimum':minimum}
         self.save_frame('coop_room_selected.png')
 
+    def selected_versus_room(self):
+        title=normalized(self.text([510,210,290,110]))
+        matches=[key for key,label in VERSUS_ROOMS.items() if label in title]
+        if len(matches)!=1:
+            raise FlowError('无法确认当前选中的竞演房间：'+title)
+        return matches[0]
+
+    def choose_versus_room(self):
+        self.wait('OL_RoomPage')
+        self.require_clear_notification_overlay()
+        group=self.settings.versus_room_group
+        label=COOP_ROOM_GROUPS[group]
+        button=self.hit_text([955,145,245,55],'^'+label+'$')
+        if not button:
+            raise FlowError('当前没有所选竞演房间类别：'+label)
+        self.tap_hit(button)
+        self.wait('OL_RoomPage')
+        x=button.box[0]+button.box[2]//2
+        if (self.image[156:160,x-5:x+5].min(2)>235).mean()<.9:
+            raise FlowError('未确认竞演房间类别：'+label)
+        requested=self.settings.versus_room
+        current=self.selected_versus_room()
+        if current!=requested:
+            card=self.hit_text([215,210,1030,120],'^'+VERSUS_ROOMS[requested]+'$')
+            if not card:
+                raise FlowError('当前没有所选竞演房间：'+VERSUS_ROOMS[requested])
+            self.tap_hit(card)
+            self.wait('OL_RoomPage')
+            if self.selected_versus_room()!=requested:
+                raise FlowError('竞演房间切换未确认')
+        self.report['versus_room_verified']={'type':requested,'group':group}
+        self.save_frame('versus_room_selected.png')
+
     def submit_coop_song(self):
         if self.coop_song_submitted:
             return True
@@ -229,21 +278,21 @@ class OnlineLiveFlow(ChartLiveFlow):
         button=self.hit_text([685,605,200,80],'^不指定歌曲$')
         if not button:
             return False
-        self.state('协力选曲')
+        self.state('提交选曲')
         self.save_frame('coop_song_page.png')
-        if self.settings.coop_song:
-            song=resolve_song(self.settings.coop_song)
+        if self.requested_song:
+            song=resolve_song(self.requested_song)
             # Check the current song before changing the room's saved filters.
             self.find_song(song,max_steps=8,forward_first=True,quick=True)
             if not self.reco('OL_CoopSongPage') or not self.selected_song_matches(song):
-                raise FlowError('协力提交前未确认所选歌曲')
+                raise FlowError('联网提交前未确认所选歌曲')
             button=self.hit_text([950,605,250,80],'^确定$')
             if not button or not self.pink(self.image[625:638,980:995]):
-                raise FlowError('协力选歌确认按钮不可用')
+                raise FlowError('联网选歌确认按钮不可用')
         self.save_frame('coop_song_submission.png')
         self.tap_hit(button)
         self.coop_song_submitted=True
-        self.current_attempt['submitted_song']=self.settings.coop_song or None
+        self.current_attempt['submitted_song']=self.requested_song or None
         return True
 
     def configure_menu_fire(self):
@@ -260,6 +309,8 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.open_page(self.entry_node,self.home_node)
         if self.settings.mode=='coop':
             self.choose_coop_room()
+        elif self.settings.mode=='versus':
+            self.choose_versus_room()
         self.report['attempts']+=1
         self.current_attempt={'attempt':self.report['attempts'],'status':'matching',
                               'songs':[],'fire_before_matching':self.fire_balance()}
@@ -278,31 +329,31 @@ class OnlineLiveFlow(ChartLiveFlow):
         while True:
             self.snap()
             if self.reco('OL_FinalConfirm'):
-                if self.settings.mode=='coop' and self.settings.coop_song and not self.coop_song_submitted:
-                    raise FlowError('协力选曲已结束，未确认提交指定歌曲')
+                if self.requested_song and not self.coop_song_submitted:
+                    raise FlowError('联网选曲已结束，未确认提交指定歌曲')
                 self.state('确认最终歌曲和难度')
                 return
-            if self.settings.mode=='coop' and self.hit_text([450,300,400,100],'以[2-5]人开始演出'):
+            if self.settings.mode in ('coop','versus') and self.hit_text([450,300,400,100],'以[2-5]人开始演出'):
                 button=self.hit_text([650,415,250,90],'^开始$')
                 if button:
                     self.tap_hit(button)
                     unknown_since=None
                     continue
-            if self.settings.mode=='coop' and self.reco('OL_CoopSongPage'):
+            if self.chooses_song and self.reco('OL_CoopSongPage'):
                 if self.submit_coop_song():
                     song_loading_since=None
                 else:
                     now=time.monotonic()
                     if song_loading_since is None:
                         song_loading_since=now
-                        self.state('等待协力选曲页面加载')
+                        self.state('等待选曲页面加载')
                         self.save_frame('coop_song_loading.png')
                     if now-song_loading_since>=30:
-                        raise FlowError('协力选曲页面30秒未加载出操作按钮')
+                        raise FlowError('联网选曲页面30秒未加载出操作按钮')
                 unknown_since=None
                 self.pause(.25)
                 continue
-            if self.settings.mode=='coop' and time.monotonic()-self.room_clock.entered>15:
+            if self.settings.mode in ('coop','versus') and time.monotonic()-self.room_clock.entered>15:
                 start=self.hit_text([920,610,275,70],'^立即开始$|^立刻开始$')
                 if start and self.pink(self.image[625:638,960:980]):
                     self.tap_hit(start)
@@ -315,7 +366,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 unknown_since=None
             else:
                 unknown_since=unknown_since or time.monotonic()
-                if self.settings.mode=='coop':
+                if self.settings.mode in ('coop','versus'):
                     self.save_frame('coop_waiting.png')
                 if time.monotonic()-unknown_since>30:
                     raise FlowError('联网房间出现未知页面超过30秒')
@@ -365,12 +416,6 @@ class OnlineLiveFlow(ChartLiveFlow):
                 raise FlowError('未能在倒计时内确认难度')
             if not self.difficulty_selected(x):
                 raise FlowError('联网难度未选中：'+selection.difficulty)
-        # Cut-in checkbox is separate per mode; disable it before ready submission.
-        if self.pink(self.image[637:663,487:513]):
-            self.quick_tap(500,650)
-            self.snap()
-        if self.pink(self.image[637:663,487:513]):
-            raise FlowError('联网3D Cut in未关闭')
         self.selection=selection
         return selection
 
@@ -434,7 +479,7 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.verify_final_selection(selection)
             try:
                 before,after=self.fire_preview()
-                if self.settings.mode=='coop':
+                if self.settings.mode in ('coop','versus'):
                     balance=before
                 else:
                     balance=self.fire_balance()
@@ -457,8 +502,6 @@ class OnlineLiveFlow(ChartLiveFlow):
         x=target.box[0]+target.box[2]//2
         if not self.difficulty_selected(x):
             raise FlowError('开演前联网难度发生变化')
-        if self.pink(self.image[637:663,487:513]):
-            raise FlowError('开演前联网3D Cut in未关闭')
 
     def submit_online_ready(self,selection):
         self.snap()
@@ -466,7 +509,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         if not final:
             raise FlowError('准备提交前联网确认页面已离开')
         # Coop final confirmation already recognizes this exact ready button.
-        ready=final if self.settings.mode=='coop' else self.hit_text([1010,580,225,105],'^准备完毕[！!]?$')
+        ready=final if self.settings.mode in ('coop','versus') else self.hit_text([1010,580,225,105],'^准备完毕[！!]?$')
         if not ready:
             raise FlowError('未找到联网准备完毕按钮')
         self.quick_tap(ready.box[0]+ready.box[2]//2,ready.box[1]+ready.box[3]//2)
@@ -537,6 +580,10 @@ class OnlineLiveFlow(ChartLiveFlow):
                     confirmed=True
                     self.count_result(row)
                     self.room_active=False
+            # Room selection has its own Confirm footer. Once a result is
+            # counted, returning there ends settlement; never start a new room.
+            if confirmed and (self.reco(self.home_node) or self.reco('LV_Menu') or self.reco('CU_HomeBand')):
+                return
             group_result=self.settings.mode=='coop' and self.reco('OL_CoopGroupResult')
             if group_result:
                 self.save_frame(f'group_result_attempt{self.report["attempts"]}.png')
@@ -548,8 +595,6 @@ class OnlineLiveFlow(ChartLiveFlow):
                 if confirmed:
                     self.room_active=False
                 continue
-            if confirmed and (self.reco(self.home_node) or self.reco('LV_Menu') or self.reco('CU_HomeBand')):
-                return
             self.pause(.4)
         raise FlowError('联网演出结算超时，保留现场')
 

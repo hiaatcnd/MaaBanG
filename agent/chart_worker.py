@@ -1,6 +1,7 @@
 """Local low-latency playback worker. The UI Agent authorizes exactly one start."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import threading
@@ -14,7 +15,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from chart_policy import JITTER_PROFILES
 from chart_timing import compile_chart, first_anchor, GestureRecovery
 from online_errors import room_error
-from playback_controller import controller_config
+from playback_controller import playback_options
+from playback_diagnostics import finalize_playback, timed_touch
 
 
 def start_authorized_stage(controller, mode):
@@ -44,19 +46,44 @@ def capture_observer_frame(observer, online):
     return None
 
 
-def initialize_playback_backend(controllers, resource, bundle):
+def prime_phase_recovery(recovery, trace):
+    """Reuse only completed captures from this stall, with a fresh final frame."""
+    eligible = []
+    for row in trace:
+        capture = row['capture_ms'] / 1000
+        stamp = row['time']
+        if (row['positions'] is not None and 0 <= capture < .040 and
+                stamp-capture/2 >= recovery.evidence_since and
+                stamp+capture/2 <= recovery.started):
+            eligible.append(row)
+    for index, row in enumerate(eligible):
+        # Accumulate the entire batch before deciding. If it ends too early,
+        # the observer must supply a new frame before any phase is accepted.
+        recovery.observe_positions(row['time'], row['positions'],
+                                   evaluate=index == len(eligible)-1,
+                                   received_at=recovery.started)
+    return len(eligible)
+
+
+def initialize_playback_backend(controllers, resource, bundle, connection_records=None):
     """Overlap independent queues, validating every backend before arming."""
     resource_job=resource.post_bundle(bundle)
     pending=[]
-    for controller in controllers:
+    for role,controller in zip(('touch','observer'),controllers):
         controller.set_screenshot_target_short_side(720)
+        record={'role':role,'queued_unix':time.time()}
+        if connection_records is not None:
+            connection_records.append(record)
         connection=controller.post_connection()
+        record['job_id']=getattr(connection,'job_id',None)
         # Each controller preserves its own order: capture follows connection.
         capture=controller.post_screencap()
-        pending.append((controller,connection,capture))
-    for controller,connection,capture in pending:
-        if not connection.wait().succeeded or not capture.wait().succeeded:
-            raise RuntimeError('演奏控制器连接或增强截图失败，请检查当前设备的截图增强和 MaaTouch 支持')
+        pending.append((controller,connection,capture,record))
+    for controller,connection,capture,record in pending:
+        record['connected']=bool(connection.wait().succeeded)
+        record['completion_observed_unix']=time.time()
+        if not record['connected'] or not capture.wait().succeeded:
+            raise RuntimeError('演奏控制器连接或增强截图失败，请检查当前设备的截图增强和多点触控支持')
         if controller.cached_image.shape != (720,1280,3):
             raise RuntimeError('演奏画面比例必须为 16:9')
     if not resource_job.wait().succeeded:
@@ -106,6 +133,7 @@ def play(config_path):
     from maa.resource import Resource
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
+    from maa.library import Library
     from maa.define import MaaAdbScreencapMethodEnum, MaaAdbInputMethodEnum
     from chart_sync import (FirstNoteLock, locate_note_y, stage_state,
                             ChartPhaseTracker, PhaseReacquirer, SlewedClock)
@@ -127,7 +155,7 @@ def play(config_path):
     observer_failed = threading.Event()
     thread = None
     controller = None
-    started = False
+    stage_confirmed = False
     lock = None
     first_note_lock_frame = None
     last_start_frame = None
@@ -156,11 +184,23 @@ def play(config_path):
                       avoid_full_combo=avoid_full_combo,
                       chart=cfg['chart'],anchor=[anchor_time,lane,color],
                       jitter_distribution='truncated_normal',jitter_sigma_divisor=3)
-        adb,address,settings = controller_config(cfg['controller'])
-        controller = AdbController(adb,address,screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
-                                   input_methods=MaaAdbInputMethodEnum.Maatouch,config=settings)
-        observer = AdbController(adb,address,screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
-                                 input_methods=MaaAdbInputMethodEnum.AdbShell,config=settings)
+        options = playback_options(cfg['controller'])
+        report['backend']={'allowed_input_methods':options.input_methods,
+            'input_source':options.input_source,
+            'configured_input_methods':options.configured_input_methods,
+            'discovered_input_methods':options.discovered_input_methods,
+            'active_backend':None,'selection_evidence':'not_exposed_by_framework',
+            'runtime_fallback':False,'pid':os.getpid(),
+            'framework_version':Library.version(),
+            'framework_library':str(Library.framework_libpath),
+            'toolkit_library':str(Library.toolkit_libpath),
+            'native_log':str(output/'debug/maafw.log'),'connections':[]}
+        controller = AdbController(options.adb_path,options.address,
+                                   screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                                   input_methods=options.input_methods,config=options.config)
+        observer = AdbController(options.adb_path,options.address,
+                                 screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                                 input_methods=MaaAdbInputMethodEnum.AdbShell,config=options.config)
         # Only recognize actual interruption dialogs. Skill effects can recolor the
         # judgment line for several seconds and must not be treated as a lost stage.
         resource=Resource()
@@ -168,7 +208,7 @@ def play(config_path):
         bundle=root/'resource' if (root/'resource').is_dir() else root/'assets/resource'
         backend_started=time.perf_counter()
         try:
-            initialize_playback_backend((controller,observer),resource,bundle)
+            initialize_playback_backend((controller,observer),resource,bundle,report['backend']['connections'])
         finally:
             report['startup_timings_ms']['controllers_and_resource']=(time.perf_counter()-backend_started)*1000
         popup_frame=None
@@ -195,8 +235,11 @@ def play(config_path):
         clock = SlewedClock()
         stage_seen = origin = initial_health = None
         start = time.perf_counter()
-        started = True
-        start_authorized_stage(controller,cfg.get('start_mode','click'))
+        try:
+            start_authorized_stage(controller,cfg.get('start_mode','click'))
+        except Exception:
+            report['input_failed']=True
+            raise
         # Account for songs with a long lead-in; chart time is independent of fall speed.
         last_start_check=0.
         while time.perf_counter()-start < (180 if online else max(40,anchor_time+30)):
@@ -221,6 +264,7 @@ def play(config_path):
                 continue
             if stage_seen is None:
                 stage_seen = after
+                stage_confirmed = True
                 (output/'stage_started').write_text('started')
             health=frame[36:47,980:1170].astype(float)
             health_ratio=float(np.mean((health[:,:,1]>130) & (health[:,:,1]>health[:,:,2]*1.2)))
@@ -278,14 +322,15 @@ def play(config_path):
                         with phase_guard:
                             # A capture already in flight when the origin changes
                             # cannot contribute to the new phase history.
-                            if stamp >= phase_reset_at:
+                            if before >= phase_reset_at:
                                 phase_trace.append({'time':stamp-origin,
                                     'capture_ms':(after-before)*1000, 'positions':positions,
                                     'recovering':phase_recovery is not None})
                                 del phase_trace[:-64]
                                 if positions is not None:
                                     if phase_recovery is not None:
-                                        phase_recovery.observe_positions(stamp-origin,positions)
+                                        phase_recovery.observe_positions(stamp-origin,positions,
+                                            received_at=time.perf_counter()-origin)
                                     else:
                                         estimate = tracker.observe_positions(stamp-origin,positions,clock.value)
                                         if estimate and clock.update(estimate['correction']):
@@ -331,14 +376,28 @@ def play(config_path):
                 # the host clock. Neither the stall duration nor stale phase
                 # samples are evidence that it is safe to resume blind input.
                 released = set(active)
+                missed['release_inputs']=[]
                 for contact in sorted(active):
                     stopped()
-                    if not controller.post_touch_up(contact).wait().succeeded:
-                        raise RuntimeError('恢复时释放触点失败')
-                active.clear()
-                requested = time.perf_counter()
+                    # Never replay an up whose submission/completion is unknown.
+                    active.discard(contact)
+                    measured={'action':'up','contact':contact}
+                    missed['release_inputs'].append(measured)
+                    try:
+                        if not timed_touch(controller,'up',0,0,contact,measured):
+                            raise RuntimeError('恢复时释放触点失败')
+                    except Exception:
+                        report['input_failed']=True
+                        raise
                 with phase_guard:
-                    phase_recovery = PhaseReacquirer(tracker,requested-origin,clock.value,sent-target)
+                    # The independent observer can keep capturing while a touch
+                    # blocks. Reuse only this stall's captures, in this origin.
+                    requested = time.perf_counter()
+                    evidence_since = max(target, phase_reset_at)-origin
+                    phase_recovery = PhaseReacquirer(tracker,requested-origin,clock.value,
+                                                     sent-target,evidence_since=evidence_since)
+                    missed['evidence_since'] = evidence_since
+                    missed['seeded_frames'] = prime_phase_recovery(phase_recovery,phase_trace)
                 while True:
                     stopped()
                     with phase_guard:
@@ -353,6 +412,7 @@ def play(config_path):
                             tracker = ChartPhaseTracker(chart)
                             clock = SlewedClock()
                             phase_reset_at = time.perf_counter()
+                            phase_trace.clear()  # Cached timestamps belonged to the old origin.
                             phase_recovery = None
                             break
                     if time.perf_counter()-requested > PhaseReacquirer.timeout:
@@ -368,22 +428,19 @@ def play(config_path):
             x,y = round(197+147.7*event.lane+event.dx),round(event.y)
             if event.action=='down':
                 active.add(event.contact)
-                job=controller.post_touch_down(x,y,contact=event.contact)
-            elif event.action=='move':
-                job=controller.post_touch_move(x,y,contact=event.contact)
-            else:
-                job=controller.post_touch_up(event.contact)
-            ok=job.wait().succeeded
-            report['events'].append({**asdict(event),'late_ms':(sent-target)*1000,
-                                     'api_ms':(time.perf_counter()-sent)*1000,
-                                     'phase_ms':correction*1000,'ok':ok})
-            if not ok:
-                raise RuntimeError('触控输入失败')
+            elif event.action=='up':
+                active.discard(event.contact)
+            measured={**asdict(event),'late_ms':(sent-target)*1000,'phase_ms':correction*1000}
+            report['events'].append(measured)
+            try:
+                if not timed_touch(controller,event.action,x,y,event.contact,measured):
+                    raise RuntimeError('触控输入失败')
+            except Exception:
+                report['input_failed']=True
+                raise
             if report['recoveries'] and 'resumed_at' not in report['recoveries'][-1]:
                 report['recoveries'][-1]['resumed_at']=event.time
                 report['recoveries'][-1]['resume_late_ms']=(sent-target)*1000
-            if event.action=='up':
-                active.discard(event.contact)
         # Keep observing through the original chart end even if the omitted
         # final tap/flick leaves no remaining input before the result wait.
         if avoid_full_combo:
@@ -397,32 +454,28 @@ def play(config_path):
         report['status']='input_complete'
     except Exception as exc:
         report.update(status='error',error=str(exc))
-        if last_start_frame is not None and 'lock' not in report:
-            from PIL import Image
-            Image.fromarray(last_start_frame[:,:,::-1]).save(output/'first_note_failure.png')
     finally:
         report['start_trace']=start_trace
         if lock is not None:
             report['start_points']=lock.points
         observer_stop.set()
-        if controller:
-            for contact in tuple(active):
-                controller.post_touch_up(contact).wait()
-        if thread:
-            thread.join(timeout=3)
-        if report['status']=='error' or report.get('recoveries'):
-            report['phase_trace'] = phase_trace
-        if controller and started and report['status']=='error' and not observer_failed.is_set() and not online:
-            controller.post_click(1240,50).wait()
-        # Defer encoding until all touches are released; diagnostics must not
-        # delay the first touch or prevent cleanup if writing the image fails.
-        if first_note_lock_frame is not None:
-            from PIL import Image
-            try:
+        def save_diagnostics():
+            if thread:
+                thread.join(timeout=3)
+            if report['status']=='error' or report.get('recoveries'):
+                report['phase_trace'] = phase_trace
+            # Defer encoding until all touches are released; image failures must
+            # not suppress the report containing the original input failure.
+            if last_start_frame is not None and 'lock' not in report:
+                from PIL import Image
+                Image.fromarray(last_start_frame[:,:,::-1]).save(output/'first_note_failure.png')
+            if first_note_lock_frame is not None:
+                from PIL import Image
                 Image.fromarray(first_note_lock_frame[:,:,::-1]).save(output/'first_note_lock.png')
-            except OSError as exc:
-                report['diagnostic_error']=str(exc)
-        (output/'playback.json').write_text(json.dumps(report,ensure_ascii=False),encoding='utf8')
+        finalize_playback(controller,active,report,output/'playback.json',
+            allow_pause=stage_confirmed and report['status']=='error'
+                        and not observer_failed.is_set() and not online,
+            save_diagnostics=save_diagnostics)
     return 0 if report['status']=='input_complete' else 1
 
 

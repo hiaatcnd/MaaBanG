@@ -457,3 +457,4 @@ debug
 dist/
 cache/charts/
 .maabang-dev/
+.codex-remote-attachments/

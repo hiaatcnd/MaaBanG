@@ -81,6 +81,10 @@ class NotificationMixin:
             title = ' '.join(titles) or '提示'
             lines = [normalized(hit.text) for hit in hits]
             text = ' '.join(lines)
+            # A disabled footer can be OCR-visible before any reward was chosen.
+            # Leave choices to their owner instead of repeatedly confirming them.
+            if any(line=='选择' or line.startswith('请选择') for line in lines):
+                return handled
             # Inheritance is already complete. Pool names and the item label
             # contain "recruit", but this result only acknowledges the transfer.
             inheritance = ('继承' in titles and '招募贴纸' in lines

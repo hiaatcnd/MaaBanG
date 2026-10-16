@@ -180,11 +180,11 @@ class FinalSelectionSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(FlowError,'难度按钮消失'):
             flow.verify_final_selection(ChartSelection('564','expert'))
 
-    def test_enabled_cut_in_is_rejected(self):
+    def test_final_selection_leaves_effects_to_shared_pre_start_handling(self):
         flow=self.make_flow()
         flow.image[637:663,487:513]=[100,0,255]
-        with self.assertRaisesRegex(FlowError,'Cut in未关闭'):
-            flow.verify_final_selection(ChartSelection('564','expert'))
+        flow.verify_final_selection(ChartSelection('564','expert'))
+        flow.quick_tap.assert_not_called()
 
 
 class SelectionActionTests(unittest.TestCase):
@@ -238,21 +238,12 @@ class SelectionActionTests(unittest.TestCase):
         flow.snap.assert_called_once_with()
         self.assertFalse(hasattr(flow,'selection'))
 
-    def test_selected_difficulty_still_disables_and_rechecks_cut_in(self):
+    def test_selection_does_not_guess_cut_in_from_fixed_coordinate_color(self):
         flow=self.make_flow()
         flow.image[637:663,487:513]=[100,0,255]
-        flow.quick_tap.side_effect=lambda x,y:flow.image.__setitem__((slice(637,663),slice(487,513)),0)
-        flow.read_final_selection()
-        flow.quick_tap.assert_called_once_with(500,650)
-        flow.snap.assert_called_once_with()
-
-    def test_cut_in_that_stays_enabled_is_rejected(self):
-        flow=self.make_flow()
-        flow.image[637:663,487:513]=[100,0,255]
-        with self.assertRaisesRegex(FlowError,'Cut in未关闭'):
-            flow.read_final_selection()
-        flow.quick_tap.assert_called_once_with(500,650)
-        self.assertFalse(hasattr(flow,'selection'))
+        self.assertEqual(flow.read_final_selection().difficulty,'expert')
+        flow.quick_tap.assert_not_called()
+        flow.snap.assert_not_called()
 
     def test_missing_difficulty_is_not_clicked(self):
         flow=self.make_flow()

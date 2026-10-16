@@ -13,6 +13,7 @@ import numpy as np
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from chart_worker import play, start_authorized_stage
+from playback_controller import PlaybackOptions
 
 
 class DirectChartWorkerTests(unittest.TestCase):
@@ -33,7 +34,7 @@ class DirectChartWorkerTests(unittest.TestCase):
             start_authorized_stage(controller,'online_click')
         controller.post_click.assert_called_once_with(1130,616)
 
-    def run_startup(self,folder,*,click_succeeds=True):
+    def run_startup(self,folder,*,click_succeeds=True,click_raises=False,start_mode='online_click'):
         output=Path(folder)
         chart=[{'type':'BPM','beat':0,'bpm':120},
                {'type':'Single','beat':2,'lane':3,'skill':True}]
@@ -41,7 +42,7 @@ class DirectChartWorkerTests(unittest.TestCase):
         (output/'chart.json').write_bytes(raw)
         config={'controller':{},'chart':{'path':str(output/'chart.json'),
                 'sha256':hashlib.sha256(raw).hexdigest(),'duration':2},
-                'jitter':'small','seed':1,'start_mode':'online_click'}
+                'jitter':'small','seed':1,'start_mode':start_mode}
         config_path=output/'config.json'
         config_path.write_text(json.dumps(config),encoding='utf8')
         (output/'start').write_text('start')
@@ -56,6 +57,8 @@ class DirectChartWorkerTests(unittest.TestCase):
             item.post_screencap.return_value=success
         controller.post_click.return_value=SimpleNamespace(
             wait=lambda:SimpleNamespace(succeeded=click_succeeds))
+        if click_raises:
+            controller.post_click.side_effect=RuntimeError('uncertain start submission')
         frames=[]
         for marker,elapsed in [(0,60.),(2,120.),(1,121.)]:
             frame=np.zeros((720,1280,3),dtype=np.uint8)
@@ -95,7 +98,8 @@ class DirectChartWorkerTests(unittest.TestCase):
                 patch('maa.resource.Resource',return_value=resource), \
                 patch('maa.tasker.Tasker',return_value=tasker), \
                 patch('maa.toolkit.Toolkit.init_option'), \
-                patch('chart_worker.controller_config',return_value=('fake-adb','mock-device',{})), \
+                patch('chart_worker.playback_options',return_value=PlaybackOptions(
+                    'fake-adb','mock-device',{},4,'connection_explicit',4)), \
                 patch('chart_worker.compile_chart',return_value=[]), \
                 patch('chart_worker.time.perf_counter',side_effect=lambda:now[0]), \
                 patch('chart_worker.threading.Thread'), \
@@ -133,6 +137,17 @@ class DirectChartWorkerTests(unittest.TestCase):
             controller.post_click.assert_called_once_with(1130,616)
             lock.observe.assert_not_called()
             locate.assert_not_called()
+
+    def test_solo_start_failure_or_uncertain_submission_never_blindly_pauses(self):
+        for raises in (False,True):
+            with self.subTest(raises=raises),tempfile.TemporaryDirectory() as folder:
+                result,report,controller,lock,locate,_=self.run_startup(
+                    folder,click_succeeds=False,click_raises=raises,start_mode='click')
+                self.assertEqual(result,1)
+                self.assertTrue(report['input_failed'])
+                controller.post_click.assert_called_once_with(1130,616)
+                lock.observe.assert_not_called()
+                locate.assert_not_called()
 
 
 if __name__=='__main__':

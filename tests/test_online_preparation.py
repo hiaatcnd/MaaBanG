@@ -17,7 +17,7 @@ from online_live import OnlineLiveFlow
 
 class OnlinePreparationTests(unittest.TestCase):
     def test_fresh_final_page_failure_stops_armed_worker_without_authorizing_input(self):
-        for mode in ('team','coop'):
+        for mode in ('team','coop','versus'):
             with self.subTest(mode=mode),tempfile.TemporaryDirectory() as folder:
                 flow=OnlineLiveFlow.__new__(OnlineLiveFlow)
                 flow.settings=ChartOptions.parse({'mode':mode,'fire':0})

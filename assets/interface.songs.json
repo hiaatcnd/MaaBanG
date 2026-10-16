@@ -43,6 +43,11 @@
             "value": "id",
             "order": "chart"
         },
+        "谱面竞演歌曲": {
+            "song_node": "CL_versus_song",
+            "value": "id",
+            "order": "chart"
+        },
         "谱面协力歌曲": {
             "song_node": "CL_coop_song",
             "value": "id",

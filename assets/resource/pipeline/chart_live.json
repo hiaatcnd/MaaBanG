@@ -58,6 +58,31 @@
             "value": ""
         }
     },
+    "CL_from_favorites": {
+        "attach": {
+            "value": false
+        }
+    },
+    "CL_avoid_full_combo": {
+        "attach": {
+            "value": false
+        }
+    },
+    "CL_versus_room": {
+        "attach": {
+            "value": "event"
+        }
+    },
+    "CL_versus_song": {
+        "attach": {
+            "value": ""
+        }
+    },
+    "CL_versus_room_group": {
+        "attach": {
+            "value": "normal"
+        }
+    },
     "CL_song1": {
         "attach": {
             "value": "306"
@@ -86,16 +111,6 @@
     "CL_difficulty3": {
         "attach": {
             "value": "expert"
-        }
-    },
-    "CL_from_favorites": {
-        "attach": {
-            "value": false
-        }
-    },
-    "CL_avoid_full_combo": {
-        "attach": {
-            "value": false
         }
     }
 }

@@ -14,7 +14,7 @@ import numpy as np
 from maa.custom_action import CustomAction
 
 from auto_live import LiveFlow
-from chart_policy import ChartOptions, ChartSelection, OPTION_DEFAULTS, OPTION_NODES
+from chart_policy import ChartOptions, ChartSelection, OPTION_DEFAULTS, OPTION_NODES, ONLINE_MODES
 from chart_store import ChartStore
 from costume_unlock import FlowError, normalized
 from live_policy import DIFFICULTIES
@@ -227,18 +227,15 @@ class ChartLiveFlow(LiveFlow):
         return balance
 
     def playback_start_mode(self):
-        return 'online' if self.settings.mode in ('team','coop') else 'click'
+        return 'online' if self.settings.mode in ONLINE_MODES else 'click'
 
     def play_chart(self, index, selection, metadata, amount, row):
         preparation_started=time.perf_counter()
         timings=row['startup_timings_ms']={}
         log(f'[谱面演出] {selection.song["title"]} / {selection.difficulty.upper()}：正在准备演奏进程')
-        online=self.settings.mode in ('team','coop')
+        online=self.settings.mode in ONLINE_MODES
         if not online:
             self.wait_ready(index)
-            self.disable_mv()
-        # Online selection already disables Cut in; the final verification below
-        # checks it again without repeating generic MV/page detection.
         start_mode=self.playback_start_mode()
         destination=self.output/(f'attempt{self.report["attempts"]}_playback' if online else
                                  f'round{self.report["completed_rounds"]+1}_song{index}')
@@ -271,6 +268,8 @@ class ChartLiveFlow(LiveFlow):
             ready_at=time.perf_counter()
             timings['wait_worker_ready']=(ready_at-spawned_at)*1000
             balance=self.verify_chart_start(index,selection,amount)
+            # Every mode uses the same controls on the fresh final-check frame.
+            self.disable_mv(fresh=False)
             verified_at=time.perf_counter()
             timings['final_verification']=(verified_at-ready_at)*1000
             if balance is not None:
@@ -441,7 +440,7 @@ class ChartLive(CustomAction):
 
     def create_flow(self, context, values, destination):
         options=ChartOptions.parse(values)
-        if options.mode in ('team','coop'):
+        if options.mode in ONLINE_MODES:
             from online_live import OnlineLiveFlow
             return OnlineLiveFlow(context,options,destination)
         if options.mode == 'challenge':

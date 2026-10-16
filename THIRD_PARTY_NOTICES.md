@@ -4,7 +4,7 @@ MaaBanG code is distributed under the MIT license in LICENSE.
 
 The Windows package includes upstream runtime components and a patched UI:
 
-- MaaFramework 5.12.2: https://github.com/MaaXYZ/MaaFramework (LGPL-3.0); source and license: https://github.com/MaaXYZ/MaaFramework/tree/v5.12.2
+- MaaFramework 5.12.3: https://github.com/MaaXYZ/MaaFramework (LGPL-3.0); source and license: https://github.com/MaaXYZ/MaaFramework/tree/v5.12.3
 - MFAAvalonia 2.16.1: https://github.com/MaaXYZ/MFAAvalonia (GPL-3.0); corresponding source and license: https://github.com/MaaXYZ/MFAAvalonia/tree/v2.16.1
   MaaBanG modifies the normal startup path to perform startup device discovery in the background while preserving automatic connection. The source archive (including its GPL license), patch and build script are included in docs/upstream-ui/. This UI modification remains under GPL-3.0; the project's MIT license does not relicense it.
 - CPython 3.12.10: https://www.python.org/downloads/release/python-31210/ (PSF license; included in python/LICENSE.txt).

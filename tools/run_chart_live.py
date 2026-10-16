@@ -15,11 +15,14 @@ def main():
         ipc_temp=Path.home()/'.maabang/temp'
         ipc_temp.mkdir(parents=True,exist_ok=True)
         os.environ['TEMP']=os.environ['TMP']=str(ipc_temp)
-    from chart_policy import ChartOptions, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS
+    from chart_policy import ChartOptions, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS, ONLINE_MODES
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',required=True)
-    parser.add_argument('--mode',choices=['free','tour_free','tour_fixed','team','coop','challenge'],default='free')
+    parser.add_argument('--controller-config',type=Path,help='Explicit MaaFramework connection config JSON')
+    parser.add_argument('--input-methods',type=lambda value:int(value,0),
+                        help='Explicit per-contact input mask; omitted uses full official device discovery')
+    parser.add_argument('--mode',choices=['free','tour_free','tour_fixed',*ONLINE_MODES,'challenge'],default='free')
     parser.add_argument('--direct',action='store_true',help='从最后准备页直接按指定谱面打一首，不选歌或识别曲名')
     for i in range(1,4):
         parser.add_argument(f'--song{i}',default='306')
@@ -31,6 +34,9 @@ def main():
     parser.add_argument('--coop-room',choices=COOP_ROOMS,default='free')
     parser.add_argument('--coop-room-group',choices=COOP_ROOM_GROUPS,default='normal')
     parser.add_argument('--coop-song',default='',help='提交的中国服歌曲ID或歌名；留空不指定歌曲')
+    parser.add_argument('--versus-room',choices=VERSUS_ROOMS,default='event')
+    parser.add_argument('--versus-room-group',choices=COOP_ROOM_GROUPS,default='normal')
+    parser.add_argument('--versus-song',default='',help='竞演自由选歌房间提交的歌曲；留空不指定')
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
     parser.add_argument('--max-rounds',default='')
     parser.add_argument('--prepare-only',action='store_true')
@@ -45,17 +51,27 @@ def main():
         parser.error('--package tests the actual packaged task and cannot use --prepare-only')
     values={key:getattr(args,key) for key in OPTION_NODES if hasattr(args,key)}
     options=ChartOptions.parse(values)
-    if args.prepare_only and options.mode in ('team','coop'):
+    if args.prepare_only and options.mode in ONLINE_MODES:
         parser.error('--prepare-only is not supported for automatically starting online rooms')
     from maa.controller import AdbController
     from maa.custom_action import CustomAction
     from maa.resource import Resource
     from maa.tasker import Tasker
     from maa.toolkit import Toolkit
+    from maa.define import MaaAdbScreencapMethodEnum
+    from playback_controller import playback_options
+    import json
     from chart_live import ChartLive, ChartLiveFlow
     from direct_chart_live import DirectChartLive, DirectChartLiveFlow
     Toolkit.init_option('debug/chart_live_cli')
-    controller=AdbController(args.adb,args.address)
+    connection={'type':'adb','adb_path':args.adb,'adb_serial':args.address,
+                'input_methods':args.input_methods,
+                'config':json.loads(args.controller_config.read_text(encoding='utf8'))
+                          if args.controller_config else {}}
+    backend=playback_options(connection)
+    controller=AdbController(backend.adb_path,backend.address,
+                             screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
+                             input_methods=backend.input_methods,config=backend.config)
     controller.set_screenshot_target_short_side(720)
     assert controller.post_connection().wait().succeeded
     resource=Resource()
@@ -72,11 +88,11 @@ def main():
                 if not selections:
                     print('Preparation stopped:',flow.report['status'],flush=True)
                     return True
-                flow.disable_mv()
                 if options.mode=='challenge':
                     balance=flow.verify_chart_start(1,selections[0],options.cp)
                     print(f'CP verified before start: {balance}, cost: {options.cp}',flush=True)
-                flow.snap();flow.save_frame('ready.png')
+                flow.disable_mv()
+                flow.save_frame('ready.png')
                 print('Prepared',selections,flush=True)
                 return True
             except Exception:

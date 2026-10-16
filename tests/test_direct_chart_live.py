@@ -23,6 +23,7 @@ class DirectChartLiveTests(unittest.TestCase):
     def prepare_flow(self, flow):
         flow.snap=Mock()
         flow.hit_text=Mock(return_value=object())
+        flow.disable_mv=Mock()
         for method in ('text','title_matches','select_song','navigate_menu','home',
                        'refill_fire','inherit_menu_fire','configure_stage','configure_fire','settle_results',
                        'await_chart_result'):
@@ -46,7 +47,7 @@ class DirectChartLiveTests(unittest.TestCase):
             flow.store.get.assert_called_once_with(selections[0],check_stop=flow.check_stop)
             flow.hit_text.assert_called_once_with([1010,595,235,75],'^演出开始$')
             self.assertIsNone(flow.verify_chart_start(1,selections[0],None))
-            flow.disable_mv()
+            flow.disable_mv.assert_not_called()
             flow.text.assert_not_called()
 
     def test_missing_ready_button_never_loads_or_starts(self):
@@ -102,6 +103,7 @@ class DirectChartLiveTests(unittest.TestCase):
             self.assertEqual(configs[0]['start_mode'],'online_click')
             self.assertEqual(flow.report['completed_rounds'],1)
             self.assertEqual(flow.report['rounds'][0]['songs'][0]['status'],'input_complete')
+            flow.disable_mv.assert_called_once_with(fresh=False)
             flow.await_chart_result.assert_not_called()
 
     def test_page_change_after_worker_preparation_never_authorizes_start(self):
@@ -163,6 +165,32 @@ class DirectChartLiveTests(unittest.TestCase):
             job=tasker.post_task('DirectCoopCheck',{'DirectCoopCheck':{
                 'action':'Custom','custom_action':'DirectCoopCheck'}}).wait()
             self.assertTrue(job.succeeded,observed)
+
+    def test_effects_failure_blocks_both_direct_start_buttons(self):
+        for label in ('演出开始','准备开始'):
+            with self.subTest(label=label),tempfile.TemporaryDirectory() as folder:
+                flow=self.flow(folder)
+                flow.controller=SimpleNamespace(info={})
+                flow.hit_text.side_effect=lambda roi,pattern:re.search(pattern,label)
+                flow.store.get=Mock(return_value=([],{'duration':100}))
+                flow.disable_mv.side_effect=FlowError('背景未关闭')
+                flow.save_frame=Mock()
+                process=Mock()
+                process.poll.return_value=None
+                destinations=[]
+                def worker(args,**kwargs):
+                    destination=Path(args[-1]).parent
+                    destinations.append(destination)
+                    (destination/'armed').write_text('ready')
+                    return process
+                with patch('chart_live.subprocess.Popen',side_effect=worker):
+                    with self.assertRaisesRegex(FlowError,'背景未关闭'):flow.run()
+                flow.disable_mv.assert_called_once_with(fresh=False)
+                self.assertFalse((destinations[0]/'start').exists())
+                self.assertTrue((destinations[0]/'stop').exists())
+                self.assertEqual(flow.report['completed_rounds'],0)
+                flow.await_chart_result.assert_not_called()
+                flow.text.assert_not_called()
 
     def test_download_failure_and_stop_never_start(self):
         for error in (ValueError('谱面音符数与目录不符'),FlowError('任务已被用户停止')):
@@ -273,6 +301,7 @@ class DirectChartLiveTests(unittest.TestCase):
                 self.assertEqual(flows[0].report['completed_rounds'],1)
                 self.assertEqual(flows[0].report['status'],'finished')
                 self.assertEqual(flows[0].report['rounds'][0]['songs'][0]['status'],'input_complete')
+                flows[0].disable_mv.assert_called_once_with(fresh=False)
                 flows[0].await_chart_result.assert_not_called()
 
     def test_direct_cli_passes_avoid_full_combo_to_independent_node(self):
@@ -284,11 +313,18 @@ class DirectChartLiveTests(unittest.TestCase):
                 tasker.post_task.return_value=SimpleNamespace(done=True,succeeded=True)
                 args=['run_chart_live.py','--adb','test-adb','--address','test-device','--direct']
                 if enabled:args.append('--avoid-full-combo')
+                device=SimpleNamespace(address='test-device',screencap_methods=64,input_methods=15,
+                    config={'extras':{'mumu':{'enable':True,'index':1,'path':'test-emulator'}}})
                 with patch.object(sys,'argv',args),patch.dict('os.environ',{}), \
                         patch('run_chart_live.Path.home',return_value=Path(folder)), \
-                        patch('maa.controller.AdbController'),patch('maa.resource.Resource',return_value=resource), \
+                        patch('maa.controller.AdbController') as controller, \
+                        patch('maa.toolkit.Toolkit.find_adb_devices',return_value=[device]) as discover, \
+                        patch('maa.resource.Resource',return_value=resource), \
                         patch('maa.tasker.Tasker',return_value=tasker),patch('maa.toolkit.Toolkit.init_option'):
                     self.assertEqual(main(),0)
+                discover.assert_called_once_with()
+                controller.assert_called_once_with('test-adb','test-device',screencap_methods=64,
+                                                    input_methods=14,config=device.config)
                 self.assertIsInstance(resource.register_custom_action.call_args.args[1],DirectChartLive)
                 name,overrides=tasker.post_task.call_args.args
                 self.assertEqual(name,'DirectChartLive')

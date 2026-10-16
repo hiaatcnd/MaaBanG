@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'agent'))
 from auto_live import LiveFlow
@@ -25,12 +25,18 @@ class LiveFlowTests(unittest.TestCase):
 
     def test_maximum_stops_after_one_free_live(self):
         f=self.flow(max_rounds='1')
+        order=Mock()
+        order.attach_mock(f.verify_start,'verify')
+        order.attach_mock(f.disable_mv,'effects')
+        order.attach_mock(f.tap,'start')
         f.run()
         f.tap.assert_called_once_with(1127,626)
         f.prepare_round.assert_called_once()
         f.home.assert_called_once()
         self.assertEqual(f.report['completed_rounds'],1)
         self.assertEqual(f.report['status'],'max_rounds_reached')
+        self.assertEqual(order.mock_calls,[call.verify(1,'expert',3,1),
+                                          call.effects(fresh=False),call.start(1127,626)])
 
     def test_navigation_retries_lost_click_only_on_known_source(self):
         for known_source in (True,False):
@@ -53,6 +59,7 @@ class LiveFlowTests(unittest.TestCase):
         f.run()
         self.assertEqual(f.tap.call_count,3)
         self.assertEqual(f.disable_mv.call_count,3)
+        self.assertEqual(f.disable_mv.call_args_list,[call(fresh=False)]*3)
         self.assertEqual([c.args[3] for c in f.verify_start.call_args_list],[3,2,1])
         self.assertEqual(f.report['completed_rounds'],1)
         self.assertEqual(len(f.report['rounds'][0]['songs']),3)
@@ -114,6 +121,16 @@ class LiveFlowTests(unittest.TestCase):
         f.verify_start=Mock(side_effect=FlowError('auto off or mismatched song'))
         with self.assertRaises(FlowError): f.run()
         f.tap.assert_not_called()
+        f.disable_mv.assert_not_called()
+
+    def test_effects_failure_does_not_click_start_or_complete_song(self):
+        f=self.flow(max_rounds=1)
+        f.disable_mv.side_effect=FlowError('背景未关闭')
+        with self.assertRaisesRegex(FlowError,'背景未关闭'):f.run()
+        f.verify_start.assert_called_once()
+        f.tap.assert_not_called()
+        f.wait_song.assert_not_called()
+        self.assertEqual(f.report['completed_rounds'],0)
 
     def test_rank_popup_is_closed_before_underlying_experience_page(self):
         f=self.flow()

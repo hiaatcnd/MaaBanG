@@ -5,7 +5,7 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
-from chart_policy import OPTION_DEFAULTS, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS
+from chart_policy import OPTION_DEFAULTS, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS
 from live_policy import DIFFICULTIES
 from interface_descriptions import OPTION_DESCRIPTIONS, INPUT_DESCRIPTIONS, TASK_DESCRIPTIONS
 
@@ -47,12 +47,15 @@ def update(interface):
         choice('课题巡演（左侧固定歌曲）','mode','tour_fixed',[f'谱面课题第{i}首难度' for i in range(1,4)]+fire_options),
         choice('团队演出','mode','team',['谱面联网难度',*fire_options]),
         choice('协力演出','mode','coop',['谱面协力房间类别','谱面协力房间','谱面协力歌曲','谱面从收藏选择','谱面联网难度',*fire_options]),
-        choice('挑战演出（消耗CP）','mode','challenge',['谱面挑战歌曲','谱面挑战难度','谱面每首CP'])]}
+        choice('挑战演出（消耗CP）','mode','challenge',['谱面挑战歌曲','谱面挑战难度','谱面每首CP']),
+        choice('竞演演出','mode','versus',['谱面竞演房间类别','谱面竞演房间','谱面联网难度',*fire_options])]}
     for option,label,key,default,description in (
         ('谱面挑战歌曲','活动歌曲','cp_song','沿用当前活动歌曲',
          '从中国服歌曲列表选择。指定歌曲必须在当前活动歌单内，否则停止；不替换为其他歌曲。'),
         ('谱面协力歌曲','协力选歌','coop_song','不指定歌曲',
-         '从中国服歌曲列表选择要提交的歌曲；最终演奏曲目由游戏在全房间提交的歌曲中抽选。')):
+         '从中国服歌曲列表选择要提交的歌曲；最终演奏曲目由游戏在全房间提交的歌曲中抽选。'),
+        ('谱面竞演歌曲','竞演选歌','versus_song','不指定歌曲',
+         '仅用于自由选歌房间；提交所选歌曲，最终曲目由游戏决定。活动歌曲房间使用本期活动歌曲。')):
         cases=[choice(default,key,'')]
         options[option]={'type':'select','label':label,'default_case':default,
                          'description':description,'cases':cases}
@@ -61,6 +64,13 @@ def update(interface):
     options['谱面协力房间']={'type':'select','label':'房间类型','default_case':'自由房间',
         'description':'按所选房间匹配；综合能力不足或房间不可用时停止，不自动换房。',
         'cases':[choice(label,'coop_room',value) for value,label in COOP_ROOMS.items()]}
+    options['谱面竞演房间']={'type':'select','label':'竞演房间','default_case':VERSUS_ROOMS['event'],
+        'description':'仅在竞演活动期间可用。按所选房间匹配，不自动换房；最终歌曲和难度确认后才准备。',
+        'cases':[choice(label,'versus_room',value,
+                        ['谱面竞演歌曲','谱面从收藏选择'] if value=='free' else None)
+                 for value,label in VERSUS_ROOMS.items()]}
+    options['谱面竞演房间类别']={'type':'select','label':'房间类别','default_case':'普通',
+        'cases':[choice(label,'versus_room_group',value) for value,label in COOP_ROOM_GROUPS.items()]}
     options['谱面挑战难度']={'type':'select','label':'挑战难度','default_case':'EXPERT',
         'description':'所选难度必须在活动歌曲中开放，不自动降级。',
         'cases':[choice(name.upper(),'difficulty1',name) for name in DIFFICULTIES]}

@@ -12,7 +12,7 @@ OPTION_NODES = {key: 'DL_'+key for key in OPTION_DEFAULTS}
 
 class DirectChartLiveFlow(ChartLiveFlow):
     def wait_ready(self, index=1, timeout=25):
-        # The user owns song, difficulty and stage settings. Only inspect the
+        # The user owns song, difficulty and gameplay settings. Only inspect the
         # start button; never route through ready-page title/difficulty checks.
         self.snap()
         if self.hit_text([1010,595,235,75], '^演出开始$'):
@@ -29,10 +29,6 @@ class DirectChartLiveFlow(ChartLiveFlow):
 
     def playback_start_mode(self):
         return self._start_mode
-
-    def disable_mv(self):
-        # Direct mode must not change the user's prepared screen or settings.
-        pass
 
     def verify_chart_start(self, index, selection, amount):
         self.wait_ready(index)
@@ -55,7 +51,7 @@ class DirectChartLiveFlow(ChartLiveFlow):
         row={'songs':[song], 'status':'running'}
         self.report['rounds'].append(row)
         log(f'[指定谱面直接演出] {selection.song["title"]} '
-              f'{selection.difficulty.upper()}；沿用当前准备页设置')
+              f'{selection.difficulty.upper()}；开演前统一关闭演出背景和 3D Cut in')
         self.play_chart(1,selection,charts[0][1],None,song)
         # play_chart returns only after the worker confirms all chart input.
         # Direct mode finishes here without inspecting or advancing results.

@@ -1,15 +1,25 @@
 """Build the narrowly patched MFAAvalonia core from hash-pinned upstream source."""
 import hashlib
+import json
 import os
 from pathlib import Path
 import subprocess
 import shutil
 import urllib.request
 import zipfile
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 REVISION = '4f11c8122de4f43eafc818a368c9956e3b06249c'  # v2.16.1
 SOURCE_SHA256 = '087ff4dde522feebaf20e6946392d9f2179d8507aebf12bb2c2f5371885c5e50'
+
+
+def verify_runtime_pin(project, version):
+    references = ET.parse(project).getroot().iter('PackageReference')
+    native_versions = [ref.attrib.get('Version') for ref in references
+                       if ref.attrib.get('Include') == 'Maa.Framework.Runtimes']
+    if native_versions != [version]:
+        raise ValueError(f'UI native MaaFramework pin {native_versions} differs from release {version}')
 
 
 def build_ui():
@@ -30,6 +40,8 @@ def build_ui():
         patch_bytes = patch.read_text(encoding='utf-8').encode('utf-8')
         subprocess.run(['git', 'apply', '--check', '-'], input=patch_bytes, cwd=source_dir, check=True)
         subprocess.run(['git', 'apply', '-'], input=patch_bytes, cwd=source_dir, check=True)
+    version = json.loads((ROOT / 'tools/release-inputs.json').read_text(encoding='utf-8'))['maafw']['version']
+    verify_runtime_pin(source_dir / 'MFAAvalonia/MFAAvalonia.csproj', version)
     output = cache / 'ui-build'
     shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGUpdate.cs')
     shutil.copy2(ROOT / 'tools/MaaBanGSongCatalog.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGSongCatalog.cs')

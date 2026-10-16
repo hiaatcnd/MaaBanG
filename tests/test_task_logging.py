@@ -28,7 +28,7 @@ class TaskLoggingTests(unittest.TestCase):
     def test_real_play_chart_logs_without_shadowing_worker_output(self):
         # Exercise the actual playback orchestration, not a mocked flow.run.
         # Only the game calls and external worker are replaced.
-        for mode in ('free', 'team', 'coop', 'challenge'):
+        for mode in ('free','tour_free','tour_fixed','team','coop','challenge'):
             for worker_ok in (True, False):
                 with self.subTest(mode=mode, worker_ok=worker_ok), tempfile.TemporaryDirectory() as folder:
                     flow=SimpleNamespace(
@@ -44,8 +44,10 @@ class TaskLoggingTests(unittest.TestCase):
                     process=Mock(returncode=0 if worker_ok else 1)
                     process.poll.return_value=process.returncode
                     worker_streams=[]
+                    destinations=[]
                     def spawn(command, **kwargs):
                         destination=Path(command[-1]).parent
+                        destinations.append(destination)
                         config=json.loads(Path(command[-1]).read_text(encoding='utf8'))
                         self.assertEqual(config['start_mode'],'online' if mode in ('team','coop') else 'click')
                         (destination/'armed').touch()
@@ -56,6 +58,12 @@ class TaskLoggingTests(unittest.TestCase):
                         worker_streams.append(kwargs['stdout'])
                         return process
                     selection=SimpleNamespace(song={'title':'测试歌曲'},difficulty='easy')
+                    def disable_effects(*,fresh):
+                        self.assertFalse(fresh)
+                        flow.verify_chart_start.assert_called_once_with(1,selection,0)
+                        self.assertTrue((destinations[0]/'armed').exists())
+                        self.assertFalse((destinations[0]/'start').exists())
+                    flow.disable_mv.side_effect=disable_effects
                     row={}
                     with patch('chart_live.subprocess.Popen',side_effect=spawn), \
                             contextlib.redirect_stdout(io.StringIO()) as output:
@@ -71,11 +79,42 @@ class TaskLoggingTests(unittest.TestCase):
                     self.assertEqual(Path(worker_streams[0].name).read_text(encoding='utf8'),
                                      'worker output\n')
                     flow.verify_chart_start.assert_called_once_with(1,selection,0)
-                    if mode in ('team','coop'):
-                        flow.disable_mv.assert_not_called()
-                    else:
-                        flow.disable_mv.assert_called_once_with()
+                    flow.disable_mv.assert_called_once_with(fresh=False)
                     process.terminate.assert_not_called()
+
+    def test_effects_failure_never_authorizes_any_chart_mode(self):
+        for mode in ('free','tour_free','tour_fixed','team','coop','challenge'):
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as folder:
+                flow=SimpleNamespace(
+                    settings=ChartOptions.parse({'mode':mode}),output=Path(folder),
+                    report={'completed_rounds':0,'attempts':1},
+                    controller=SimpleNamespace(info={}))
+                for name in ('wait_ready','check_stop','save_frame','pause',
+                             'monitor_online_worker','submit_online_ready'):
+                    setattr(flow,name,Mock())
+                flow.verify_chart_start=Mock(return_value=0)
+                flow.disable_mv=Mock(side_effect=FlowError('背景未关闭'))
+                flow.playback_start_mode=lambda:ChartLiveFlow.playback_start_mode(flow)
+                process=Mock()
+                process.poll.return_value=None
+                destinations=[]
+                def spawn(command,**kwargs):
+                    destination=Path(command[-1]).parent
+                    destinations.append(destination)
+                    (destination/'armed').touch()
+                    return process
+                selection=SimpleNamespace(song={'title':'测试歌曲'},difficulty='easy')
+                row={}
+                with patch('chart_live.subprocess.Popen',side_effect=spawn):
+                    with self.assertRaisesRegex(FlowError,'背景未关闭'):
+                        ChartLiveFlow.play_chart(flow,1,selection,{'duration':1},0,row)
+                flow.verify_chart_start.assert_called_once_with(1,selection,0)
+                flow.disable_mv.assert_called_once_with(fresh=False)
+                self.assertFalse((destinations[0]/'start').exists())
+                self.assertTrue((destinations[0]/'stop').exists())
+                self.assertNotIn('status',row)
+                flow.submit_online_ready.assert_not_called()
+                flow.save_frame.assert_not_called()
 
     def test_protocol_prefixes_each_line_and_flushes(self):
         with patch('builtins.print') as output:
