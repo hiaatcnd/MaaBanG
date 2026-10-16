@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import subprocess
 import hashlib
+from importlib.metadata import version
 
 package = Path(sys.argv[1]).resolve()
 os.chdir(package)
@@ -25,7 +26,8 @@ assert Path(os.environ["TEMP"]).resolve() == Path.home() / ".maabang" / "temp"
 from chart_store import ChartStore
 assert ChartStore().directory == data_root() / 'cache/charts'
 assert Path("resource/model/ocr/rec.onnx").is_file()
-for library in ("MaaFramework.dll", "MaaAgentClient.dll", "MaaAgentServer.dll"):
+for library in ("MaaFramework.dll", "MaaToolkit.dll", "MaaAdbControlUnit.dll",
+                "MaaUtils.dll", "MaaAgentClient.dll", "MaaAgentServer.dll"):
     native = package / "runtimes/win-x64/native" / library
     python_native = package / "python/Lib/site-packages/maa/bin" / library
     assert hashlib.sha256(native.read_bytes()).digest() == hashlib.sha256(python_native.read_bytes()).digest(), library
@@ -36,7 +38,10 @@ import costume_unlock
 import costume_policy
 import main
 
-assert Library.version().lstrip("v") == "5.12.2", Library.version()
+assert version("maafw") == "5.12.3", version("maafw")
+assert Library.version().lstrip("v") == "5.12.3", Library.version()
+assert Library.framework_libpath.resolve().is_relative_to(package / "python/Lib/site-packages/maa/bin")
+assert Library.toolkit_libpath.resolve().is_relative_to(package / "python/Lib/site-packages/maa/bin")
 Toolkit.init_option(str(package / "debug"))
 resource = Resource()
 assert resource.post_bundle(str(package / "resource")).wait().succeeded
@@ -60,4 +65,4 @@ finally:
     except subprocess.TimeoutExpired:
         process.terminate()
         process.wait(timeout=5)
-print("Package smoke passed: embedded Python, Maa 5.12.2, resources + OCR, Agent handshake")
+print("Package smoke passed: embedded Python, Maa 5.12.3 + Toolkit, resources + OCR, Agent handshake")

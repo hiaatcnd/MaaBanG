@@ -1,7 +1,7 @@
 ﻿ID,中国服歌名,乐队,可用,时长(秒),easy,normal,hard,expert,special,来源
 1,Yes! BanG_Dream!,Poppin'Party,True,120.048,5,10,17,22,26,https://bestdori.com/info/songs/1
 2,STAR BEAT!〜ホシノコドウ〜,Poppin'Party,True,132.816,7,14,20,25,26,https://bestdori.com/info/songs/2
-3,ぽっぴん'しゃっふる,Poppin'Party,True,133.104,7,11,18,24,,https://bestdori.com/info/songs/3
+3,ぽっぴん'しゃっふる,Poppin'Party,True,133.104,7,11,18,24,27,https://bestdori.com/info/songs/3
 4,ティアドロップス,Poppin'Party,True,150.312,9,13,19,25,27,https://bestdori.com/info/songs/4
 5,夏空 SUN! SUN! SEVEN!,Poppin'Party,True,146.184,8,12,19,25,,https://bestdori.com/info/songs/5
 8,空色デイズ,Poppin'Party,True,104.928,5,12,20,26,27,https://bestdori.com/info/songs/8
@@ -25,7 +25,7 @@
 27,True color,Afterglow,True,123.048,6,13,18,25,26,https://bestdori.com/info/songs/27
 28,Scarlet Sky,Afterglow,True,108.72,6,12,19,26,26,https://bestdori.com/info/songs/28
 29,BLACK SHOUT,Roselia,True,110.016,6,13,18,25,26,https://bestdori.com/info/songs/29
-30,Re:birth day,Roselia,True,124.296,7,11,21,29,,https://bestdori.com/info/songs/30
+30,Re:birth day,Roselia,True,124.296,7,11,21,29,26,https://bestdori.com/info/songs/30
 31,LOUDER,Roselia,True,109.819,7,12,21,27,,https://bestdori.com/info/songs/31
 32,しゅわりん☆どり～みん,Pastel＊Palettes,True,102.336,6,12,19,24,25,https://bestdori.com/info/songs/32
 33,パスパレボリューションず☆,Pastel＊Palettes,True,105.072,7,12,19,25,,https://bestdori.com/info/songs/33
@@ -106,7 +106,7 @@
 118,Neo-Aspect,Roselia,True,116.736,9,14,21,26,,https://bestdori.com/info/songs/118
 119,Legendary,Roselia,True,110.904,8,13,20,25,,https://bestdori.com/info/songs/119
 120,DAYS,Poppin'Party,True,128.064,8,13,20,25,25,https://bestdori.com/info/songs/120
-121,COMIC PANIC!!!,Afterglow,True,110.352,11,15,21,26,,https://bestdori.com/info/songs/121
+121,COMIC PANIC!!!,Afterglow,True,110.352,11,15,21,26,28,https://bestdori.com/info/songs/121
 122,二重の虹（ダブル レインボウ）,Poppin'Party,True,109.2,9,14,20,25,,https://bestdori.com/info/songs/122
 123,ふわふわ☆ゆめいろサンドイッチ,"Hello, Happy World！",True,119.136,7,13,19,24,,https://bestdori.com/info/songs/123
 124,みくみくにしてあげる♪【してやんよ】,Pastel＊Palettes,True,102.816,8,14,20,26,,https://bestdori.com/info/songs/124
@@ -266,7 +266,7 @@
 279,flame of hope,Morfonica,True,111.84,10,15,23,27,27,https://bestdori.com/info/songs/279
 280,えがお、み～っけた！,"Hello, Happy World！",True,109.992,7,12,18,24,,https://bestdori.com/info/songs/280
 281,右肩の蝶,Roselia,True,118.344,7,13,21,25,,https://bestdori.com/info/songs/281
-282,深海少女,Morfonica,True,125.304,8,13,20,25,,https://bestdori.com/info/songs/282
+282,深海少女,Morfonica,True,125.304,8,13,20,25,26,https://bestdori.com/info/songs/282
 283,劣等上等,RAISE A SUILEN,True,138.816,10,15,22,28,,https://bestdori.com/info/songs/283
 284,I knew it!,Afterglow,True,102.672,9,14,22,27,,https://bestdori.com/info/songs/284
 285,ウィーアー！,"Hello, Happy World！",True,113.64,9,14,21,25,,https://bestdori.com/info/songs/285
@@ -304,7 +304,7 @@
 317,夜に駆ける,Pastel＊Palettes,True,121.896,9,14,21,26,,https://bestdori.com/info/songs/317
 318,イエスタデイ,Poppin'Party,True,103.44,7,12,19,24,,https://bestdori.com/info/songs/318
 319,サムライハート(Some Like It Hot!!),Afterglow,True,133.872,8,14,22,26,,https://bestdori.com/info/songs/319
-320,SHINY DAYS,"Hello, Happy World！",True,115.704,7,12,19,23,,https://bestdori.com/info/songs/320
+320,SHINY DAYS,"Hello, Happy World！",True,115.704,7,12,19,23,26,https://bestdori.com/info/songs/320
 321,アゲハ蝶,Morfonica,True,126.264,7,13,20,25,23,https://bestdori.com/info/songs/321
 322,DAYBREAK FRONTLINE,RAISE A SUILEN,True,126.24,7,13,21,26,,https://bestdori.com/info/songs/322
 323,Synchrogazer,Roselia,True,106.464,9,15,22,26,,https://bestdori.com/info/songs/323
@@ -357,7 +357,7 @@
 373,Our Carol,Roselia,True,102.288,6,12,19,24,,https://bestdori.com/info/songs/373
 374,Fateful...,Morfonica,True,110.976,7,13,19,24,,https://bestdori.com/info/songs/374
 375,Embrace of light,RAISE A SUILEN,True,115.32,6,11,18,22,,https://bestdori.com/info/songs/375
-376,ベノム,Afterglow,True,105.84,8,14,20,25,,https://bestdori.com/info/songs/376
+376,ベノム,Afterglow,True,105.84,8,14,20,25,27,https://bestdori.com/info/songs/376
 377,優勝 feat.Afterglow,FLOW×美竹兰,False,108.072,7,14,21,25,,https://bestdori.com/info/songs/377
 378,COLORS,Afterglow×FLOW,True,112.128,7,12,19,25,,https://bestdori.com/info/songs/378
 379,Keep the Heat and Fire Yourself Up,RAISE A SUILEN,True,113.856,9,14,21,26,,https://bestdori.com/info/songs/379
@@ -578,7 +578,7 @@
 603,フレっとパレットFight Song!!,Pastel＊Palettes,True,108.48,7,13,19,25,,https://bestdori.com/info/songs/603
 604,トリドリ＊パレット,Pastel＊Palettes,True,111.96,8,13,20,24,,https://bestdori.com/info/songs/604
 605,メランコリックララバイ,Morfonica,True,105.48,8,14,21,25,,https://bestdori.com/info/songs/605
-606,V.I.P MONSTER,RAISE A SUILEN,True,99.12,8,14,23,28,,https://bestdori.com/info/songs/606
+606,V.I.P MONSTER,RAISE A SUILEN,True,99.12,8,14,23,28,29,https://bestdori.com/info/songs/606
 607,サンバロハッピ〜！,"Hello, Happy World！",True,106.104,6,12,19,25,,https://bestdori.com/info/songs/607
 608,SOUVENIR,Poppin'Party,True,105.624,6,13,20,25,,https://bestdori.com/info/songs/608
 609,Floral Haven,Roselia,True,123.552,9,14,22,27,,https://bestdori.com/info/songs/609
@@ -752,6 +752,8 @@
 780,許婚っきゅん,"Hello, Happy World！",True,118.416,7,13,20,25,,https://bestdori.com/info/songs/780
 781,過去を喰らう,MyGO!!!!!,True,129.048,7,14,23,27,,https://bestdori.com/info/songs/781
 782,Game Changer,Poppin'Party,True,141.264,12,16,25,29,30,https://bestdori.com/info/songs/782
+783,COMIC PANIC!!!(平行歌曲),PINKISH!!!!,True,110.352,11,15,21,26,28,https://bestdori.com/info/songs/783
+784,灼熱 Bonfire!(平行歌曲),GO OUR WAYS！,True,105.36,7,13,21,26,27,https://bestdori.com/info/songs/784
 786,ときめきエクスペリエンス！ (月岛麻里奈ver.),月岛麻里奈,True,106.728,7,13,20,25,26,https://bestdori.com/info/songs/786
 790,ときめきエクスペリエンス！ (月岛麻里奈ver.),月岛麻里奈,True,106.728,7,13,20,25,,https://bestdori.com/info/songs/790
 10001,彩虹节拍,肥皂菌×易言×音阙诗听/赵方婧×西瓜Kune,False,94.248,7,14,18,26,26,https://bestdori.com/info/songs/10001

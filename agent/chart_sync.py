@@ -274,20 +274,30 @@ class PhaseReacquirer:
     multi-note match before the caller changes its origin and seeks future heads.
     """
     timeout = 1.25
+    max_frame_age = .100
 
-    def __init__(self, tracker, started, correction, stall):
+    def __init__(self, tracker, started, correction, stall, *, evidence_since=None):
         if not all(np.isfinite(v) for v in (started, correction, stall)) or not 0 < stall <= 2:
             raise ValueError('Invalid phase recovery')
+        evidence_since = started if evidence_since is None else evidence_since
+        if not np.isfinite(evidence_since) or evidence_since > started:
+            raise ValueError('Invalid phase evidence boundary')
         self.tracker = tracker
+        # Admission and timeout use different clocks: captures made during this
+        # stall are fresh evidence, but must not consume the new recovery budget.
         self.started = started
+        self.evidence_since = evidence_since
         self.low = correction-.050
         self.high = correction+min(.500, max(.250, stall+.150))
         self.rows = []
         self.result = None
         self.last_stamp = float('-inf')
 
-    def observe_positions(self, timestamp, positions):
-        if (timestamp < self.started or timestamp-self.started > self.timeout or
+    def observe_positions(self, timestamp, positions, *, evaluate=True, received_at=None):
+        received_at = timestamp if received_at is None else received_at
+        if (not all(np.isfinite(v) for v in (timestamp, received_at)) or
+                received_at < timestamp or timestamp < self.evidence_since or
+                received_at-self.started > self.timeout or
                 timestamp <= self.last_stamp):
             return None
         self.last_stamp = timestamp
@@ -303,6 +313,12 @@ class PhaseReacquirer:
             ids = np.where((errors >= self.low) & (errors <= self.high))[0]
             self.rows.append((timestamp, lane, [(int(i), float(errors[i])) for i in ids]))
         self.rows = [r for r in self.rows if timestamp-r[0] <= 1.]
+        # A cached batch must be evaluated only after its newest observation;
+        # an early match must not hide a later change in the game's phase.
+        # OCR or lock contention can delay a live frame just like cached history.
+        # Such frames can contribute evidence, but cannot confirm the current phase.
+        if not evaluate or received_at-timestamp > self.max_frame_age:
+            return None
         # Do not borrow pre-stall samples: they can otherwise keep reporting a
         # reassuring old correction for several seconds after synchronization is lost.
         if len(self.rows) < 6 or len({r[0] for r in self.rows}) < 4:
@@ -317,6 +333,7 @@ class PhaseReacquirer:
                     i, error = matches[0]
                     samples.append((stamp, lane, i, error))
             if (not ChartPhaseTracker._supported(samples, 6, 4) or
+                    not any(s[0] == timestamp for s in samples) or
                     len(samples) < len(self.rows)*.75):
                 continue
             grouped = {}

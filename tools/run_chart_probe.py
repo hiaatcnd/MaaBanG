@@ -10,6 +10,7 @@ import threading
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
+from playback_diagnostics import finalize_playback, timed_touch
 
 
 def main():
@@ -18,6 +19,8 @@ def main():
     parser.add_argument('--address', required=True)
     parser.add_argument('--controller-config', type=Path,
                         help='Optional MaaFramework connection config JSON; otherwise discover the exact ADB address')
+    parser.add_argument('--input-methods',type=lambda value:int(value,0),
+                        help='Explicit per-contact input mask; omitted uses full official device discovery')
     parser.add_argument('--chart', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True, help='New output directory')
     parser.add_argument('--offset-ms', type=float, default=0)
@@ -76,11 +79,13 @@ def main():
     from chart_sync import locate_note_y, FirstNoteLock, stage_state, ChartPhaseTracker, SlewedClock
 
     Toolkit.init_option(args.output)
-    from playback_controller import controller_config
+    from playback_controller import playback_options
     config=json.loads(args.controller_config.read_text(encoding='utf8')) if args.controller_config else {}
-    _,_,cfg=controller_config({'type':'adb','adb_path':args.adb,'adb_serial':args.address,'config':config})
+    backend=playback_options({'type':'adb','adb_path':args.adb,'adb_serial':args.address,
+                              'input_methods':args.input_methods,'config':config})
+    cfg=backend.config
     controller = AdbController(args.adb, args.address, screencap_methods=MaaAdbScreencapMethodEnum.EmulatorExtras,
-                               input_methods=MaaAdbInputMethodEnum.Maatouch, config=cfg)
+                               input_methods=backend.input_methods, config=cfg)
     controller.set_screenshot_target_short_side(720)
     if not controller.post_connection().wait().succeeded:
         raise RuntimeError('Controller connection failed')
@@ -154,7 +159,10 @@ def main():
                               'capture_limit_ms':40,'sample_window_seconds':2.5}
                              if args.continuous_sync else None),
               'anchor':{'time':anchor_time,'lane':anchor_lane,'color':anchor_color},
-              'observations':[], 'events':[], 'lock':None}
+              'observations':[], 'events':[], 'lock':None,
+              'backend':{'allowed_input_methods':backend.input_methods,
+                         'input_source':backend.input_source,'active_backend':None,
+                         'selection_evidence':'not_exposed_by_framework','runtime_fallback':False}}
     recent_images = []
     active = set()
     lock = FirstNoteLock(travel_scale=.245 if args.continuous_sync else None)
@@ -164,8 +172,12 @@ def main():
     stage_seen = None
     start = time.perf_counter()
     try:
-        if not controller.post_click(1130,616).wait().succeeded:
-            raise RuntimeError('Start input failed')
+        try:
+            if not controller.post_click(1130,616).wait().succeeded:
+                raise RuntimeError('Start input failed')
+        except (Exception,KeyboardInterrupt):
+            report['input_failed']=True
+            raise
         while time.perf_counter()-start < 25:
             before = time.perf_counter()
             if not controller.post_screencap().wait().succeeded:
@@ -234,19 +246,17 @@ def main():
                 raise RuntimeError('Timing overrun; refusing to replay stale notes')
             if event.action == 'down':
                 active.add(event.contact)
-                job = controller.post_touch_down(round(197+147.7*event.lane+event.dx),round(event.y),contact=event.contact)
-            elif event.action == 'move':
-                job = controller.post_touch_move(round(197+147.7*event.lane+event.dx),round(event.y),contact=event.contact)
-            else:
-                job = controller.post_touch_up(event.contact)
-            ok = job.wait().succeeded
-            report['events'].append({**asdict(event),'late_ms':(sent-target)*1000,
-                                     'phase_ms':correction*1000,
-                                     'api_ms':(time.perf_counter()-sent)*1000,'ok':ok})
-            if not ok:
-                raise RuntimeError('Touch input failed')
-            if event.action == 'up':
+            elif event.action == 'up':
                 active.discard(event.contact)
+            measured = {**asdict(event),'late_ms':(sent-target)*1000,'phase_ms':correction*1000}
+            report['events'].append(measured)
+            try:
+                if not timed_touch(controller,event.action,round(197+147.7*event.lane+event.dx),
+                                   round(event.y),event.contact,measured):
+                    raise RuntimeError('Touch input failed')
+            except (Exception,KeyboardInterrupt):
+                report['input_failed']=True
+                raise
         report['status'] = 'input_complete_unverified'
         print('Input finished; result still requires visual verification.', flush=True)
     except (Exception, KeyboardInterrupt) as exc:
@@ -255,20 +265,17 @@ def main():
         print('Probe stopped:', repr(exc), flush=True)
     finally:
         observer_stop.set()
-        # Include attempted downs with uncertain acknowledgments, but never send
-        # an extra up for an already released contact on the Android backend.
-        for contact in tuple(active):
-            controller.post_touch_up(contact).wait()
-        if observer_thread is not None:
-            observer_thread.join(timeout=5)
-        if report['status'] == 'failed':
-            controller.post_click(1240,50).wait()  # stage pause; never a paid recovery button
-        for index, frame in recent_images:
-            Image.fromarray(frame[:,:,::-1]).save(args.output/f'note_{index:04}.png')
         report['track'] = lock.points
-        (args.output/'report.json').write_text(json.dumps(report,indent=2),encoding='utf8')
-        if controller.post_screencap().wait().succeeded:
-            Image.fromarray(controller.cached_image[:,:,::-1]).save(args.output/'after.png')
+        def save_diagnostics():
+            if observer_thread is not None:
+                observer_thread.join(timeout=5)
+            for index, frame in recent_images:
+                Image.fromarray(frame[:,:,::-1]).save(args.output/f'note_{index:04}.png')
+            if controller.post_screencap().wait().succeeded:
+                Image.fromarray(controller.cached_image[:,:,::-1]).save(args.output/'after.png')
+        finalize_playback(controller,active,report,args.output/'report.json',
+            allow_pause=stage_seen is not None and report['status']=='failed',
+            save_diagnostics=save_diagnostics,failure_status='failed')
     if report['status'] == 'failed':
         return 1
     time.sleep(12)

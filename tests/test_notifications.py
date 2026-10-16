@@ -33,6 +33,12 @@ def inheritance_notice():
 
 
 class NotificationTests(unittest.TestCase):
+    def test_reward_choice_is_not_an_informational_confirmation(self):
+        for choice in ('请选择道具。','选择'):
+            f=self.flow([hit('每日演出报酬',400,160),hit(choice,440,300),hit('确定',606,521)])
+            self.assertFalse(f.dismiss_notifications())
+            f.tap_hit.assert_not_called()
+
     @patch('notifications.time.sleep')
     def test_recorded_recruit_inheritance_result_is_acknowledged(self,_):
         frame,hits=inheritance_notice()

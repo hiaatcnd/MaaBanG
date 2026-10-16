@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.request
 import zipfile
 from build_ui import build_ui
@@ -15,6 +16,37 @@ from package_manifest import build_updater, write_manifest
 from song_interface import install_bindings
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def release_archive(name, spec, cache):
+    """A dependency upgrade must not reuse an archive from the previous pin."""
+    archive = cache / f"{name}-{spec['sha256']}.zip"
+    if not archive.exists():
+        legacy = cache / f"{name}.zip"
+        if legacy.exists() and hashlib.sha256(legacy.read_bytes()).hexdigest() == spec["sha256"]:
+            shutil.copy2(legacy, archive)
+        else:
+            urllib.request.urlretrieve(spec["url"], archive)
+    if hashlib.sha256(archive.read_bytes()).hexdigest() != spec["sha256"]:
+        raise ValueError(f"Checksum mismatch: {archive}")
+    return archive
+
+
+def install_native_runtime(archive, package):
+    # A fresh extraction prevents removed DLLs/plugins from surviving an upgrade
+    # in the shared release cache. The destination belongs to this new package.
+    with tempfile.TemporaryDirectory(prefix="maabang-framework-") as folder:
+        framework = Path(folder)
+        with zipfile.ZipFile(archive) as source:
+            source.extractall(framework)
+        shutil.rmtree(package / "runtimes")
+        shutil.copytree(framework / "bin", package / "runtimes/win-x64/native",
+                        ignore=shutil.ignore_patterns("plugins", "*MaaPiCli*", "*.node"))
+        plugins = package / "plugins/win-x64"
+        if plugins.exists():
+            shutil.rmtree(plugins)
+        shutil.copytree(framework / "bin/plugins", plugins)
+        shutil.copytree(framework / "share/MaaAgentBinary", package / "libs/MaaAgentBinary", dirs_exist_ok=True)
 
 
 def build(version):
@@ -34,22 +66,16 @@ def build(version):
     package = release / "app"
     package.mkdir(parents=True)
     for name, spec in manifest.items():
-        archive = cache / f"{name}.zip"
-        if not archive.exists():
-            urllib.request.urlretrieve(spec["url"], archive)
-        if hashlib.sha256(archive.read_bytes()).hexdigest() != spec["sha256"]:
-            raise ValueError(f"Checksum mismatch: {archive}")
-        dest = package if name == "mfaa" else package / "python" if name == "python" else cache / "framework"
+        archive = release_archive(name, spec, cache)
+        if name == "maafw":
+            install_native_runtime(archive, package)
+            continue
+        dest = package if name == "mfaa" else package / "python"
         with zipfile.ZipFile(archive) as source:
             source.extractall(dest)
-    # Keep upstream runtime/dependency versions; replace only our patched UI core.
+    # Keep upstream managed dependencies and use our verified Framework/Toolkit
+    # runtime pin for both the UI and Python wheel.
     shutil.copy2(build_ui(), package / 'libs/MFAAvalonia.Core.dll')
-    shutil.rmtree(package / "runtimes")
-    framework = cache / "framework"
-    shutil.copytree(framework / "bin", package / "runtimes/win-x64/native",
-                    ignore=shutil.ignore_patterns("plugins", "*MaaPiCli*", "*.node"))
-    shutil.copytree(framework / "bin/plugins", package / "plugins/win-x64", dirs_exist_ok=True)
-    shutil.copytree(framework / "share/MaaAgentBinary", package / "libs/MaaAgentBinary", dirs_exist_ok=True)
     shutil.copytree(ROOT / "assets/resource", package / "resource")
     if not (package / "resource/model/ocr").exists():
         shutil.copytree(ROOT / "assets/MaaCommonAssets/OCR/ppocr_v6/small", package / "resource/model/ocr")

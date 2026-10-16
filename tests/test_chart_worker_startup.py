@@ -11,6 +11,7 @@ from unittest.mock import Mock, patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from chart_worker import initialize_playback_backend, play
+from playback_controller import PlaybackOptions
 
 
 def fake_backends(failure=None, bad_shape=None):
@@ -20,7 +21,7 @@ def fake_backends(failure=None, bad_shape=None):
         def wait():
             calls.append('wait:'+name)
             return SimpleNamespace(succeeded=name!=failure)
-        return SimpleNamespace(wait=wait)
+        return SimpleNamespace(job_id=name,wait=wait)
     controllers=[]
     for name in ('touch','observer'):
         controllers.append(SimpleNamespace(
@@ -64,7 +65,8 @@ class ChartWorkerStartupTests(unittest.TestCase):
         with patch('maa.controller.AdbController',side_effect=controllers), \
                 patch('maa.resource.Resource',return_value=resource), \
                 patch('maa.tasker.Tasker'),patch('maa.toolkit.Toolkit.init_option'), \
-                patch('chart_worker.controller_config',return_value=('unused','unused',{})):
+                patch('chart_worker.playback_options',return_value=PlaybackOptions(
+                    'unused','unused',{},12,'toolkit_discovery',-9,-1)):
             exit_code=play(config)
         report=json.loads((destination/'playback.json').read_text(encoding='utf8'))
         for controller in controllers:
@@ -103,6 +105,14 @@ class ChartWorkerStartupTests(unittest.TestCase):
             self.assertTrue(all(value>=0 for value in timings.values()))
             self.assertGreaterEqual(timings['ready_total'],timings['chart_compile']+timings['controllers_and_resource'])
             self.assertIn('已停止',report['error'])
+            backend=report['backend']
+            self.assertEqual(backend['allowed_input_methods'],12)
+            self.assertIsNone(backend['active_backend'])
+            self.assertFalse(backend['runtime_fallback'])
+            self.assertEqual([row['role'] for row in backend['connections']],['touch','observer'])
+            self.assertTrue(all(row['connected'] for row in backend['connections']))
+            self.assertEqual([row['job_id'] for row in backend['connections']],
+                             ['touch.connect','observer.connect'])
 
 
 if __name__=='__main__':

@@ -140,15 +140,6 @@ class CPLiveFlow(ChartLiveFlow):
         self.report['cp_balance']=balance
         return (selection,),charts
 
-    def disable_mv(self):
-        self.wait_ready()
-        # This event's confirmation page has only the 3D Cut in checkbox.
-        if self.pink(self.image[637:663,487:513]):
-            self.tap(500,650)
-            self.wait_ready()
-        if self.pink(self.image[637:663,487:513]):
-            raise FlowError('挑战演出3D Cut in未关闭')
-
     def verify_chart_start(self,index,selection,amount):
         if amount!=self.settings.cp:
             raise FlowError('CP消耗参数不一致')

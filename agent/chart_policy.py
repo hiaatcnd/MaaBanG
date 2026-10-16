@@ -18,6 +18,8 @@ JITTER_PROFILES = {
 COOP_ROOMS = {'free':'自由房间', 'beginner':'新手房间',
               'master':'首席房间', 'legend':'传说房间'}
 COOP_ROOM_GROUPS = {'normal':'普通', 'special':'特别'}
+VERSUS_ROOMS = {'event':'活动歌曲房间', 'free':'自由选歌房间'}
+ONLINE_MODES = ('team', 'coop', 'versus')
 
 
 @dataclass(frozen=True)
@@ -63,11 +65,14 @@ class ChartOptions:
     fever: str = 'off'
     from_favorites: bool = False
     avoid_full_combo: bool = False
+    versus_room: str = 'event'
+    versus_song: str = ''
+    versus_room_group: str = 'normal'
 
     @classmethod
     def parse(cls, data):
         mode = data.get('mode', 'free')
-        if mode not in ('free', 'tour_free', 'tour_fixed', 'team', 'coop', 'challenge'):
+        if mode not in ('free', 'tour_free', 'tour_fixed', *ONLINE_MODES, 'challenge'):
             raise ValueError('未知谱面演出模式')
         jitter = data.get('jitter', 'small')
         avoid_full_combo = data.get('avoid_full_combo', False)
@@ -87,7 +92,7 @@ class ChartOptions:
         rounds = None if limit in ('', None) else number(limit, '最大演出次数', 999)
         if rounds == 0:
             raise ValueError('最大演出次数请留空或填写 1–999')
-        online = mode in ('team', 'coop')
+        online = mode in ONLINE_MODES
         count = 1 if mode == 'free' or online or challenge else 3
         difficulties = tuple(data.get(f'difficulty{i}', 'expert') for i in range(1, count+1))
         if any(d not in DIFFICULTIES for d in difficulties):
@@ -103,10 +108,22 @@ class ChartOptions:
                 raise ValueError('未知协力房间类型')
             if coop_song:
                 coop_song = resolve_song(coop_song)['id']
+        versus_room = data.get('versus_room', 'event')
+        versus_song = str(data.get('versus_song', '')).strip()
+        versus_room_group = data.get('versus_room_group', 'normal')
+        if mode == 'versus':
+            if versus_room not in VERSUS_ROOMS or versus_room_group not in COOP_ROOM_GROUPS:
+                raise ValueError('未知竞演房间类型')
+            if versus_room == 'event':
+                # Hidden free-room choices must not constrain the event song.
+                versus_song = ''
+            elif versus_song:
+                versus_song = resolve_song(versus_song)['id']
         return cls(mode, selections, difficulties, jitter, fire, shortage, rounds,
                    cp, str(data.get('cp_song', '')).strip(), coop_room, coop_room_group, coop_song,
                    fever_option(data.get('fever', 'off')),
-                   favorites_option(data.get('from_favorites', False)), avoid_full_combo)
+                   favorites_option(data.get('from_favorites', False)), avoid_full_combo,
+                   versus_room, versus_song, versus_room_group)
 
     @property
     def songs_per_round(self):
@@ -116,6 +133,7 @@ class ChartOptions:
 OPTION_DEFAULTS = dict(mode='free', jitter='small', fire=1, shortage='stop', max_rounds='', cp=200, cp_song='', fever='off',
                        coop_room='free', coop_room_group='normal', coop_song='', from_favorites=False,
                        avoid_full_combo=False,
+                       versus_room='event', versus_song='', versus_room_group='normal',
                        **{f'song{i}':'306' for i in range(1,4)},
                        **{f'difficulty{i}':'expert' for i in range(1,4)})
 OPTION_NODES = {key: 'CL_'+key for key in OPTION_DEFAULTS}
