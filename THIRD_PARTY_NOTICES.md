@@ -16,3 +16,7 @@ Game screenshots are recognition templates from BanG Dream and remain the proper
 The MaaBanG icon uses Aya Maruyama character artwork as its reference, supplied from https://bestdori.com/assets/cn/characters/resourceset/res016005_rip/card_normal.png, with image-generated badge and wordmark composition. The character and source artwork remain the property of their respective rights holders.
 
 Song metadata in agent/data/songs_cn.json and docs/data/songs_cn.csv comes from Bestdori (https://bestdori.com/info/songs), using its public songs/all.7.json and bands/all.1.json APIs. The snapshot records source URLs and retrieval time. This factual metadata and upstream game assets retain their respective rights; the project's MIT license does not relicense third-party content.
+
+Card identity metadata in agent/data/bestdori.json comes from Bestdori's public cards/all.5.json, characters/main.3.json and bands/main.1.json APIs. Bestdori profile import/export compatibility is based on its public frontend. Game screenshots and recognition templates retain the rights of their respective owners.
+
+The Bestdori tool retrieves public card artwork and skill descriptions from Bestdori cards/{id}.json, skills/all.10.json and assets/cn/characters/resourceset/. These assets and descriptions retain their respective rights and are cached locally without account credentials.

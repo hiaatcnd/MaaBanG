@@ -45,6 +45,8 @@ def build_ui():
     output = cache / 'ui-build'
     shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGUpdate.cs')
     shutil.copy2(ROOT / 'tools/MaaBanGSongCatalog.cs', source_dir / 'MFAAvalonia/Helper/MaaBanGSongCatalog.cs')
+    for filename in ('MaaBanGBestdori.cs', 'MaaBanGBestdoriRunner.cs'):
+        shutil.copy2(ROOT / 'tools' / filename, source_dir / 'MFAAvalonia/Helper' / filename)
     dotnet = os.environ.get('MAABANG_DOTNET', 'dotnet')
     subprocess.run([dotnet, 'build', str(source_dir / 'MFAAvalonia/MFAAvalonia.csproj'),
                     '-c', 'Release', '-r', 'win-x64', '-o', str(output),

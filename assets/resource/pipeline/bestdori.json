@@ -1,0 +1,18 @@
+{
+    "BestdoriProfiles": {
+        "action": "Custom",
+        "custom_action": "BestdoriProfiles"
+    },
+    "BD_MemberStars": {
+        "recognition": "TemplateMatch",
+        "roi": [118, 390, 40, 175],
+        "template": ["mining/MemberStar.png", "mining/MemberStarTrained.png", "mining/MemberStarLarge.png", "bestdori/MemberStarRainbow.png"],
+        "threshold": 0.75,
+        "order_by": "Vertical"
+    },
+    "BD_MasterHeader": {
+        "recognition": "OCR",
+        "roi": [680, 180, 220, 60],
+        "expected": "^星光等级$"
+    }
+}

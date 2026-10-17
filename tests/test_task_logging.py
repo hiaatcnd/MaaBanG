@@ -22,6 +22,7 @@ from daily_tasks import ClaimHomeGifts, ClaimHomeMissions, ExchangeMichelle, Dai
 from live_presets import LivePresets
 from mining import MineFullCombo, MineStories, MineChallenges
 from update_songs import UpdateSongCatalog
+from bestdori import BestdoriProfiles
 
 
 class TaskLoggingTests(unittest.TestCase):
@@ -187,6 +188,11 @@ class TaskLoggingTests(unittest.TestCase):
             elif isinstance(action, (MineFullCombo, MineStories, MineChallenges)):
                 stack.enter_context(patch('mining.MiningOptions.parse'))
                 stack.enter_context(patch.object(action,'flow_type',return_value=flow))
+            elif isinstance(action, BestdoriProfiles):
+                def scan(*args, **kwargs):
+                    execute()
+                    return {'status':'complete'}
+                stack.enter_context(patch('bestdori_desktop.run_scan',side_effect=scan))
             elif isinstance(action, UpdateSongCatalog):
                 refresh=stack.enter_context(patch('update_songs.refresh_catalog'))
                 refresh.side_effect=RuntimeError('测试节点失败') if fail else None
@@ -208,6 +214,7 @@ class TaskLoggingTests(unittest.TestCase):
         }
         interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
         self.assertEqual(set(actions), {task['entry'] for task in interface['task']})
+        actions['BestdoriProfiles'] = BestdoriProfiles  # Tool-only game-reading action.
         for name, factory in actions.items():
             for fail in (False,True):
                 with self.subTest(task=name, fail=fail):
