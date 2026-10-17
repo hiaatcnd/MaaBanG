@@ -36,6 +36,7 @@ public sealed class MaaBanGBestdoriClient
 {
     private Process? _process;
     private HttpClient? _http;
+    private readonly SemaphoreSlim _operations = new(1, 1);
     public async Task StartAsync(string? python = null, string? script = null)
     {
         var start = new ProcessStartInfo
@@ -75,12 +76,21 @@ public sealed class MaaBanGBestdoriClient
     public async Task<JObject> CallAsync(string action, JObject? body = null)
     {
         var http = _http ?? throw new IOException("档案工具尚未连接");
-        using var response = body == null ? await http.GetAsync("/api/" + action) :
-            await http.PostAsync("/api/" + action, new StringContent(body.ToString(Formatting.None), Encoding.UTF8, "application/json"));
-        var value = JObject.Parse(await response.Content.ReadAsStringAsync());
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException(value.Value<string>("error") ?? "操作未完成");
-        return value;
+        // Autosave can already be in flight when a user starts an operation.
+        // Match the service's mutation lock, without delaying scan cancellation,
+        // scan completion, public card media or read-only state polling.
+        var serialize = body != null && action is not ("card" or "cancel" or "scan_finish");
+        if (serialize) await _operations.WaitAsync();
+        try
+        {
+            using var response = body == null ? await http.GetAsync("/api/" + action) :
+                await http.PostAsync("/api/" + action, new StringContent(body.ToString(Formatting.None), Encoding.UTF8, "application/json"));
+            var value = JObject.Parse(await response.Content.ReadAsStringAsync());
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException(value.Value<string>("error") ?? "操作未完成");
+            return value;
+        }
+        finally { if (serialize) _operations.Release(); }
     }
 
     public void Disconnect()

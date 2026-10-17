@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +23,44 @@ using Newtonsoft.Json.Linq;
 
 class Program
 {
+    sealed class PendingSaveHandler : HttpMessageHandler
+    {
+        public readonly List<string> Actions = new();
+        public readonly TaskCompletionSource ReleaseSave = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var action = request.RequestUri!.AbsolutePath.Split('/').Last();
+            Actions.Add(action);
+            if (action == "cache_review") await ReleaseSave.Task.WaitAsync(cancellationToken);
+            return new HttpResponseMessage(action == "import" ? HttpStatusCode.BadRequest : HttpStatusCode.OK)
+            { Content = new StringContent(action == "import" ? "{\"error\":\"invalid fixture\"}" : "{}") };
+        }
+    }
+    static void VerifyPendingSave()
+    {
+        using var handler = new PendingSaveHandler();
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1") };
+        var client = new MaaBanGBestdoriClient();
+        typeof(MaaBanGBestdoriClient).GetField("_http", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(client, http);
+        var save = client.CallAsync("cache_review", new JObject());
+        var select = client.CallAsync("cloud_base", new JObject());
+        try
+        {
+            Assert(handler.Actions.SequenceEqual(new[] { "cache_review" }), "cloud selection overlaps pending autosave");
+            Wait(client.CallAsync("cancel", new JObject()));
+            Wait(client.CallAsync("card", new JObject()));
+            Wait(client.CallAsync("state"));
+            Assert(!select.IsCompleted, "cloud selection did not wait for autosave");
+            Assert(handler.Actions.SequenceEqual(new[] { "cache_review", "cancel", "card", "state" }), "stop or media blocked behind autosave");
+        }
+        finally { handler.ReleaseSave.TrySetResult(); }
+        Wait(Task.WhenAll(save, select));
+        Assert(handler.Actions.Last() == "cloud_base", "queued cloud selection was lost");
+        try { Wait(client.CallAsync("import", new JObject())); throw new Exception("fixture error was swallowed"); }
+        catch (InvalidOperationException ex) { Assert(ex.Message == "invalid fixture", "unexpected fixture error"); }
+        Wait(client.CallAsync("cloud", new JObject()));
+        Console.WriteLine("PASS: pending autosave serializes cloud selection; stop/media/state remain responsive; errors release queue.");
+    }
     static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
     static T Field<T>(object value, string name) => (T)value.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(value)!;
     static object? Invoke(object value, string name, params object[] args) => value.GetType().GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(value, args);
@@ -60,6 +100,7 @@ class Program
         Window? window = null;
         try
         {
+            VerifyPendingSave();
             Wait(client.StartAsync(args[1], Path.Combine(root, "agent", "bestdori_desktop.py")));
             var view = new MaaBanGBestdoriView();
             typeof(MaaBanGBestdoriView).GetField("_client", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, client);
@@ -247,7 +288,7 @@ class Program
                     var before = (JArray)Wait(mockClient.CallAsync("cloud", new JObject()))["profiles"]!;
                     Field<ComboBox>(view, "_cloud").SelectedIndex = 1;
                     Click(view, "使用所选底稿");
-                    Assert(Field<TextBox>(view, "_name").Text == "要更新的档案", "replacement did not keep cloud name");
+                    Assert(Field<TextBox>(view, "_name").Text == "要更新的档案", "replacement did not keep cloud name: " + Field<TextBlock>(view, "_status").Text);
                     Assert(!Field<Button>(view, "_replace").IsEnabled, "replacement enabled without a preview");
                     rows.Clear();
                     Invoke(view, "AddRow", new JObject { ["id"] = 1703, ["level"] = 60, ["skill"] = 4, ["master"] = 4, ["train"] = 1 });
