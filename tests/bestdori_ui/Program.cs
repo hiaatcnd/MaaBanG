@@ -158,9 +158,13 @@ class Program
             Assert(table.GetVisualDescendants().OfType<TextBlock>().Any(t => ReferenceEquals(t.DataContext,first) && t.Text == first.ReadSkillText), "read reference hidden during editing");
             numericEditor.Text = ""; Dispatcher.UIThread.RunJobs();
             Assert(numericEditor.Text == "", "clearing numeric editor injected the missing-value label");
+            // A pending comparison refresh must not recycle the focused editor.
+            Invoke(view, "RefreshComparison"); Dispatcher.UIThread.RunJobs();
+            Assert(numericEditor.IsFocused && numericEditor.Text == "" && ReferenceEquals(numericEditor.GetVisualRoot(), window),
+                   "comparison refresh interrupted the active numeric editor");
             Capture(window, Path.Combine(output, "target-editing.png"));
             numericEditor.Text = "3"; numericEditor.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
-            Assert(first.Skill == "5" && numericEditor.Text == "5", "escape changed target value");
+            Assert(first.Skill == "5" && numericEditor.Text == "5", $"escape changed target value: row={first.Skill}, editor={numericEditor.Text}");
             numericEditor.Focus(); numericEditor.Text = "9"; numericEditor.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
             Assert(first.Skill == "5", "out-of-range skill accepted");
             numericEditor.Text = "5"; numericEditor.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });

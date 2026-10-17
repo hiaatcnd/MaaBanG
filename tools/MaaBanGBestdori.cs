@@ -741,7 +741,17 @@ public sealed class MaaBanGBestdoriView : UserControl
             row.SetComparison(baseline?.FirstOrDefault(), _policy.SelectedIndex == 0, inScope, baseline?.Count > 1 || duplicateRows.Contains(row.Id),
                 meta?.Value<int>("levelLimit") ?? 60, meta?.Value<int>("trainingLevel") ?? 0);
         }
-        if (!_rowView.IsEditingItem) _rowView.Refresh();
+        // Refresh recreates rows and commits a focused TextBox on lost focus.
+        // Property notifications already update numbers; rebuild only when the
+        // visible membership changes, and defer filtering until editing ends.
+        var visibleRows = _rows.Where(r => _onlyChanged.IsChecked != true || r.HasChanges);
+        if (!_rowView.IsEditingItem && !_rowView.Cast<MaaBanGBestdoriRow>().SequenceEqual(visibleRows))
+        {
+            if (TopLevel.GetTopLevel(_table)?.FocusManager?.GetFocusedElement() is TextBox input
+                && input.Name?.StartsWith("BestdoriTarget", StringComparison.Ordinal) == true)
+            { _comparisonTimer.Stop(); _comparisonTimer.Start(); }
+            else _rowView.Refresh();
+        }
         _comparisonSummary.Text = $"共 {_rows.Count} 张 · 将变化 {_rows.Count(r => r.HasChanges)} 张";
     }
     private static string Local(JToken? names)
