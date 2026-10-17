@@ -43,9 +43,9 @@ jobs:
       - name: Verify Bestdori native tool with packaged runtime
         shell: pwsh
         run: |
-          dotnet build tests/bestdori_ui/BestdoriUi.csproj -c Release -p:BuildProjectReferences=false
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $package = Get-ChildItem install/MaaBanG-*-win-x64 -Directory | Select-Object -First 1
+          dotnet build tests/bestdori_ui/BestdoriUi.csproj -c Release "-p:MaaBanGTestApp=$($package.FullName)/app"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:MAABANG_UI_TEST_OUTPUT = Join-Path $PWD 'debug/bestdori-native-ui'
           $env:MAABANG_UI_CLOUD_FIXTURE = Join-Path $PWD 'tests/bestdori_ui/mock_cloud.py'
           dotnet tests/bestdori_ui/bin/Release/net10.0/win-x64/BestdoriUi.dll (Join-Path $package.FullName 'app') (Join-Path $package.FullName 'app/python/python.exe')
