@@ -57,7 +57,7 @@ try:
     assert client.connect(), "Agent handshake failed"
     assert {"UnlockDefault3DCostumes", "ClaimHomeGifts", "ClaimHomeMissions",
             "ExchangeMichelle", "DailyFreeRecruit", "AutoLive", "ChartLive", "DirectChartLive", "UpdateSongCatalog", "LivePresets",
-            "MineFullCombo", "MineStories", "MineChallenges"}.issubset(client.custom_action_list)
+            "MineFullCombo", "MineStories", "MineChallenges", "BestdoriProfiles"}.issubset(client.custom_action_list)
 finally:
     client.disconnect()
     try:

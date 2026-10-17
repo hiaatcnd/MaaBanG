@@ -26,6 +26,7 @@ def main():
     from direct_chart_live import DirectChartLive
     from live_presets import LivePresets
     from update_songs import UpdateSongCatalog
+    from bestdori import BestdoriProfiles
     import mining
 
     from song_catalog import reload_catalog
@@ -47,6 +48,7 @@ def main():
     catalog_action("DirectChartLive", DirectChartLive)
     AgentServer.custom_action("LivePresets")(LivePresets)
     AgentServer.custom_action("UpdateSongCatalog")(UpdateSongCatalog)
+    AgentServer.custom_action("BestdoriProfiles")(BestdoriProfiles)
     for name in ("MineFullCombo", "MineStories", "MineChallenges"):
         catalog_action(name, getattr(mining, name))
     for name in ("ClaimHomeGifts", "ClaimHomeMissions", "ExchangeMichelle", "DailyFreeRecruit"):

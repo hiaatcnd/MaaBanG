@@ -1,0 +1,60 @@
+--- a/MFAAvalonia/Views/Mobile/RootViewContent.axaml
++++ b/MFAAvalonia/Views/Mobile/RootViewContent.axaml
+@@ -58,6 +58,13 @@
+                                                Icon="{fluent:FluentIcon Icon=TasksApp,
+                                                                 IconVariant=Regular}"
+                                                PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:InstanceContainerView}}" />
++                        <suki:SukiSideMenuItem IsContentMovable="False"
++                                               Header="工具"
++                                               Icon="{fluent:FluentIcon Icon=ContactCard, IconVariant=Regular}">
++                            <suki:SukiSideMenuItem.PageContent>
++                                <helper:MaaBanGBestdoriView />
++                            </suki:SukiSideMenuItem.PageContent>
++                        </suki:SukiSideMenuItem>
+                         <suki:SukiSideMenuItem IsContentMovable="False"
+                                                Header="{markup:I18n {x:Static helper:LangKeys.Monitor}}"
+                                                PageContent="{extensions:ServiceProvider ServiceType={x:Type pages:MonitorView}}">
+--- a/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
++++ b/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
+@@ -40,7 +40,7 @@
+ #pragma warning  disable CS4014 // 由于此调用不会等待，因此在此调用完成之前将会继续执行当前方法.
+ #pragma warning  disable CS1998 // 此异步方法缺少 "await" 运算符，将以同步方式运行。
+ #pragma warning disable CA1416 //  可在 'linux', 'macOS/OSX', 'windows' 上访问此调用站点。
+-public class MaaProcessor
++public partial class MaaProcessor
+ {
+     #region 属性
+ 
+@@ -482,7 +482,7 @@
+         {
+             DispatcherHelper.PostOnMainThread(() =>
+             {
+-                Instances.RootViewModel.IsRunning = Processors.Any(p => p.TaskQueue.Count > 0);
++                Instances.RootViewModel.IsRunning = Processors.Any(p => p.TaskQueue.Count > 0 || Volatile.Read(ref p._bestdoriToolActive) != 0);
+             });
+ 
+             if (_taskQueueTotal <= 0)
+@@ -4494,6 +4494,11 @@
+     public void Stop(MFATask.MFATaskStatus status, bool finished = false, bool onlyStart = false,
+         Action? action = null, bool queueCompleted = false)
+     {
++        if (Volatile.Read(ref _bestdoriToolActive) != 0)
++        {
++            CancelBestdoriScan(action);
++            return;
++        }
+         EnqueueCommand(() => StopInternal(status, finished, onlyStart, queueCompleted, action));
+     }
+ 
+--- a/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
++++ b/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
+@@ -783,7 +783,8 @@
+         // Reflect the user's stop request immediately.  The processor still owns the
+         // actual cancellation/cleanup and prevents another run from starting until its
+         // task chain has unwound.
+-        IsRunning = false;
++        if (!Processor.IsBestdoriToolActive)
++            IsRunning = false;
+         Processor.Stop(MFATask.MFATaskStatus.STOPPED, action: action);
+     }
+ 

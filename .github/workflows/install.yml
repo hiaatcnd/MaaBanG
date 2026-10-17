@@ -29,7 +29,7 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.6.24-ci' }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.7.0-ci' }
           python tools/install.py $version
           python tools/verify_song_interface.py
       - name: Test refreshed catalogs and release sources
@@ -40,6 +40,16 @@ jobs:
         run: |
           python -m pip install jsonschema==4.26.0 referencing==0.37.0
           python tools/validate_schema.py --schema-dir deps/tools --resource-dirs assets/resource --exclude-dirs assets/resource/announcement --interface-files assets/interface.json
+      - name: Verify Bestdori native tool with packaged runtime
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem install/MaaBanG-*-win-x64 -Directory | Select-Object -First 1
+          dotnet build tests/bestdori_ui/BestdoriUi.csproj -c Release "-p:MaaBanGTestApp=$($package.FullName)/app"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:MAABANG_UI_TEST_OUTPUT = Join-Path $PWD 'debug/bestdori-native-ui'
+          $env:MAABANG_UI_CLOUD_FIXTURE = Join-Path $PWD 'tests/bestdori_ui/mock_cloud.py'
+          dotnet tests/bestdori_ui/bin/Release/net10.0/win-x64/BestdoriUi.dll (Join-Path $package.FullName 'app') (Join-Path $package.FullName 'app/python/python.exe')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify upgrade with the packaged runtime
         shell: pwsh
         run: |
