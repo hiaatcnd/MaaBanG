@@ -5,8 +5,8 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
-from chart_policy import OPTION_DEFAULTS, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS
-from live_policy import DIFFICULTIES
+from chart_policy import OPTION_DEFAULTS, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS, CURRENT_SONG
+from live_policy import DIFFICULTIES, REFILL_PRIORITIES
 from interface_descriptions import OPTION_DESCRIPTIONS, INPUT_DESCRIPTIONS, TASK_DESCRIPTIONS
 
 
@@ -48,15 +48,17 @@ def update(interface):
         choice('团队演出','mode','team',['谱面联网难度',*fire_options]),
         choice('协力演出','mode','coop',['谱面协力房间类别','谱面协力房间','谱面协力歌曲','谱面从收藏选择','谱面联网难度',*fire_options]),
         choice('挑战演出（消耗CP）','mode','challenge',['谱面挑战歌曲','谱面挑战难度','谱面每首CP']),
-        choice('竞演演出','mode','versus',['谱面竞演房间类别','谱面竞演房间','谱面联网难度',*fire_options])]}
+        choice('竞演演出','mode','versus',['谱面竞演房间类别','谱面竞演房间','谱面竞演歌曲','谱面从收藏选择','谱面联网难度',*fire_options])]}
     for option,label,key,default,description in (
         ('谱面挑战歌曲','活动歌曲','cp_song','沿用当前活动歌曲',
          '从中国服歌曲列表选择。指定歌曲必须在当前活动歌单内，否则停止；不替换为其他歌曲。'),
         ('谱面协力歌曲','协力选歌','coop_song','不指定歌曲',
-         '从中国服歌曲列表选择要提交的歌曲；最终演奏曲目由游戏在全房间提交的歌曲中抽选。'),
+         '可不指定歌曲、选择当前歌曲，或从中国服曲库指定歌曲。选择当前歌曲时，直接提交房间选歌页当前选中的歌曲，不更改筛选或收藏；每轮以该页当前选择为准。最终演奏曲目由游戏抽选。'),
         ('谱面竞演歌曲','竞演选歌','versus_song','不指定歌曲',
-         '仅用于自由选歌房间；提交所选歌曲，最终曲目由游戏决定。活动歌曲房间使用本期活动歌曲。')):
+         '仅用于自由选歌房间，可不指定歌曲、选择当前歌曲，或从中国服曲库指定歌曲。选择当前歌曲时，直接提交房间选歌页当前选中的歌曲，不更改筛选或收藏；每轮以该页当前选择为准。活动歌曲房间忽略此选项，最终曲目由游戏决定。')):
         cases=[choice(default,key,'')]
+        if key in ('coop_song','versus_song'):
+            cases.append(choice('选择当前歌曲',key,CURRENT_SONG))
         options[option]={'type':'select','label':label,'default_case':default,
                          'description':description,'cases':cases}
     options['谱面协力房间类别']={'type':'select','label':'房间类别','default_case':'普通',
@@ -66,8 +68,7 @@ def update(interface):
         'cases':[choice(label,'coop_room',value) for value,label in COOP_ROOMS.items()]}
     options['谱面竞演房间']={'type':'select','label':'竞演房间','default_case':VERSUS_ROOMS['event'],
         'description':'仅在竞演活动期间可用。按所选房间匹配，不自动换房；最终歌曲和难度确认后才准备。',
-        'cases':[choice(label,'versus_room',value,
-                        ['谱面竞演歌曲','谱面从收藏选择'] if value=='free' else None)
+        'cases':[choice(label,'versus_room',value)
                  for value,label in VERSUS_ROOMS.items()]}
     options['谱面竞演房间类别']={'type':'select','label':'房间类别','default_case':'普通',
         'cases':[choice(label,'versus_room_group',value) for value,label in COOP_ROOM_GROUPS.items()]}
@@ -96,8 +97,11 @@ def update(interface):
         if task['entry']=='AutoLive' and '演出Fever印章' not in task['option']:
             task['option'].append('演出Fever印章')
     options['谱面火不足策略']={'type':'select','label':'火不足策略','cases':[
-        choice('停止','shortage','stop'),choice('使用回复道具补火','shortage','items')],
+        choice('停止','shortage','stop'),choice('使用回复道具补火','shortage','items',['谱面补火道具优先级'])],
         'description':OPTION_DESCRIPTIONS['谱面火不足策略']}
+    options['谱面补火道具优先级']={'type':'select','label':'补火道具优先级','default_case':'小火优先',
+        'description':OPTION_DESCRIPTIONS['谱面补火道具优先级'],
+        'cases':[choice(label,'refill_priority',value) for value,label in REFILL_PRIORITIES.items()]}
     options['谱面最大演出次数']={'type':'input','label':'最大演出次数','inputs':[{'name':'次数','label':'最大演出次数',
         'description':INPUT_DESCRIPTIONS[('谱面最大演出次数', '次数')],
         'default':'','verify':'^$|^[1-9][0-9]{0,2}$','pattern_msg':'留空不限，或填写1–999'}],

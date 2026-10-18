@@ -18,14 +18,15 @@ def bindings():
 
 
 def compact_interface(interface, spec=None):
-    """Remove generated choices, retaining static options and empty-song cases."""
+    """Remove generated choices, retaining explicitly bound static cases."""
     interface = deepcopy(interface)
     options = interface['option']
     for name, binding in (spec or bindings())['selectors'].items():
         node = binding['song_node']
+        static_values = binding.get('static_values', [''])
         options[name]['cases'] = [case for case in options[name]['cases']
                                   if case.get('pipeline_override', {}).get(node, {})
-                                  .get('attach', {}).get('value') == '']
+                                  .get('attach', {}).get('value') in static_values]
         if not options[name]['cases']:
             options[name].pop('default_case', None)
         prefix = binding.get('difficulty_prefix')
@@ -50,6 +51,10 @@ def expand_interface(interface, catalog, spec=None):
         option = options[name]
         option.setdefault('default_case', spec['default_case'])
         node = binding['song_node']
+        # Keep existing catalog indices stable when adding nonempty static choices.
+        trailing = [case for case in option['cases']
+                    if case['pipeline_override'][node]['attach']['value'] != '']
+        option['cases'] = [case for case in option['cases'] if case not in trailing]
         for song in songs if binding['order'] == 'catalog' else chart_songs:
             key = song_key(song, songs)
             case = {'name': key, 'label': f"{song['title']} · {song['band']}",
@@ -66,6 +71,7 @@ def expand_interface(interface, catalog, spec=None):
                         for d in names]}
                 case['option'] = [profile]
             option['cases'].append(case)
+        option['cases'].extend(trailing)
         if option.get('default_case') not in {c['name'] for c in option['cases']}:
             option['default_case'] = option['cases'][0]['name']
     return interface

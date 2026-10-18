@@ -146,7 +146,8 @@ class NotificationTests(unittest.TestCase):
         root=Path(__file__).parent/'fixtures'/'notifications'
         for name,expected in (('experience.png',False),('event_result.png',False),
                               ('reward.png',True),('area_unlock.png',True),('costume.png',True),
-                              ('song_achievement.png',True),('song_story.png',True)):
+                              ('song_achievement.png',True),('song_story.png',True),
+                              ('band_story.png',True)):
             with self.subTest(name=name):
                 image=np.array(Image.open(root/name).convert('RGB'))[:,:,::-1].copy()
                 self.assertEqual(dialog_box(image) is not None,expected)
@@ -173,20 +174,26 @@ class NotificationTests(unittest.TestCase):
 
     @patch('notifications.time.sleep')
     def test_song_story_is_deferred_without_reading_or_clicking_background(self,_):
-        later=hit('稍后再读',440,610,140)
-        f=self.flow([hit('阅读与这首歌曲相关的故事吧！',400,64,450),
-                     later,hit('阅读',739,610),hit('确定',1020,630)])
-        f.image=panel(36,688)
-        self.assertTrue(f.dismiss_notifications())
-        f.tap_hit.assert_called_once_with(later)
-        f.snap.assert_called_once()
-        f.require_clear_notification_overlay()
+        for title in ('阅读与这首歌曲相关的故事吧！',
+                      '阅读演奏这首歌曲的乐队登场的故事吧！'):
+            with self.subTest(title=title):
+                later=hit('稍后再读',440,610,140)
+                # The recorded band-story OCR also reads the title icon as "+".
+                f=self.flow([hit('+',365,64,20),hit(title,400,64,490),
+                             later,hit('阅读',739,610),hit('确定',1020,630)])
+                f.image=panel(36,688)
+                self.assertTrue(f.dismiss_notifications())
+                f.tap_hit.assert_called_once_with(later)
+                f.snap.assert_called_once()
+                f.require_clear_notification_overlay()
 
     def test_song_story_requires_title_and_unique_contained_reading_choices(self):
         title=hit('阅读与这首歌曲相关的故事吧！',400,64,450)
         later=hit('稍后再读',440,610,140)
         read=hit('阅读',739,610)
         for hits in ([later,read], [title,later], [title,read],
+                     [hit('其他选择',400,64),later,read],
+                     [hit('阅读演奏这首歌曲的乐队登场的故事吧！',400,450,490),later,read],
                      [title,later,later,read], [title,later,read,read],
                      [title,hit('稍后再读',970,610),read],
                      [title,later,hit('阅读',250,610)],

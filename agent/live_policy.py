@@ -5,6 +5,13 @@ import unicodedata
 from song_catalog import SONGS, resolve_song, available_difficulties
 
 DIFFICULTIES = ("easy", "normal", "hard", "expert", "special")
+REFILL_PRIORITIES = {'small': '小火优先', 'large': '大火优先'}
+
+
+def refill_priority_option(value):
+    if not isinstance(value, str) or value not in REFILL_PRIORITIES:
+        raise ValueError('补火道具优先级必须为小火优先或大火优先')
+    return value
 
 
 def fever_option(value):

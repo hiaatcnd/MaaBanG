@@ -21,6 +21,7 @@ def main():
     from maa.toolkit import Toolkit
     import costume_unlock
     import daily_tasks
+    from skill_practice import UpgradeSameMemberSkills
     from auto_live import AutoLive
     from chart_live import ChartLive
     from direct_chart_live import DirectChartLive
@@ -49,6 +50,7 @@ def main():
     AgentServer.custom_action("LivePresets")(LivePresets)
     AgentServer.custom_action("UpdateSongCatalog")(UpdateSongCatalog)
     AgentServer.custom_action("BestdoriProfiles")(BestdoriProfiles)
+    AgentServer.custom_action("UpgradeSameMemberSkills")(UpgradeSameMemberSkills)
     for name in ("MineFullCombo", "MineStories", "MineChallenges"):
         catalog_action(name, getattr(mining, name))
     for name in ("ClaimHomeGifts", "ClaimHomeMissions", "ExchangeMichelle", "DailyFreeRecruit"):

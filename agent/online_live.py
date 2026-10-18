@@ -8,13 +8,16 @@ import subprocess
 import time
 
 from chart_live import ChartLiveFlow
-from chart_policy import COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS
+from chart_policy import COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS, CURRENT_SONG
 from costume_unlock import FlowError, normalized
 from online_policy import RoomClock, RoomInterrupted, retry_delay, final_song, final_selection
 from online_errors import room_error as recognize_room_error
 from notifications import dialog_box
 from song_catalog import resolve_song
 from chart_sync import stage_state
+
+
+UNCONFIRMED_PAGE_TIMEOUT = 8.
 
 
 class OnlineFatal(FlowError):
@@ -57,6 +60,29 @@ class OnlineLiveFlow(ChartLiveFlow):
         if name=='OL_FinalConfirm' and self.settings.mode in ('coop','versus'):
             name='OL_CoopFinalConfirm'
         return super().reco(name,**override)
+
+    def ready_loading(self):
+        return self.hit_text([865,595,415,115],'NOW LOADING')
+
+    def loading_final_page(self):
+        """Recognize the footer independently of the covered ready button."""
+        if (self.settings.mode not in ('coop','versus') or
+                getattr(self,'image',None) is None or not self.ready_loading()):
+            return False
+        labels=self.ocr([540,550,452,65],'EASY|NORMAL|HARD|EXPERT|SPECIAL')
+        if not {'easy','normal','hard','expert'} <= {hit.text.strip().lower() for hit in labels}:
+            return False
+        # Song-list/loading/roulette pages do not have this complete footer.
+        # Identity, selected difficulty and cost still get their normal checks.
+        return bool(self.hit_text([110,580,130,35],r'^Lv[.．]?\s*\d+'))
+
+    def is_final_page(self):
+        return bool(self.reco('OL_FinalConfirm') or self.loading_final_page())
+
+    def _is_effects_ready_page(self):
+        if self.settings.mode in ('coop','versus'):
+            return self.is_final_page()
+        return super()._is_effects_ready_page()
 
     def state(self, value):
         if self.report['state']!=value:
@@ -177,7 +203,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         raise FlowError('返回演出菜单未收敛')
 
     def prepare_settings(self):
-        if not self.requested_song:
+        if not self.requested_song or self.requested_song==CURRENT_SONG:
             return
         self.state('检查选曲')
         self.navigate_menu()
@@ -271,7 +297,7 @@ class OnlineLiveFlow(ChartLiveFlow):
     def submit_coop_song(self):
         if self.coop_song_submitted:
             return True
-        if self.hit_text([865,595,415,115],'NOW LOADING'):
+        if self.ready_loading():
             return False
         # The page title can precede both the list and the loading indicator.
         # This common button must be visible before either selection path runs.
@@ -281,10 +307,14 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.state('提交选曲')
         self.save_frame('coop_song_page.png')
         if self.requested_song:
-            song=resolve_song(self.requested_song)
-            # Check the current song before changing the room's saved filters.
-            self.find_song(song,max_steps=8,forward_first=True,quick=True)
-            if not self.reco('OL_CoopSongPage') or not self.selected_song_matches(song):
+            song=None
+            if self.requested_song!=CURRENT_SONG:
+                song=resolve_song(self.requested_song)
+                # Check the current song before changing the room's saved filters.
+                self.find_song(song,max_steps=8,forward_first=True,quick=True)
+            # Current-song mode submits the game's selection without scrolling
+            # or list-title OCR. Playback still verifies the final room song.
+            if not self.reco('OL_CoopSongPage') or (song is not None and not self.selected_song_matches(song)):
                 raise FlowError('联网提交前未确认所选歌曲')
             button=self.hit_text([950,605,250,80],'^确定$')
             if not button or not self.pink(self.image[625:638,980:995]):
@@ -326,13 +356,25 @@ class OnlineLiveFlow(ChartLiveFlow):
     def await_final(self):
         unknown_since=None
         song_loading_since=None
+        loading_since=None
         while True:
             self.snap()
-            if self.reco('OL_FinalConfirm'):
+            if self.is_final_page():
                 if self.requested_song and not self.coop_song_submitted:
                     raise FlowError('联网选曲已结束，未确认提交指定歌曲')
                 self.state('确认最终歌曲和难度')
                 return
+            if self.settings.mode in ('coop','versus'):
+                # "选择中" behind the overlay also matches OL_Matching. It
+                # must not reset the deadline for an unconfirmed loading page.
+                if self.ready_loading():
+                    now=time.monotonic()
+                    if loading_since is None:
+                        loading_since=now
+                    if now-loading_since>=UNCONFIRMED_PAGE_TIMEOUT:
+                        raise RoomInterrupted('加载遮挡页面超过8秒，无法确认开演信息，退出房间')
+                else:
+                    loading_since=None
             if self.settings.mode in ('coop','versus') and self.hit_text([450,300,400,100],'以[2-5]人开始演出'):
                 button=self.hit_text([650,415,250,90],'^开始$')
                 if button:
@@ -348,8 +390,8 @@ class OnlineLiveFlow(ChartLiveFlow):
                         song_loading_since=now
                         self.state('等待选曲页面加载')
                         self.save_frame('coop_song_loading.png')
-                    if now-song_loading_since>=30:
-                        raise FlowError('联网选曲页面30秒未加载出操作按钮')
+                    if now-song_loading_since>=UNCONFIRMED_PAGE_TIMEOUT:
+                        raise RoomInterrupted('联网选曲页面8秒未加载出操作按钮，退出房间')
                 unknown_since=None
                 self.pause(.25)
                 continue
@@ -365,10 +407,14 @@ class OnlineLiveFlow(ChartLiveFlow):
             elif self.reco('OL_Matching') or self.reco(self.home_node):
                 unknown_since=None
             else:
-                unknown_since=unknown_since or time.monotonic()
+                now=time.monotonic()
+                if unknown_since is None:
+                    unknown_since=now
                 if self.settings.mode in ('coop','versus'):
                     self.save_frame('coop_waiting.png')
-                if time.monotonic()-unknown_since>30:
+                    if now-unknown_since>=UNCONFIRMED_PAGE_TIMEOUT:
+                        raise RoomInterrupted('联网房间页面8秒无法识别，退出房间')
+                elif now-unknown_since>30:
                     raise FlowError('联网房间出现未知页面超过30秒')
             self.pause(.25)
 
@@ -379,7 +425,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         error='最终歌曲尚未显示完整'
         while time.monotonic()<deadline:
             self.snap()
-            if not self.reco('OL_FinalConfirm'):
+            if not self.is_final_page():
                 raise FlowError('最终确认页面已离开，停止读取旧页面歌曲')
             title=self.text([110,538,454,41])
             try:
@@ -412,7 +458,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         if not self.difficulty_selected(x):
             self.quick_tap(x,self.difficulty_y)
             self.snap()
-            if not self.reco('OL_FinalConfirm'):
+            if not self.is_final_page():
                 raise FlowError('未能在倒计时内确认难度')
             if not self.difficulty_selected(x):
                 raise FlowError('联网难度未选中：'+selection.difficulty)
@@ -459,7 +505,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                         continue
                     # Keep room monitoring while a download really is pending.
                     self.snap()
-                    if not self.reco('OL_FinalConfirm'):
+                    if not self.is_final_page():
                         raise FlowError('谱面准备期间最终确认页面已离开，停止开演')
                     continue
                 except Exception as exc:
@@ -507,6 +553,14 @@ class OnlineLiveFlow(ChartLiveFlow):
         self.snap()
         final=self.reco('OL_FinalConfirm')
         if not final:
+            # play_chart has already reverified identity/difficulty/cost and
+            # authorized its observer. Never click an overlay or a stage; let
+            # that worker catch the room's automatic start instead.
+            if self.settings.mode in ('coop','versus') and (
+                    self.loading_final_page() or
+                    (self.image is not None and stage_state(self.image) is not None)):
+                self.state('等待联网自动开演')
+                return
             raise FlowError('准备提交前联网确认页面已离开')
         # Coop final confirmation already recognizes this exact ready button.
         ready=final if self.settings.mode in ('coop','versus') else self.hit_text([1010,580,225,105],'^准备完毕[！!]?$')
@@ -611,7 +665,8 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.resume_game()
             backgrounded=True
         # Only navigate from recognized pages/dialogs; never send stale ready taps.
-        deadline=time.monotonic()+30
+        recovery_started=time.monotonic()
+        deadline=recovery_started+30
         while time.monotonic()<deadline:
             self.snap()
             # Modal text takes precedence over a still-visible background header.
@@ -651,7 +706,10 @@ class OnlineLiveFlow(ChartLiveFlow):
                 pause_attempted=True
                 continue
             waiting=any(self.reco(node) for node in
-                        ('OL_Matching','OL_FinalConfirm','OL_Loading','OL_WaitingMembers'))
+                        ('OL_Matching','OL_FinalConfirm','OL_Loading','OL_WaitingMembers',
+                         'OL_CoopSongPage','OL_RandomSong'))
+            if not waiting and self.settings.mode in ('coop','versus'):
+                waiting=bool(self.ready_loading())
             if waiting and back_attempted and not backgrounded:
                 self.background_room()
                 backgrounded=True
@@ -661,6 +719,14 @@ class OnlineLiveFlow(ChartLiveFlow):
                 back_attempted=True
                 continue
             if not backgrounded and waiting:
+                self.background_room()
+                backgrounded=True
+                continue
+            if (self.settings.mode in ('coop','versus') and not backgrounded and
+                    self.current_attempt is not None and
+                    time.monotonic()-recovery_started>=3):
+                # We joined this room, but cannot trust any game coordinates.
+                # Use the existing focus-loss exit once, then confirm the exit.
                 self.background_room()
                 backgrounded=True
                 continue

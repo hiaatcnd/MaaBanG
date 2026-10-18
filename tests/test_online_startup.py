@@ -111,6 +111,8 @@ class RoomErrorTests(unittest.TestCase):
 class FinalSelectionSafetyTests(unittest.TestCase):
     def make_flow(self):
         flow=OnlineLiveFlow.__new__(OnlineLiveFlow)
+        flow.settings=SimpleNamespace(mode='coop')
+        flow.hit_text=Mock(return_value=None)
         flow.difficulty_y=594
         flow.image=np.zeros((720,1280,3),dtype=np.uint8)
         flow.image[574:606,805:835]=[255,0,0]
@@ -199,7 +201,7 @@ class SelectionActionTests(unittest.TestCase):
         flow.snap=Mock()
         flow.reco=Mock(return_value=True)
         flow.quick_tap=Mock()
-        flow.hit_text=Mock()
+        flow.hit_text=Mock(return_value=None)
         flow.state=Mock()
         return flow
 
@@ -277,7 +279,8 @@ class SelectionActionTests(unittest.TestCase):
                 flow.reco.return_value=None
                 with self.assertRaisesRegex(FlowError,'确认页面已离开'):
                     flow.submit_online_ready(ChartSelection('564','expert'))
-                flow.hit_text.assert_not_called()
+                if mode=='team':
+                    flow.hit_text.assert_not_called()
                 flow.quick_tap.assert_not_called()
                 flow.state.assert_not_called()
 

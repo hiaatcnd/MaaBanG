@@ -21,6 +21,7 @@ from costume_unlock import UnlockDefault3DCostumes
 from daily_tasks import ClaimHomeGifts, ClaimHomeMissions, ExchangeMichelle, DailyFreeRecruit
 from live_presets import LivePresets
 from mining import MineFullCombo, MineStories, MineChallenges
+from skill_practice import UpgradeSameMemberSkills
 from update_songs import UpdateSongCatalog
 from bestdori import BestdoriProfiles
 
@@ -188,6 +189,9 @@ class TaskLoggingTests(unittest.TestCase):
             elif isinstance(action, (MineFullCombo, MineStories, MineChallenges)):
                 stack.enter_context(patch('mining.MiningOptions.parse'))
                 stack.enter_context(patch.object(action,'flow_type',return_value=flow))
+            elif isinstance(action, UpgradeSameMemberSkills):
+                flow.save_report = lambda: None
+                stack.enter_context(patch('skill_practice.SkillPracticeFlow',return_value=flow))
             elif isinstance(action, BestdoriProfiles):
                 def scan(*args, **kwargs):
                     execute()
@@ -211,6 +215,7 @@ class TaskLoggingTests(unittest.TestCase):
             'ExchangeMichelle':ExchangeMichelle, 'DailyFreeRecruit':DailyFreeRecruit,
             'MineFullCombo':MineFullCombo, 'MineStories':MineStories,
             'MineChallenges':MineChallenges, 'UpdateSongCatalog':UpdateSongCatalog,
+            'UpgradeSameMemberSkills':UpgradeSameMemberSkills,
         }
         interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
         self.assertEqual(set(actions), {task['entry'] for task in interface['task']})

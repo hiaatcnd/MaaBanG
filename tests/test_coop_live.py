@@ -33,8 +33,9 @@ class CoopTests(unittest.TestCase):
             option=interface['option'][name]
             self.assertEqual(option['type'],'select')
             values=[case['pipeline_override']['CL_'+key]['attach']['value'] for case in option['cases']]
-            self.assertEqual(len(values),len(BY_ID)+1)
-            self.assertEqual(set(values),{'',*BY_ID})
+            static={'','current'} if key=='coop_song' else {''}
+            self.assertEqual(len(values),len(BY_ID)+len(static))
+            self.assertEqual(set(values),static|set(BY_ID))
             king=next(case for case in option['cases'] if case['name']=='KING')
             settings=ChartOptions.parse({'mode':'coop' if key=='coop_song' else 'challenge',key:king['pipeline_override']['CL_'+key]['attach']['value']})
             self.assertEqual(getattr(settings,key),'361')
@@ -114,8 +115,8 @@ class CoopTests(unittest.TestCase):
             flow.snap=Mock();flow.pause=Mock();flow.save_frame=Mock()
             flow.reco=Mock(side_effect=lambda name:name=='OL_CoopSongPage')
             flow.hit_text=Mock(return_value=None);flow.tap_hit=Mock()
-            with patch('online_live.time.monotonic',side_effect=[0,10,30]):
-                with self.assertRaisesRegex(RuntimeError,'30秒未加载'):
+            with patch('online_live.time.monotonic',side_effect=[0,4,8]):
+                with self.assertRaisesRegex(RuntimeError,'8秒未加载'):
                     flow.await_final()
             self.assertEqual(flow.snap.call_count,3)
             flow.tap_hit.assert_not_called()
@@ -218,6 +219,15 @@ class CoopTests(unittest.TestCase):
                         case.assertTrue(flow.hit_text([1010,580,225,105],'^准备完毕[！!]?$'))
                         current[0]=frames['song'];flow.snap()
                         case.assertTrue(flow.hit_text([685,605,200,80],'^不指定歌曲$'))
+                        current_flow=OnlineLiveFlow(context,ChartOptions.parse({'mode':'coop','coop_song':'current'}),folder)
+                        current_flow.snap();current_flow.current_attempt={};current_flow.tap_hit=Mock()
+                        current_flow.find_song=Mock(side_effect=AssertionError('Keep current selection'))
+                        # This real fixture has an empty favorites filter and a
+                        # disabled confirm button: never invent a current song.
+                        with case.assertRaisesRegex(RuntimeError,'确认按钮不可用'):
+                            current_flow.submit_coop_song()
+                        current_flow.tap_hit.assert_not_called()
+                        case.assertFalse(current_flow.coop_song_submitted)
                         # Real failed frame -> loading -> visible controls -> final.
                         # Exercise the outer loop so it keeps taking fresh frames.
                         loading_flow=OnlineLiveFlow(context,ChartOptions.parse({'mode':'coop','fire':0}),folder)

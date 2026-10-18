@@ -13,11 +13,11 @@ from chart_policy import ChartOptions
 
 
 class RefillItemTests(unittest.TestCase):
-    def make_flow(self, cards, balance=2, actual_gains=None):
+    def make_flow(self, cards, balance=2, actual_gains=None, **options):
         folder=tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
         flow=ChartLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
-                           ChartOptions.parse({'shortage':'items'}),folder.name)
+                           ChartOptions.parse({'shortage':'items',**options}),folder.name)
         state={'preview':balance}
         titles={'小型':'小型 live boost 饮料','普通':'live boost 饮料'}
         gains={'小型':1,'普通':10}
@@ -91,6 +91,67 @@ class RefillItemTests(unittest.TestCase):
         self.assertEqual([(item['item'],item['count']) for item in flow.report['refills'][0]['items']],
                          [('小型',2),('普通',1)])
         self.assertEqual(flow.report['refills'][0]['after'],14)
+
+    def test_large_preference_uses_large_even_for_small_deficit_in_either_row(self):
+        for cards,y in (([('小型',227,'x9'),('普通',376,'x3')],376),
+                        ([('普通',227,'x3'),('小型',376,'x9')],227)):
+            with self.subTest(cards=cards):
+                flow=self.make_flow(cards,refill_priority='large')
+                self.assertTrue(flow.refill_fire(5))
+                self.assertEqual([call.args for call in flow.tap.call_args_list if call.args[0]==766],[(766,y)])
+                self.assertEqual(flow.report['refills'][0]['after'],12)
+
+    def test_large_preference_falls_back_to_small_for_remaining_deficit(self):
+        for stock,needed,expected in (('x1',15,[('普通',1),('小型',3)]),
+                                      ('x0',5,[('小型',3)])):
+            with self.subTest(stock=stock):
+                flow=self.make_flow([('小型',227,'x9'),('普通',376,stock)],refill_priority='large')
+                self.assertTrue(flow.refill_fire(needed))
+                self.assertEqual([(item['item'],item['count']) for item in flow.report['refills'][0]['items']],expected)
+                self.assertEqual(flow.report['refills'][0]['after'],needed)
+
+    def test_large_preference_handles_missing_card_and_rejects_bad_preview(self):
+        flow=self.make_flow([('小型',227,'x9')],refill_priority='large')
+        self.assertTrue(flow.refill_fire(5))
+        flow=self.make_flow([('小型',227,'x9'),('普通',376,'x3')],
+                            actual_gains={376:1},refill_priority='large')
+        with self.assertRaisesRegex(RuntimeError,'预览与所选数量不符'):
+            flow.refill_fire(5)
+        self.assertNotIn((770,602),[call.args for call in flow.tap.call_args_list])
+
+    def test_preference_never_enables_refill_without_shortage_policy(self):
+        for options,balance in (({'shortage':'stop'},2),({'shortage':'items'},5)):
+            flow=self.make_flow([('普通',227,'x3')],balance=balance,refill_priority='large',**options)
+            self.assertEqual(flow.refill_fire(5),balance>=5)
+            flow.tap.assert_not_called()
+
+    def test_ui_defaults_and_mining_forward_refill_preference(self):
+        import json
+        from interface_test_support import load_interface
+        from mining_policy import MiningOptions
+        from mining_live import MiningLiveFlow
+        interface=load_interface()
+        for prefix,node,parser,pipeline_name in (('谱面','CL_',ChartOptions,'chart_live'),
+                                                ('挖矿','MN_',MiningOptions,'mining')):
+            option=interface['option'][prefix+'补火道具优先级']
+            self.assertEqual(option['default_case'],'小火优先')
+            self.assertEqual(parser.parse({}).refill_priority,'small')
+            pipeline=json.loads((ROOT/f'assets/resource/pipeline/{pipeline_name}.json').read_text(encoding='utf8'))
+            self.assertEqual(pipeline[node+'refill_priority']['attach']['value'],'small')
+            strategy=interface['option'][prefix+'火不足策略']['cases']
+            self.assertNotIn('option',strategy[0])
+            self.assertEqual(strategy[1]['option'],[prefix+'补火道具优先级'])
+            for case in option['cases']:
+                value=case['pipeline_override'][node+'refill_priority']['attach']['value']
+                self.assertEqual(parser.parse({'refill_priority':value}).refill_priority,value)
+            for invalid in ('unknown',True,None,[]):
+                with self.subTest(parser=parser,invalid=invalid),self.assertRaises(ValueError):
+                    parser.parse({'refill_priority':invalid})
+        with tempfile.TemporaryDirectory() as folder:
+            flow=MiningLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+                                MiningOptions.parse({'shortage':'items','refill_priority':'large'}),folder)
+            self.assertEqual(flow.settings.refill_priority,'large')
+            self.assertEqual(flow.report['options']['refill_priority'],'large')
 
     def test_zero_stock_card_is_skipped(self):
         flow=self.make_flow([('小型',227,'x0'),('普通',376,'x436')])

@@ -43,17 +43,20 @@ class VersusTests(unittest.TestCase):
             with self.subTest(values=values),self.assertRaises(ValueError):
                 ChartOptions.parse({'mode':'versus',**values})
 
-    def test_ui_exposes_free_song_only_in_free_room_and_uses_shared_catalog(self):
+    def test_ui_aligns_coop_and_versus_options_and_uses_shared_catalog(self):
         interface=load_interface()
         modes=interface['option']['谱面演出模式']['cases']
         self.assertEqual([case['pipeline_override']['CL_mode']['attach']['value'] for case in modes],
                          ['free','tour_free','tour_fixed','team','coop','challenge','versus'])
         cases=interface['option']['谱面竞演房间']['cases']
         self.assertNotIn('option',cases[0])
-        self.assertIn('谱面竞演歌曲',cases[1]['option'])
+        self.assertNotIn('option',cases[1])
+        coop=next(case for case in modes if case['name']=='协力演出')
+        versus=next(case for case in modes if case['name']=='竞演演出')
+        self.assertEqual([name.replace('协力','竞演') for name in coop['option']],versus['option'])
         songs=interface['option']['谱面竞演歌曲']['cases']
         values={case['pipeline_override']['CL_versus_song']['attach']['value'] for case in songs}
-        self.assertEqual(values,{'',*BY_ID})
+        self.assertEqual(values,{'','current',*BY_ID})
 
     def test_event_room_never_submits_stale_free_or_coop_song(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -125,6 +128,13 @@ class VersusTests(unittest.TestCase):
                         case.assertTrue(flow.submit_coop_song())
                         case.assertTrue(flow.submit_coop_song())
                         case.assertEqual(flow.current_attempt['submitted_song'],'24')
+                        flow.tap_hit.assert_called_once()
+                        case.assertEqual(flow.tap_hit.call_args.args[0].text,'确定')
+                        flow.settings=replace(flow.settings,versus_song='current')
+                        flow.coop_song_submitted=False;flow.tap_hit.reset_mock()
+                        flow.find_song=Mock(side_effect=AssertionError('Keep current selection'))
+                        case.assertTrue(flow.submit_coop_song())
+                        case.assertEqual(flow.current_attempt['submitted_song'],'current')
                         flow.tap_hit.assert_called_once()
                         case.assertEqual(flow.tap_hit.call_args.args[0].text,'确定')
                         current[0]=frames['ready'];flow.snap()

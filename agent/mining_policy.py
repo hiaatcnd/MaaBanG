@@ -2,11 +2,12 @@
 from dataclasses import dataclass
 import re
 import numpy as np
+from live_policy import refill_priority_option
 
 DIFFICULTIES = ('easy', 'normal', 'hard', 'expert', 'special')
 DEFAULTS = dict(max_rounds='', stories=True, memories=True, practice=False,
                 unlock=False, stars='1,2,3', stage='main', challenge_target='uncleared', fire=0, shortage='stop',
-                avoid_full_combo=False)
+                avoid_full_combo=False, refill_priority='small')
 NODES = {key: 'MN_' + key for key in DEFAULTS}
 DIFFICULTY_NODES = {difficulty:'MN_difficulty_'+difficulty for difficulty in DIFFICULTIES}
 STAR_NODES = {stars:f'MN_star_{stars}' for stars in range(1,6)}
@@ -26,6 +27,7 @@ class MiningOptions:
     shortage: str
     challenge_target: str
     avoid_full_combo: bool = False
+    refill_priority: str = 'small'
 
     @classmethod
     def parse(cls, data):
@@ -61,7 +63,8 @@ class MiningOptions:
             raise ValueError('火不足时请选择停止或使用回复道具')
         return cls(limit, *(values[k] for k in ('stories', 'memories', 'practice', 'unlock')),
                    stars, values['stage'],tuple(d for d in DIFFICULTIES if d in difficulties),int(fire),shortage,
-                   values['challenge_target'],values['avoid_full_combo'])
+                   values['challenge_target'],values['avoid_full_combo'],
+                   refill_priority_option(values['refill_priority']))
 
 
 def challenge_star_count(image):

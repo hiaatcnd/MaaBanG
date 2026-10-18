@@ -14,6 +14,10 @@ class LiveEffectsState:
 
 
 class LiveEffectsMixin:
+    def _is_effects_ready_page(self):
+        ready = ''.join(normalized(hit.text) for hit in self.ocr([1010, 590, 245, 85]))
+        return bool(re.search(r'演出开始|准备(?:完毕|开始)|第[123]曲开始', ready))
+
     def _live_effects_state(self):
         """Read actual controls, including layouts that replace Cut in with members."""
         if self.image is None or self.image.shape[:2] != (720, 1280):
@@ -40,8 +44,7 @@ class LiveEffectsMixin:
         elif not label and np.mean(np.all(self.image[620:680, 110:320] > 245, axis=2)) > .98:
             # No playable MV is a property of this song/page, not the live mode.
             # Blank OCR alone cannot establish that the selector is absent.
-            ready = ''.join(normalized(hit.text) for hit in self.ocr([1010, 590, 245, 85]))
-            if not re.search(r'演出开始|准备(?:完毕|开始)|第[123]曲开始', ready):
+            if not self._is_effects_ready_page():
                 raise FlowError('无法确认演出准备页，不跳过背景开关')
             background = None
         else:

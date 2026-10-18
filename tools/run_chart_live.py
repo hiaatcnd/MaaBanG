@@ -16,6 +16,7 @@ def main():
         ipc_temp.mkdir(parents=True,exist_ok=True)
         os.environ['TEMP']=os.environ['TMP']=str(ipc_temp)
     from chart_policy import ChartOptions, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS, ONLINE_MODES
+    from live_policy import REFILL_PRIORITIES
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adb',required=True)
     parser.add_argument('--address',required=True)
@@ -33,11 +34,12 @@ def main():
     parser.add_argument('--cp-song',default='',help='挑战活动歌曲ID或完整歌名；留空沿用当前活动选曲')
     parser.add_argument('--coop-room',choices=COOP_ROOMS,default='free')
     parser.add_argument('--coop-room-group',choices=COOP_ROOM_GROUPS,default='normal')
-    parser.add_argument('--coop-song',default='',help='提交的中国服歌曲ID或歌名；留空不指定歌曲')
+    parser.add_argument('--coop-song',default='',help='提交的中国服歌曲ID或歌名；current 提交当前歌曲；留空不指定歌曲')
     parser.add_argument('--versus-room',choices=VERSUS_ROOMS,default='event')
     parser.add_argument('--versus-room-group',choices=COOP_ROOM_GROUPS,default='normal')
-    parser.add_argument('--versus-song',default='',help='竞演自由选歌房间提交的歌曲；留空不指定')
+    parser.add_argument('--versus-song',default='',help='竞演自由选歌房间提交的歌曲；current 提交当前歌曲；留空不指定')
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
+    parser.add_argument('--refill-priority',choices=REFILL_PRIORITIES,default='small')
     parser.add_argument('--max-rounds',default='')
     parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--package',type=Path,help='Packaged app directory; use its embedded Agent over IPC')
