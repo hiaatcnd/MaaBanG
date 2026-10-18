@@ -156,8 +156,10 @@ class ChartLiveFlow(LiveFlow):
         if after!=before:
             raise FlowError('道具回复预览初始值不符')
         used=[]
-        # Prefer +1 drinks to minimize surplus; +10 drinks are the fallback.
-        for item in self.refill_items():
+        # Sort identified cards by preference, never by their visible row.
+        items=sorted(self.refill_items(),key=lambda item:item['gain'],
+                     reverse=self.settings.refill_priority=='large')
+        for item in items:
             if after>=needed:
                 break
             name,y,gain,available=(item[key] for key in ('item','y','gain','inventory_before'))

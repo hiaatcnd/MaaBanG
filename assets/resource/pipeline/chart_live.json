@@ -68,6 +68,11 @@
             "value": false
         }
     },
+    "CL_refill_priority": {
+        "attach": {
+            "value": "small"
+        }
+    },
     "CL_versus_room": {
         "attach": {
             "value": "event"

@@ -40,7 +40,7 @@ def main():
             actions = set(client.custom_action_list)
             expected = {"UnlockDefault3DCostumes", "ClaimHomeGifts", "ClaimHomeMissions",
                         "ExchangeMichelle", "DailyFreeRecruit", "AutoLive", "ChartLive", "DirectChartLive", "UpdateSongCatalog",
-                        "MineFullCombo", "MineStories", "MineChallenges", "BestdoriProfiles"}
+                        "MineFullCombo", "MineStories", "MineChallenges", "UpgradeSameMemberSkills", "BestdoriProfiles"}
             if not expected.issubset(actions):
                 raise RuntimeError(f"Missing actions: {sorted(expected - actions)}")
             print("Agent handshake passed. Registered actions:", ", ".join(sorted(actions)))

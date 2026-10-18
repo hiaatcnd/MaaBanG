@@ -9,7 +9,7 @@ from costume_unlock import FlowError, normalized
 
 
 BUTTON = re.compile(r'^(?:确定|确认|关闭|下一步|OK)$', re.I)
-STORY_PROMPT = re.compile(r'^阅读与这首歌曲相关的故事吧[!！]?$')
+STORY_PROMPT = re.compile(r'^阅读(?:与这首歌曲相关|演奏这首歌曲的乐队登场)的故事吧[!！]?$')
 # Recruitment tickets can be reward items. Actual purchases/choices remain
 # owned by the calling task, even if their affirmative button says "OK".
 TRANSACTION = re.compile(r'是否|取消|消耗|购买|花费|招募(?!券)|交换|兑换|恢复体力|继续演出')
@@ -97,9 +97,11 @@ class NotificationMixin:
             footer = [hit for hit in hits if hit.box[1] > y+h*.55
                        and x <= hit.box[0] and hit.box[0]+hit.box[2] <= x+w
                        and hit.box[1]+hit.box[3] <= y+h]
-            if STORY_PROMPT.fullmatch(normalized(title)):
-                # Defer this specific two-choice prompt; never enter its story
-                # or click the still-visible result confirmation behind it.
+            # Match a title line so decorative icons OCR'd as "+" or "★"
+            # cannot hide an otherwise recognized story recommendation.
+            if any(STORY_PROMPT.fullmatch(line) for line in titles):
+                # Defer song/band stories; never enter the story or click the
+                # still-visible result confirmation behind the dialog.
                 later = [hit for hit in footer if normalized(hit.text) == '稍后再读']
                 read = [hit for hit in footer if normalized(hit.text) == '阅读']
                 if len(later) != 1 or len(read) != 1 or later[0].box[0]+later[0].box[2] > read[0].box[0]:

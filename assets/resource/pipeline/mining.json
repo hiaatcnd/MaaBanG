@@ -71,6 +71,11 @@
             "value": false
         }
     },
+    "MN_refill_priority": {
+        "attach": {
+            "value": "small"
+        }
+    },
     "MN_SongFilter": {
         "recognition": "OCR",
         "roi": [

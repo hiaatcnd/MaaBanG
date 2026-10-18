@@ -19,7 +19,7 @@
 +    private static bool IsSongCatalogOption(string name) =>
 +        name == "演出歌曲" || name.StartsWith("歌曲难度_", StringComparison.Ordinal) ||
 +        name == "直接演出歌曲" || name.StartsWith("直接演出难度_", StringComparison.Ordinal) ||
-+        name == "谱面挑战歌曲" || name == "谱面协力歌曲" ||
++        name == "谱面挑战歌曲" || name == "谱面协力歌曲" || name == "谱面竞演歌曲" ||
 +        Enumerable.Range(1, 3).Any(i => name == $"谱面第{i}首歌曲" ||
 +            name.StartsWith($"谱面第{i}首难度_", StringComparison.Ordinal));
 +

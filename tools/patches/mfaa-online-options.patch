@@ -1,0 +1,26 @@
+--- a/MFAAvalonia/Extensions/MaaFW/TaskLoader.cs
++++ b/MFAAvalonia/Extensions/MaaFW/TaskLoader.cs
+@@ -58,6 +58,10 @@
+             drags = items.Select(interfaceItem => new DragItemViewModel(interfaceItem) { OwnerViewModel = taskQueueViewModel }).ToList();
+         }
+ 
++        foreach (var item in drags)
++            if (item.InterfaceItem?.Entry == "ChartLive")
++                MaaBanGSongCatalog.MigrateOnlineSelections(item.InterfaceItem.Option);
++
+         if (firstTask)
+         {
+             InitializeResources();
+--- a/MFAAvalonia/Helper/TaskOptionGenerator.cs
++++ b/MFAAvalonia/Helper/TaskOptionGenerator.cs
+@@ -714,8 +714,8 @@
+             MinWidth = 120,
+             Classes = { "LimitWidth" },
+             Margin = new Thickness(0, 2, 0, 2),
+-            ItemsSource = interfaceOption.Cases,
+-            SelectedIndex = option.Index ?? 0,
++            ItemsSource = MaaBanGSongCatalog.DisplayCases(option.Name, interfaceOption.Cases),
++            SelectedItem = interfaceOption.Cases?.ElementAtOrDefault(option.Index ?? 0),
+             HorizontalAlignment = HorizontalAlignment.Stretch
+         };
+         

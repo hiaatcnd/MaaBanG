@@ -1,0 +1,51 @@
+{
+    "UpgradeSameMemberSkills": {
+        "action": "Custom",
+        "custom_action": "UpgradeSameMemberSkills"
+    },
+    "SP_Tab": {
+        "recognition": "OCR",
+        "roi": [10, 450, 210, 95],
+        "expected": "^技能练习$"
+    },
+    "SP_Filter": {
+        "recognition": "OCR",
+        "roi": [330, 110, 415, 40],
+        "expected": "仅显示有同名成员可进行技能练习的成员"
+    },
+    "SP_Page": {
+        "recognition": "OCR",
+        "roi": [115, 45, 300, 48],
+        "expected": "^技能练习$"
+    },
+    "SP_Lounge": {
+        "recognition": "OCR",
+        "roi": [640, 120, 110, 45],
+        "expected": "^休息室$"
+    },
+    "SP_Submit": {
+        "recognition": "OCR",
+        "roi": [950, 610, 240, 70],
+        "expected": "^确定$"
+    },
+    "SP_Confirm": {
+        "recognition": "OCR",
+        "roi": [370, 305, 535, 95],
+        "expected": "确定进行技能练习吗"
+    },
+    "SP_ConfirmOK": {
+        "recognition": "OCR",
+        "roi": [650, 490, 240, 70],
+        "expected": "^确定$"
+    },
+    "SP_Result": {
+        "recognition": "OCR",
+        "roi": [740, 175, 300, 80],
+        "expected": "成功"
+    },
+    "SP_ResultOK": {
+        "recognition": "OCR",
+        "roi": [770, 530, 245, 75],
+        "expected": "^确定$"
+    }
+}

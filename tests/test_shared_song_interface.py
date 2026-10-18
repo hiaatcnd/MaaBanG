@@ -16,9 +16,25 @@ class SharedSongInterfaceTests(unittest.TestCase):
         self.assertEqual(source, compact_interface(source))
         for name, binding in bindings()['selectors'].items():
             cases = source['option'][name]['cases']
-            self.assertLessEqual(len(cases), 1)
+            static_values=binding.get('static_values',[''])
+            self.assertLessEqual(len(cases), len(static_values))
             for case in cases:
-                self.assertEqual(case['pipeline_override'][binding['song_node']]['attach']['value'], '')
+                self.assertIn(case['pipeline_override'][binding['song_node']]['attach']['value'], static_values)
+
+    def test_current_song_survives_refresh_and_compaction_without_duplicates(self):
+        source=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
+        expanded=load_interface()
+        catalog=json.loads((ROOT/'agent/data/songs_cn.json').read_text(encoding='utf8'))
+        self.assertEqual(expand_interface(expanded,catalog),expanded)
+        self.assertEqual(compact_interface(expanded),source)
+        for name,key in [('谱面协力歌曲','coop_song'),('谱面竞演歌曲','versus_song')]:
+            cases=expanded['option'][name]['cases']
+            self.assertEqual(cases[0]['pipeline_override']['CL_'+key]['attach']['value'],'')
+            self.assertEqual(cases[-1]['pipeline_override']['CL_'+key]['attach']['value'],'current')
+            self.assertEqual(expanded['option'][name]['default_case'],'不指定歌曲')
+            legacy=json.loads(json.dumps(source))
+            legacy['option'][name]['cases']=legacy['option'][name]['cases'][:1]
+            self.assertEqual(cases[:-1],expand_interface(legacy,catalog)['option'][name]['cases'])
 
     def test_packaged_paths_resolve_and_all_options_match_development(self):
         with tempfile.TemporaryDirectory() as folder:

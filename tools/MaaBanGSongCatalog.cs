@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using MFAAvalonia.Extensions.MaaFW;
 
 namespace MFAAvalonia.Helper;
 
@@ -9,6 +11,50 @@ namespace MFAAvalonia.Helper;
 public static class MaaBanGSongCatalog
 {
     private static readonly string[] Difficulties = ["easy", "normal", "hard", "expert", "special"];
+
+    public static List<MaaInterface.MaaInterfaceOptionCase>? DisplayCases(
+        string? name, List<MaaInterface.MaaInterfaceOptionCase>? cases)
+    {
+        var node = name switch
+        {
+            "谱面协力歌曲" => "CL_coop_song",
+            "谱面竞演歌曲" => "CL_versus_song",
+            _ => null
+        };
+        if (node == null || cases == null) return cases;
+        string? Value(MaaInterface.MaaInterfaceOptionCase item) =>
+            item.PipelineOverride?.TryGetValue(node, out var value) == true
+                ? value["attach"]?["value"]?.Value<string>() : null;
+        var unspecified = cases.Find(c => Value(c) == "");
+        var current = cases.Find(c => Value(c) == "current");
+        if (unspecified == null || current == null) return cases;
+        // Reorder only the displayed objects; saved indices and pipeline cases
+        // retain their original order. Selection is resolved by case identity.
+        var display = new List<MaaInterface.MaaInterfaceOptionCase>(cases);
+        display.Remove(current);
+        display.Insert(display.IndexOf(unspecified) + 1, current);
+        return display;
+    }
+
+    public static void MigrateOnlineSelections(List<MaaInterface.MaaInterfaceSelectOption>? options)
+    {
+        var mode = options?.Find(o => o.Name == "谱面演出模式");
+        var room = mode?.SubOptions?.Find(o => o.Name == "谱面竞演房间");
+        if (mode?.SubOptions == null || room?.SubOptions == null) return;
+        // Promote remembered free-room choices before defaults are materialized.
+        // When versus is active, keep its old favorites preference; otherwise
+        // preserve the shared preference used by the current mode. Removing old
+        // entries makes subsequent loads preserve later user edits.
+        foreach (var name in new[] { "谱面竞演歌曲", "谱面从收藏选择" })
+        {
+            var saved = room.SubOptions.Find(o => o.Name == name);
+            if (saved == null) continue;
+            if (name == "谱面从收藏选择" && mode.Index == 6)
+                mode.SubOptions.RemoveAll(o => o.Name == name);
+            if (!mode.SubOptions.Any(o => o.Name == name)) mode.SubOptions.Add(saved);
+            room.SubOptions.RemoveAll(o => o.Name == name);
+        }
+    }
 
     public static JObject? LoadOptions(string interfacePath)
     {
@@ -62,9 +108,12 @@ public static class MaaBanGSongCatalog
                 throw new InvalidDataException("不支持的歌曲排序或参数类型：" + entry.Name);
             var option = (JObject?)options[entry.Name] ?? throw new InvalidDataException("界面缺少选歌入口：" + entry.Name);
             option["default_case"] ??= Required(spec, "default_case");
-            var cases = new JArray(((JArray?)option["cases"] ?? throw new InvalidDataException("选项缺少 cases"))
-                .Where(c => c["pipeline_override"]?[node]?["attach"]?["value"]?.Value<string>() == "")
-                .Select(c => c.DeepClone()));
+            var staticValues = binding["static_values"] as JArray ?? new JArray("");
+            var retained = ((JArray?)option["cases"] ?? throw new InvalidDataException("选项缺少 cases"))
+                .Where(c => staticValues.Any(v => JToken.DeepEquals(v, c["pipeline_override"]?[node]?["attach"]?["value"])))
+                .Select(c => c.DeepClone()).ToList();
+            // Append nonempty static choices after songs to preserve saved indices.
+            var cases = new JArray(retained.Where(c => c["pipeline_override"]?[node]?["attach"]?["value"]?.Value<string>() == ""));
             var prefix = binding["difficulty_prefix"]?.Value<string>();
             if (prefix != null)
                 foreach (var key in options.Properties().Where(p => p.Name.StartsWith(prefix, StringComparison.Ordinal)).ToList())
@@ -93,6 +142,8 @@ public static class MaaBanGSongCatalog
                 }
                 cases.Add(item);
             }
+            foreach (var item in retained.Where(c => c["pipeline_override"]?[node]?["attach"]?["value"]?.Value<string>() != ""))
+                cases.Add(item);
             option["cases"] = cases;
             if (!cases.Any(c => c["name"]?.Value<string>() == option["default_case"]?.Value<string>()))
                 option["default_case"] = cases[0]["name"]!.DeepClone();

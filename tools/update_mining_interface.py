@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from mining_policy import DEFAULTS, NODES, DIFFICULTY_NODES, STAR_NODES
+from live_policy import REFILL_PRIORITIES
 from interface_descriptions import OPTION_DESCRIPTIONS, TASK_DESCRIPTIONS
 
 
@@ -35,6 +36,11 @@ def update(interface):
         description=OPTION_DESCRIPTIONS['挖矿火不足策略'],
         cases=[dict(name=name,pipeline_override={NODES['shortage']:{'attach':{'value':value}}})
                for name,value in [('停止','stop'),('使用回复道具','items')]])
+    options['挖矿火不足策略']['cases'][1]['option']=['挖矿补火道具优先级']
+    options['挖矿补火道具优先级']=dict(type='select',label='补火道具优先级',default_case='小火优先',
+        description=OPTION_DESCRIPTIONS['挖矿补火道具优先级'],
+        cases=[dict(name=label,pipeline_override={NODES['refill_priority']:{'attach':{'value':value}}})
+               for value,label in REFILL_PRIORITIES.items()])
     for label,key in [('挖矿阅读小故事','stories'),('挖矿阅读回忆','memories')]:
         values = [DEFAULTS[key],not DEFAULTS[key]]
         options[label] = dict(type='select',cases=[dict(name='启用' if value else '关闭',

@@ -65,7 +65,8 @@ def finish(label, report):
     status = report.get('status', 'unknown')
     details = []
     for key, title in (('completed_rounds', '完成轮数'), ('attempted', '尝试次数'),
-                       ('draws', '免费招募次数'), ('read', '故事阅读数')):
+                       ('draws', '免费招募次数'), ('read', '故事阅读数'),
+                       ('practiced_members', '技能练习成员'), ('consumed_cards', '使用同名卡')):
         if key in report:
             details.append(f'{title} {report[key]}')
     for key, title in (('claims', '领取批次'), ('exchanges', '交换项目'),

@@ -15,9 +15,11 @@ from song_catalog import BY_ID, available_difficulties
 class MiningLiveFlow(ChartLiveFlow):
     def __init__(self, context, options, output):
         super().__init__(context, ChartOptions.parse(dict(jitter='precise', fire=options.fire,
-                                                         shortage=options.shortage)), output)
+                                                         shortage=options.shortage,
+                                                         refill_priority=options.refill_priority)), output)
         self.mining = options
-        self.report['options'] = dict(jitter='precise',shortage=options.shortage,avoid_full_combo=False)
+        self.report['options'] = dict(jitter='precise',shortage=options.shortage,
+                                     refill_priority=options.refill_priority,avoid_full_combo=False)
         self.report.update(mining_options={**{k:v for k,v in asdict(options).items() if k!='fire'}, 'stars': sorted(options.stars)},
                            scanned=[], skipped=[], full_combos=[], attempted=0)
         self.scan_initialized = False
