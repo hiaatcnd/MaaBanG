@@ -50,8 +50,13 @@ class CatalogUpdateTests(unittest.TestCase):
         self.assertEqual(new['option']['谱面随机偏差'], old['option']['谱面随机偏差'])
         for key in ('演出歌曲', '谱面第1首歌曲', '谱面第2首歌曲', '谱面第3首歌曲', '直接演出歌曲'):
             self.assertEqual([c['name'] for c in new['option'][key]['cases']], ['新歌曲'])
-        for key in ('谱面协力歌曲', '谱面挑战歌曲'):
-            self.assertEqual(len(new['option'][key]['cases']), 2)
+        for key, node in (('谱面协力歌曲', 'CL_coop_song'),
+                          ('谱面竞演歌曲', 'CL_versus_song'),
+                          ('谱面挑战歌曲', 'CL_cp_song')):
+            values = [case['pipeline_override'][node]['attach']['value']
+                      for case in new['option'][key]['cases']]
+            expected = ['', '99999'] + (['current'] if key != '谱面挑战歌曲' else [])
+            self.assertEqual(values, expected)
 
     def test_download_invalid_data_and_cancel_keep_existing_files(self):
         with patch.object(updater, 'fetch', side_effect=TimeoutError('offline')):
