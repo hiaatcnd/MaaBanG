@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier><Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Test the package's actual managed/native dependencies, independently of
+         upstream project build artifacts or a developer's NuGet cache. -->
+    <Reference Include="$(MaaBanGTestApp)/libs/*.dll"
+               Exclude="$(MaaBanGTestApp)/libs/lib*.dll;$(MaaBanGTestApp)/libs/av_libglesv2.dll;$(MaaBanGTestApp)/libs/miniaudio.dll;$(MaaBanGTestApp)/libs/uiohook.dll" />
+    <Content Include="$(MaaBanGTestApp)/libs/lib*.dll;$(MaaBanGTestApp)/libs/av_libglesv2.dll;$(MaaBanGTestApp)/libs/miniaudio.dll;$(MaaBanGTestApp)/libs/uiohook.dll;$(MaaBanGTestApp)/runtimes/win-x64/native/*.dll"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <PackageReference Include="Avalonia.Headless" Version="11.3.12" />
+  </ItemGroup>
+  <Target Name="RequirePackagedRuntime" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(MaaBanGTestApp)/libs/MFAAvalonia.Core.dll')"
+           Text="Set MaaBanGTestApp to the app directory of a built MaaBanG package." />
+  </Target>
+</Project>

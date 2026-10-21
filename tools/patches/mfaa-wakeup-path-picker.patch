@@ -1,0 +1,40 @@
+--- a/MFAAvalonia/Helper/TaskOptionGenerator.cs
++++ b/MFAAvalonia/Helper/TaskOptionGenerator.cs
+@@ -522,8 +522,12 @@
+         // Events
+         textBox.TextChanged += (_, _) => HandleStringInputChange(textBox, input, option, interfaceOption);
+         
++        MaaBanGPathPicker.Attach(textBox, option.Name, input.Name);
++
+         // Initial setup
+-        HandleStringInputChange(textBox, input, option, interfaceOption, true); 
++        HandleStringInputChange(textBox, input, option, interfaceOption, true);
++        if (MaaBanGPathPicker.CreateInputLayout(textBox, option.Name, input) is { } wakeupInput)
++            return wakeupInput;
+ 
+         // Label Panel
+         var labelPanel = CreateLabelPanel(input.DisplayName, input.Name, input.Description);
+--- a/MFAAvalonia/Views/Pages/TaskQueueView.axaml.cs
++++ b/MFAAvalonia/Views/Pages/TaskQueueView.axaml.cs
+@@ -1583,6 +1583,8 @@
+                     SaveConfiguration();
+                 };
+ 
++                MaaBanGPathPicker.Attach(textBox, option.Name, input.Name);
++
+                 SaveConfiguration();
+ 
+ 
+@@ -1594,6 +1596,12 @@
+                             .ToDictionary(kv => kv.Key, kv => kv.Value!));
+                 }
+                 Grid.SetColumn(textBox, 1);
++
++                if (MaaBanGPathPicker.CreateInputLayout(textBox, option.Name, input) is { } wakeupInput)
++                {
++                    container.Children.Add(wakeupInput);
++                    continue;
++                }
+ 
+                 // 标签 - 使用 ResourceBindingWithFallback 支持语言动态切换
+                 var textBlock = new TextBlock

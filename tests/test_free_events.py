@@ -17,6 +17,29 @@ FREE = '黄金周纪念1日1次免费10连招募 进行招募。确认吗？ ※
 
 
 class EventFreeTests(unittest.TestCase):
+    def test_combined_recruit_enters_once_and_returns_home_after_daily_draws(self):
+        from unittest.mock import call, patch
+        for remaining in (0,3):
+            with self.subTest(remaining=remaining):
+                f=self.event_flow(['paid','free','daily'])
+                f.free_remaining=Mock(side_effect=list(range(remaining,-1,-1)))
+                f.hit_text=Mock(return_value=True)
+                f.text=Mock(side_effect=lambda roi:
+                            FREE if roi==[370,260,540,160] else '每日最多3次免费！演出招募')
+                route=Mock()
+                route.attach_mock(f.home,'home')
+                route.attach_mock(f.click,'click')
+                route.attach_mock(f.finish_draw,'finish_draw')
+                with patch('daily_tasks.time.sleep'):
+                    f.recruit()
+                self.assertEqual(route.mock_calls,
+                                 [call.home(),call.click('DY_RecruitEntry'),
+                                  call.finish_draw('DY_RecruitDetails')]+
+                                 [call.finish_draw()]*remaining+[call.home()])
+                self.assertEqual(f.report['draws'],1+remaining)
+                self.assertEqual(f.report['recruit_tabs_checked'],3)
+                self.assertEqual(f.report['status'],'finished')
+
     def test_inheritance_during_entry_rewind_and_pool_switch_preserves_scan(self):
         from unittest.mock import patch
         from test_notifications import inheritance_notice

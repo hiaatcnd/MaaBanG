@@ -6,7 +6,7 @@
     "license": "MIT",
     "welcome": "欢迎使用 MaaBanG！请先启动模拟器并开启 ADB 调试，再选择安卓端连接设备。当前处于开发阶段，游戏任务将逐步添加。",
     "github": "https://github.com/hiaatcnd/MaaBanG",
-    "version": "v0.7.1",
+    "version": "v0.7.2",
     "controller": [
         {
             "name": "安卓端",
@@ -23,6 +23,42 @@
         }
     ],
     "task": [
+        {
+            "name": "开始唤醒",
+            "entry": "StartWakeup",
+            "default_check": false,
+            "description": "自动启动模拟器、打开指定游戏应用，处理资源更新、公告和登录奖励，确认到达主页后继续后续任务。\n\n**设备与双开**\n\nMuMu 使用 mumu-cli.exe 和多开器实例号；路径留空时尝试默认安装位置。旧版 MuMu、雷电、蓝叠等请选择自定义并填写启动程序、参数及 ADB。模拟器实例号与 Android 应用双开用户 ID 是两个不同设置。用户 ID 默认 0，打开原应用；应用分身一般从 10 开始。\n\n**与上方设备的关系**\n\n控制器类型需为安卓 ADB。MuMu／自定义模式按本任务设置连接设备，连接成功后同步上方当前设备，后续任务继续使用该设备。“仅连接已运行设备”留空时沿用上方当前连接。\n\n**运行规则**\n\n勾选后优先执行；每个队列只允许一项。资源下载默认开启，最长等待 20 分钟。登录验证、客户端安装更新及未知页面会停止队列并保存截图，不会切换到其他账号。",
+            "pipeline_override": {
+                "SW_Connection": {
+                    "attach": {
+                        "emulator": "mumu",
+                        "emulator_path": "",
+                        "instance": "0",
+                        "arguments": "[]",
+                        "adb_path": "",
+                        "address": "",
+                        "boot_timeout": "180"
+                    }
+                },
+                "SW_Game": {
+                    "attach": {
+                        "package": "com.bilibili.star.bili",
+                        "user": "0",
+                        "download": true,
+                        "game_timeout": "1200",
+                        "unknown_timeout": "60"
+                    }
+                }
+            },
+            "option": [
+                "唤醒模拟器类型",
+                "唤醒连接设置",
+                "唤醒游戏应用",
+                "唤醒自动下载",
+                "唤醒等待设置",
+                "唤醒模拟器等待"
+            ]
+        },
         {
             "name": "演出预先设置",
             "entry": "LivePresets",
@@ -184,6 +220,41 @@
                 "挖矿舞台避免FullCombo",
                 "挖矿火不足策略",
                 "挖矿最大演出数"
+            ]
+        },
+        {
+            "name": "退出",
+            "entry": "ExitGame",
+            "default_check": false,
+            "description": "在本轮普通任务结束后执行，可单独勾选运行；不会为退出而启动模拟器。停止或中断队列不会强制执行此任务。\n\n**退出范围**\n\n关闭应用：只结束指定 Android 用户下的游戏，支持原应用与分身。\n\n关闭模拟器实例：关闭指定 MuMu 实例，其他实例保留。\n\n关闭模拟器程序：关闭此 MuMu 安装的全部实例，再退出主程序；其他正在运行的实例也会结束。\n\n**退出目标**\n\n默认沿用本轮勾选的“开始唤醒”中的设备、包名和用户 ID；没有唤醒任务时使用上方当前 ADB 设备，游戏默认原应用（用户 0）。关闭实例时按当前地址匹配 MuMu，无法唯一确定时停止。可选择指定目标单独设置。\n\n实例和程序关闭目前适配 MuMu（mumu-cli）；其他模拟器可通过 ADB 关闭应用。执行记录保存在 debug/exit。",
+            "pipeline_override": {
+                "EX_Settings": {
+                    "attach": {
+                        "scope": "app",
+                        "target": "follow",
+                        "shutdown_timeout": "60"
+                    }
+                },
+                "EX_Connection": {
+                    "attach": {
+                        "emulator": "mumu",
+                        "emulator_path": "",
+                        "instance": "0",
+                        "adb_path": "",
+                        "address": ""
+                    }
+                },
+                "EX_Game": {
+                    "attach": {
+                        "package": "com.bilibili.star.bili",
+                        "user": "0"
+                    }
+                }
+            },
+            "option": [
+                "退出范围",
+                "退出目标",
+                "退出等待设置"
             ]
         }
     ],
@@ -2436,6 +2507,417 @@
                     }
                 }
             ]
+        },
+        "唤醒模拟器类型": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "MuMu（mumu-cli）",
+                    "pipeline_override": {
+                        "SW_Connection": {
+                            "attach": {
+                                "emulator": "mumu"
+                            }
+                        }
+                    },
+                    "option": [
+                        "唤醒MuMu设置"
+                    ]
+                },
+                {
+                    "name": "自定义模拟器",
+                    "pipeline_override": {
+                        "SW_Connection": {
+                            "attach": {
+                                "emulator": "custom"
+                            }
+                        }
+                    },
+                    "option": [
+                        "唤醒自定义模拟器设置"
+                    ]
+                },
+                {
+                    "name": "仅连接已运行设备",
+                    "pipeline_override": {
+                        "SW_Connection": {
+                            "attach": {
+                                "emulator": "none"
+                            }
+                        }
+                    },
+                    "option": []
+                }
+            ]
+        },
+        "唤醒MuMu设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "emulator_path",
+                    "label": "MuMu 程序路径",
+                    "default": "",
+                    "description": "可留空自动查找；手动选择时，请选择 MuMu 安装目录中的 mumu-cli.exe。"
+                },
+                {
+                    "name": "instance",
+                    "label": "模拟器多开实例号",
+                    "default": "0",
+                    "verify": "^\\d{1,4}$",
+                    "pattern_msg": "请输入有效的非负整数",
+                    "description": "默认 0 表示第一台模拟器；与应用分身的用户 ID 不同。"
+                }
+            ],
+            "pipeline_override": {
+                "SW_Connection": {
+                    "attach": {
+                        "emulator_path": "{emulator_path}",
+                        "instance": "{instance}"
+                    }
+                }
+            },
+            "description": "默认安装的 MuMu 通常不用填写路径。需要手动指定时，点击“选择…”选择安装目录中的 mumu-cli.exe。"
+        },
+        "唤醒自定义模拟器设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "emulator_path",
+                    "label": "模拟器启动程序完整路径",
+                    "default": ""
+                },
+                {
+                    "name": "arguments",
+                    "label": "启动参数",
+                    "default": "[]",
+                    "description": "填写 JSON 数组，例如 [\"--index\", \"0\"]；没有参数时保持 []。"
+                }
+            ],
+            "pipeline_override": {
+                "SW_Connection": {
+                    "attach": {
+                        "emulator_path": "{emulator_path}",
+                        "arguments": "{arguments}"
+                    }
+                }
+            },
+            "description": "参数直接传给程序，不执行 shell。请从该实例的快捷方式或官方说明复制参数。"
+        },
+        "唤醒连接设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "adb_path",
+                    "label": "ADB 程序路径",
+                    "default": "",
+                    "description": "MuMu 留空自动查找；其他模拟器可点击“选择…”选择其自带的 adb.exe 或兼容 ADB 程序。"
+                },
+                {
+                    "name": "address",
+                    "label": "连接地址 / ADB 序列号",
+                    "default": "",
+                    "description": "MuMu 可留空自动读取。手动填写时，从模拟器的 ADB 设置或本程序设备列表复制实际地址／序列号；常见形式为 127.0.0.1:16384 或 emulator-5554。不同实例的值可能不同。"
+                }
+            ],
+            "pipeline_override": {
+                "SW_Connection": {
+                    "attach": {
+                        "adb_path": "{adb_path}",
+                        "address": "{address}"
+                    }
+                }
+            },
+            "description": "**MuMu：这两项通常都不用填**，路径会自动查找，连接地址会从上面的实例号读取。\n\n**仅连接已运行设备：**留空沿用界面当前连接。\n\n**自定义模拟器：**点击“选择…”选择模拟器自带的 ADB 程序，并填写该实例的 ADB 地址，格式为 `127.0.0.1:端口`，例如 `127.0.0.1:16384`；如果设备列表显示 `emulator-5554` 等序列号，也可原样填写。这里不是文件路径，也不是实例号或应用分身用户 ID。"
+        },
+        "唤醒游戏应用": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "package",
+                    "label": "游戏包名",
+                    "default": "com.bilibili.star.bili"
+                },
+                {
+                    "name": "user",
+                    "label": "Android 用户 ID",
+                    "default": "0",
+                    "verify": "^\\d{1,5}$",
+                    "pattern_msg": "请输入有效的非负整数",
+                    "description": "默认 0 为原应用；应用分身一般从 10 开始，具体以模拟器实际用户 ID 为准。"
+                }
+            ],
+            "pipeline_override": {
+                "SW_Game": {
+                    "attach": {
+                        "package": "{package}",
+                        "user": "{user}"
+                    }
+                }
+            },
+            "description": "默认 0 为原应用；应用分身一般从 10 开始，具体以模拟器实际用户 ID 为准。严格打开指定用户安装的游戏；分身不存在时停止，不回退到原应用。"
+        },
+        "唤醒自动下载": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "允许下载游戏资源",
+                    "pipeline_override": {
+                        "SW_Game": {
+                            "attach": {
+                                "download": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "遇到下载时停止",
+                    "pipeline_override": {
+                        "SW_Game": {
+                            "attach": {
+                                "download": false
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "唤醒等待设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "game_timeout",
+                    "label": "游戏启动和下载总超时（30–7200 秒）",
+                    "default": "1200",
+                    "verify": "^\\d{2,4}$",
+                    "pattern_msg": "请输入有效的非负整数"
+                },
+                {
+                    "name": "unknown_timeout",
+                    "label": "未知页面等待（5–300 秒）",
+                    "default": "60",
+                    "verify": "^\\d{1,3}$",
+                    "pattern_msg": "请输入有效的非负整数"
+                }
+            ],
+            "pipeline_override": {
+                "SW_Game": {
+                    "attach": {
+                        "game_timeout": "{game_timeout}",
+                        "unknown_timeout": "{unknown_timeout}"
+                    }
+                }
+            }
+        },
+        "唤醒模拟器等待": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "boot_timeout",
+                    "label": "模拟器启动超时（10–1800 秒）",
+                    "default": "180",
+                    "verify": "^\\d{2,4}$",
+                    "pattern_msg": "请输入有效的非负整数"
+                }
+            ],
+            "pipeline_override": {
+                "SW_Connection": {
+                    "attach": {
+                        "boot_timeout": "{boot_timeout}"
+                    }
+                }
+            }
+        },
+        "退出范围": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "关闭应用",
+                    "pipeline_override": {
+                        "EX_Settings": {
+                            "attach": {
+                                "scope": "app"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "关闭模拟器实例",
+                    "pipeline_override": {
+                        "EX_Settings": {
+                            "attach": {
+                                "scope": "instance"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "关闭模拟器程序（全部实例）",
+                    "pipeline_override": {
+                        "EX_Settings": {
+                            "attach": {
+                                "scope": "program"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "退出目标": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "沿用本轮唤醒 / 当前设备",
+                    "pipeline_override": {
+                        "EX_Settings": {
+                            "attach": {
+                                "target": "follow"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "指定退出目标",
+                    "pipeline_override": {
+                        "EX_Settings": {
+                            "attach": {
+                                "target": "manual"
+                            }
+                        }
+                    },
+                    "option": [
+                        "退出模拟器类型",
+                        "退出连接设置",
+                        "退出游戏应用"
+                    ]
+                }
+            ]
+        },
+        "退出模拟器类型": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "MuMu（mumu-cli）",
+                    "pipeline_override": {
+                        "EX_Connection": {
+                            "attach": {
+                                "emulator": "mumu"
+                            }
+                        }
+                    },
+                    "option": [
+                        "退出MuMu设置"
+                    ]
+                },
+                {
+                    "name": "仅使用 ADB（关闭应用）",
+                    "pipeline_override": {
+                        "EX_Connection": {
+                            "attach": {
+                                "emulator": "none"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "退出MuMu设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "emulator_path",
+                    "label": "MuMu 程序路径",
+                    "default": "",
+                    "description": "留空自动查找，或选择 MuMu 安装目录中的 mumu-cli.exe。"
+                },
+                {
+                    "name": "instance",
+                    "label": "模拟器多开实例号",
+                    "default": "0",
+                    "description": "从 0 开始。关闭实例只影响此编号；关闭程序会结束该安装下的全部实例。",
+                    "verify": "^\\d{1,5}$",
+                    "pattern_msg": "请输入非负整数"
+                }
+            ],
+            "pipeline_override": {
+                "EX_Connection": {
+                    "attach": {
+                        "emulator_path": "{emulator_path}",
+                        "instance": "{instance}"
+                    }
+                }
+            }
+        },
+        "退出连接设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "adb_path",
+                    "label": "ADB 程序路径",
+                    "default": "",
+                    "description": "MuMu 可留空自动查找；仅使用 ADB 时留空沿用当前设备。"
+                },
+                {
+                    "name": "address",
+                    "label": "连接地址 / ADB 序列号",
+                    "default": "",
+                    "description": "MuMu 可留空，按实例号读取。仅使用 ADB 时留空沿用当前设备，也可填写实际地址，如 127.0.0.1:16384。"
+                }
+            ],
+            "pipeline_override": {
+                "EX_Connection": {
+                    "attach": {
+                        "adb_path": "{adb_path}",
+                        "address": "{address}"
+                    }
+                }
+            }
+        },
+        "退出游戏应用": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "package",
+                    "label": "游戏包名",
+                    "default": "com.bilibili.star.bili",
+                    "description": "仅“关闭应用”使用。"
+                },
+                {
+                    "name": "user",
+                    "label": "Android 用户 ID",
+                    "default": "0",
+                    "description": "默认 0 为原应用，应用分身一般从 10 开始；只关闭此用户的应用。",
+                    "verify": "^\\d{1,5}$",
+                    "pattern_msg": "请输入非负整数"
+                }
+            ],
+            "pipeline_override": {
+                "EX_Game": {
+                    "attach": {
+                        "package": "{package}",
+                        "user": "{user}"
+                    }
+                }
+            }
+        },
+        "退出等待设置": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "shutdown_timeout",
+                    "label": "等待关闭超时（秒）",
+                    "default": "60",
+                    "description": "5–300 秒。超时保留错误记录，不强杀其他进程。",
+                    "verify": "^\\d{1,5}$",
+                    "pattern_msg": "请输入非负整数"
+                }
+            ],
+            "pipeline_override": {
+                "EX_Settings": {
+                    "attach": {
+                        "shutdown_timeout": "{shutdown_timeout}"
+                    }
+                }
+            }
         }
     },
     "agent": {

@@ -1,0 +1,26 @@
+{
+    "StartWakeup": {
+        "action": "Custom",
+        "custom_action": "StartWakeup"
+    },
+    "SW_Connection": {
+        "attach": {
+            "emulator": "mumu",
+            "emulator_path": "",
+            "instance": "0",
+            "arguments": "[]",
+            "adb_path": "",
+            "address": "",
+            "boot_timeout": "180"
+        }
+    },
+    "SW_Game": {
+        "attach": {
+            "package": "com.bilibili.star.bili",
+            "user": "0",
+            "download": true,
+            "game_timeout": "1200",
+            "unknown_timeout": "60"
+        }
+    }
+}

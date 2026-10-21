@@ -13,7 +13,7 @@ def main():
         sys.exit(1)
 
     if sys.platform == "win32":
-        temp = Path.home() / ".maabang" / "temp"
+        temp = Path(os.environ.get('MAABANG_IPC_DIR', Path.home() / '.maabang' / 'temp'))
         temp.mkdir(parents=True, exist_ok=True)
         os.environ["TEMP"] = os.environ["TMP"] = str(temp)
 
@@ -26,6 +26,8 @@ def main():
     from chart_live import ChartLive
     from direct_chart_live import DirectChartLive
     from live_presets import LivePresets
+    from wakeup import StartWakeup
+    from exit_task import ExitGame
     from update_songs import UpdateSongCatalog
     from bestdori import BestdoriProfiles
     import mining
@@ -48,6 +50,8 @@ def main():
     catalog_action("ChartLive", ChartLive)
     catalog_action("DirectChartLive", DirectChartLive)
     AgentServer.custom_action("LivePresets")(LivePresets)
+    AgentServer.custom_action("StartWakeup")(StartWakeup)
+    AgentServer.custom_action("ExitGame")(ExitGame)
     AgentServer.custom_action("UpdateSongCatalog")(UpdateSongCatalog)
     AgentServer.custom_action("BestdoriProfiles")(BestdoriProfiles)
     AgentServer.custom_action("UpgradeSameMemberSkills")(UpgradeSameMemberSkills)

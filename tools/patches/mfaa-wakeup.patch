@@ -1,0 +1,68 @@
+--- a/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
++++ b/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
+@@ -3640,12 +3640,12 @@
+         var runId = 0L;
+         if (!onlyStart)
+         {
+-            tasks ??= new List<DragItemViewModel>();
++            tasks = WakeupFirst(tasks ?? new List<DragItemViewModel>());
+             _tempTasks = tasks;
+             runId = ViewModel?.BeginTaskRun(tasks) ?? 0;
+             LoggerHelper.Info($"准备执行任务队列：任务数量={tasks.Count}");
+             var taskAndParams = tasks.Select((task, index) => CreateNodeAndParam(task, index + 1, runId)).ToList();
+-            InitializeConnectionTasksAsync(token);
++            InitializeConnectionTasksAsync(token, taskAndParams.FirstOrDefault(t => t.Entry == "StartWakeup"));
+             AddCoreTasksAsync(taskAndParams, token);
+         }
+ 
+@@ -4106,7 +4106,7 @@
+             ?? controllerType.ToJsonKey();
+     }
+ 
+-    private void InitializeConnectionTasksAsync(CancellationToken token)
++    private void InitializeConnectionTasksAsync(CancellationToken token, NodeAndParam? wakeup = null)
+     {
+         TaskQueue.Enqueue(CreateMFATask(LangKeys.Prescript.ToLocalization(), async () =>
+         {
+@@ -4115,7 +4115,10 @@
+ 
+         TaskQueue.Enqueue(CreateMFATask(LangKeys.Connection.ToLocalization(), async () =>
+         {
+-            await HandleDeviceConnectionAsync(token);
++            if (wakeup != null)
++                await PrepareWakeupAsync(wakeup, token);
++            else
++                await HandleDeviceConnectionAsync(token);
+         }));
+ 
+         TaskQueue.Enqueue(CreateMFATask(LangKeys.PerformanceBenchmark.ToLocalization(), async () =>
+@@ -4385,7 +4388,7 @@
+     {
+         foreach (var task in taskAndParams)
+         {
+-            TaskQueue.Enqueue(CreateMaaFWTask(task.Name,
++            var queuedTask = CreateMaaFWTask(task.Name,
+                 async () =>
+                 {
+                     token.ThrowIfCancellationRequested();
+@@ -4393,7 +4396,9 @@
+                     //     NodeDictionary = task.Tasks;
+                     return await TryRunTasksAsync(MaaTasker, task.Entry, task.Param, token);
+                 }, task.Count ?? 1, task.SourceItem, task.RunId
+-            ));
++            );
++            if (task.Entry == "StartWakeup") queuedTask.ContinueOnError = false;
++            TaskQueue.Enqueue(queuedTask);
+         }
+     }
+ 
+--- a/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
++++ b/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
+@@ -686,6 +686,7 @@
+         var skipDeviceCheck = beforeTask.Contains("StartupSoftware", StringComparison.OrdinalIgnoreCase)
+             || Instances.ConnectSettingsUserControlModel.AutoDetectOnConnectionFailed
+             || HasApplicablePreTask()
++            || Processor.HasSelectedWakeup
+             || PlatformControllerFactory.CanInitializeWithoutDevice;
+ 
+         if (!skipDeviceCheck)

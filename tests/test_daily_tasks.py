@@ -128,19 +128,48 @@ class DailyFlowTests(unittest.TestCase):
                 f.image[100:565,28:229]=position[0]*30
         f.swipe=Mock(side_effect=swipe)
         f.reco=Mock(side_effect=lambda node:position[0]>=3)
-        DailyFlow.select_free_recruit(f)
-        self.assertEqual(f.swipe.call_count,3)
+        with patch('daily_tasks.time.sleep'):
+            DailyFlow.select_free_recruit(f)
+        self.assertEqual([c.args for c in f.swipe.call_args_list],
+                         [(130,310,520)]+[(130,520,320)]*3)
         f.click.assert_called_with('DY_FreeTab')
-        f.wait.assert_called_once_with('DY_FreeBanner')
+        f.wait.assert_called_with('DY_FreeBanner')
+        f.home.assert_not_called()
 
     def test_free_recruit_stops_at_unchanged_list_without_drawing(self):
         f=self.flow();f.click=Mock();f.snap=Mock();f.swipe=Mock()
         f.image=np.zeros((720,1280,3),dtype=np.uint8)
         f.reco=Mock(return_value=None)
-        with self.assertRaisesRegex(FlowError,'招募列表未找到'):
+        with patch('daily_tasks.time.sleep'), self.assertRaisesRegex(FlowError,'招募列表未找到'):
             DailyFlow.select_free_recruit(f)
-        f.swipe.assert_called_once()
+        self.assertEqual([c.args for c in f.swipe.call_args_list],
+                         [(130,310,520),(130,520,320)])
         f.tap.assert_not_called()
+
+    def test_daily_pool_above_event_scan_end_is_found_without_reentry(self):
+        for position, rewinds in ((2,0),(6,7)):
+            with self.subTest(position=position):
+                f=self.flow(); f.image=np.zeros((720,1280,3),dtype=np.uint8)
+                state={'scroll':position, 'selected':False}
+                def snap(*args):
+                    f.image[100:565,28:229]=state['scroll']*30
+                def swipe(x,y1,y2):
+                    state['scroll']=max(0,state['scroll']+(-1 if y2>y1 else 1))
+                    snap()
+                def click(node):
+                    self.assertEqual(node,'DY_FreeTab')
+                    self.assertEqual(state['scroll'],2)
+                    state['selected']=True
+                f.snap=Mock(side_effect=snap); f.wait=Mock(side_effect=snap)
+                f.swipe=Mock(side_effect=swipe); f.click=Mock(side_effect=click)
+                f.reco=Mock(side_effect=lambda node:
+                            node=='DY_FreeTab' and state['scroll']==2)
+                with patch('daily_tasks.time.sleep'):
+                    DailyFlow.select_free_recruit(f)
+                self.assertTrue(state['selected'])
+                self.assertEqual([c.args for c in f.swipe.call_args_list].count((130,310,520)),rewinds)
+                f.home.assert_not_called()
+                f.wait.assert_called_with('DY_FreeBanner')
 
     def test_real_invitation_claim_buttons_at_lower_position(self):
         root=Path(__file__).resolve().parents[1]

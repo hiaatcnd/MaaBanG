@@ -346,8 +346,14 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.home()
 
     def select_free_recruit(self):
-        self.home()
-        self.click("DY_RecruitEntry")
+        # Continue on the page left by the event scan instead of reopening it.
+        self.wait_recruit_page()
+        if self.reco("DY_FreeBanner"):
+            return
+        if not self.reco("DY_FreeTab"):
+            # The event scan may finish below the daily pool. Search from the
+            # top when its tab is no longer visible, without leaving recruitment.
+            self.rewind_recruit_tabs()
         previous = None
         for _ in range(30):
             self.snap()
@@ -446,11 +452,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             self.wait(node)
         self.require_clear_notification_overlay()
 
-    def recruit_events(self):
-        log('[免费招募] 正在检查活动免费招募')
-        self.home()
-        self.click("DY_RecruitEntry")
-        self.wait_recruit_page()
+    def rewind_recruit_tabs(self):
         # Selecting a tab centers it at y=218. Scroll back to the first pool.
         for _ in range(30):
             before = self.image[100:565,28:229].astype(float)
@@ -461,6 +463,13 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 break
         else:
             raise FlowError("招募列表未回到顶部")
+
+    def recruit_events(self):
+        log('[免费招募] 正在检查活动免费招募')
+        self.home()
+        self.click("DY_RecruitEntry")
+        self.wait_recruit_page()
+        self.rewind_recruit_tabs()
         visited = []
         for index in range(60):
             self.wait_recruit_page()

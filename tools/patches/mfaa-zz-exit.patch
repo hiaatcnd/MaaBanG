@@ -1,0 +1,36 @@
+--- a/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
++++ b/MFAAvalonia/Extensions/MaaFW/MaaProcessor.cs
+@@ -3645,7 +3645,8 @@
+             runId = ViewModel?.BeginTaskRun(tasks) ?? 0;
+             LoggerHelper.Info($"准备执行任务队列：任务数量={tasks.Count}");
+             var taskAndParams = tasks.Select((task, index) => CreateNodeAndParam(task, index + 1, runId)).ToList();
+-            InitializeConnectionTasksAsync(token, taskAndParams.FirstOrDefault(t => t.Entry == "StartWakeup"));
++            if (taskAndParams.Any(t => t.Entry != "ExitGame"))
++                InitializeConnectionTasksAsync(token, taskAndParams.FirstOrDefault(t => t.Entry == "StartWakeup"));
+             AddCoreTasksAsync(taskAndParams, token);
+         }
+ 
+@@ -4394,10 +4395,12 @@
+                     token.ThrowIfCancellationRequested();
+                     // if (task.Tasks != null)
+                     //     NodeDictionary = task.Tasks;
++                    if (task.Entry == "ExitGame")
++                        return await RunExitAsync(task, taskAndParams.FirstOrDefault(t => t.Entry == "StartWakeup"), token);
+                     return await TryRunTasksAsync(MaaTasker, task.Entry, task.Param, token);
+                 }, task.Count ?? 1, task.SourceItem, task.RunId
+             );
+-            if (task.Entry == "StartWakeup") queuedTask.ContinueOnError = false;
++            if (task.Entry is "StartWakeup" or "ExitGame") queuedTask.ContinueOnError = false;
+             TaskQueue.Enqueue(queuedTask);
+         }
+     }
+--- a/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
++++ b/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
+@@ -687,6 +687,7 @@
+             || Instances.ConnectSettingsUserControlModel.AutoDetectOnConnectionFailed
+             || HasApplicablePreTask()
+             || Processor.HasSelectedWakeup
++            || Processor.HasOnlyExitTasks
+             || PlatformControllerFactory.CanInitializeWithoutDevice;
+ 
+         if (!skipDeviceCheck)
