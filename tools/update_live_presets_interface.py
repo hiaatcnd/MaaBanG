@@ -21,11 +21,15 @@ def update(interface):
     prune(interface)
     for name in REMOVED:
         interface['option'].pop(name, None)
-    tasks = [task for task in interface['task'] if task['entry'] != 'LivePresets']
-    tasks.insert(0, dict(name='演出预先设置', entry='LivePresets', default_check=False,
+    wakeup = [task for task in interface['task'] if task['entry'] == 'StartWakeup']
+    exit_tasks = [task for task in interface['task'] if task['entry'] == 'ExitGame']
+    tasks = [task for task in interface['task']
+             if task['entry'] not in {'StartWakeup', 'LivePresets', 'ExitGame'}]
+    tasks.insert(0,
+        dict(name='演出预先设置', entry='LivePresets', default_check=False,
         description=TASK_DESCRIPTIONS['LivePresets'],
         option=['预设演出设定', '预设Fever印章', '预设火数']))
-    interface['task'] = tasks
+    interface['task'] = wakeup + tasks + exit_tasks
     def choice(label, key, value):
         return dict(name=label, pipeline_override={'LP_'+key:{'attach':{'value':value}}})
     interface['option'].update({

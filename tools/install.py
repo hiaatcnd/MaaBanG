@@ -107,7 +107,7 @@ def build(version):
     shutil.copy2(ROOT / 'tools/build_ui.py', source_bundle)
     shutil.copy2(ROOT / 'tools/MaaBanGUpdate.cs', source_bundle)
     shutil.copy2(ROOT / 'tools/MaaBanGSongCatalog.cs', source_bundle)
-    for filename in ('MaaBanGBestdori.cs', 'MaaBanGBestdoriRunner.cs'):
+    for filename in ('MaaBanGBestdori.cs', 'MaaBanGBestdoriRunner.cs', 'MaaBanGWakeup.cs', 'MaaBanGPathPicker.cs', 'MaaBanGExit.cs'):
         shutil.copy2(ROOT / 'tools' / filename, source_bundle)
     (package / "tools").mkdir()
     build_updater(package / 'tools/MaaBanGUpdater.exe')

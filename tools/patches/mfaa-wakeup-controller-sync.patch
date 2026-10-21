@@ -1,0 +1,33 @@
+--- a/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
++++ b/MFAAvalonia/ViewModels/Pages/TaskQueueViewModel.cs
+@@ -1369,6 +1369,30 @@
+         _lockCurrentAdbSelectionDuringRecovery = enabled;
+     }
+ 
++    public void SelectWakeupAdbDevice(AdbDeviceInfo device)
++    {
++        DispatcherHelper.RunOnMainThread(() =>
++        {
++            _suppressAutoConnect = true;
++            _suppressDeviceSelectionToast = true;
++            try
++            {
++                var existing = Devices.OfType<AdbDeviceInfo>().FirstOrDefault(candidate =>
++                    string.Equals(candidate.AdbPath, device.AdbPath, StringComparison.OrdinalIgnoreCase)
++                    && string.Equals(candidate.AdbSerial, device.AdbSerial, StringComparison.OrdinalIgnoreCase));
++                if (existing == null) Devices.Add(device);
++                else Devices[Devices.IndexOf(existing)] = device;
++                CurrentDevice = device;
++                OnPropertyChanged(nameof(CurrentDeviceTooltipText));
++            }
++            finally
++            {
++                _suppressDeviceSelectionToast = false;
++                _suppressAutoConnect = false;
++            }
++        });
++    }
++
+     public void SyncCurrentAdbSelectionToActiveConfig()
+     {
+         if (CurrentController != MaaControllerTypes.Adb || string.IsNullOrWhiteSpace(Processor.Config.AdbDevice.AdbSerial))

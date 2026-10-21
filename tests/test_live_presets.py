@@ -86,7 +86,7 @@ class PresetTests(unittest.TestCase):
         interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
         updated=update(json.loads(json.dumps(interface)))
         self.assertEqual(interface,updated)
-        self.assertEqual(interface['task'][0]['entry'],'LivePresets')
+        self.assertEqual([t['entry'] for t in interface['task'][:2]], ['StartWakeup', 'LivePresets'])
         self.assertFalse(REMOVED.intersection(interface['option']))
         for task in interface['task']:
             if task['entry']!='LivePresets':

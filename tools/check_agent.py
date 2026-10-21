@@ -9,7 +9,7 @@ import subprocess
 def main():
     root = Path(__file__).resolve().parents[1]
     if os.name == "nt":
-        temp = Path.home() / ".maabang" / "temp"
+        temp = Path(os.environ.get('MAABANG_IPC_DIR', Path.home() / '.maabang' / 'temp'))
         temp.mkdir(parents=True, exist_ok=True)
         os.environ["TEMP"] = os.environ["TMP"] = str(temp)
 
@@ -40,7 +40,7 @@ def main():
             actions = set(client.custom_action_list)
             expected = {"UnlockDefault3DCostumes", "ClaimHomeGifts", "ClaimHomeMissions",
                         "ExchangeMichelle", "DailyFreeRecruit", "AutoLive", "ChartLive", "DirectChartLive", "UpdateSongCatalog",
-                        "MineFullCombo", "MineStories", "MineChallenges", "UpgradeSameMemberSkills", "BestdoriProfiles"}
+                        "MineFullCombo", "MineStories", "MineChallenges", "UpgradeSameMemberSkills", "BestdoriProfiles", "StartWakeup", "ExitGame"}
             if not expected.issubset(actions):
                 raise RuntimeError(f"Missing actions: {sorted(expected - actions)}")
             print("Agent handshake passed. Registered actions:", ", ".join(sorted(actions)))

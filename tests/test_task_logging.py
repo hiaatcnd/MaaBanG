@@ -24,6 +24,8 @@ from mining import MineFullCombo, MineStories, MineChallenges
 from skill_practice import UpgradeSameMemberSkills
 from update_songs import UpdateSongCatalog
 from bestdori import BestdoriProfiles
+from wakeup import StartWakeup
+from exit_task import ExitGame
 
 
 class TaskLoggingTests(unittest.TestCase):
@@ -192,6 +194,10 @@ class TaskLoggingTests(unittest.TestCase):
             elif isinstance(action, UpgradeSameMemberSkills):
                 flow.save_report = lambda: None
                 stack.enter_context(patch('skill_practice.SkillPracticeFlow',return_value=flow))
+            elif isinstance(action, StartWakeup):
+                flow.save_report = lambda: None
+                flow.save_frame = lambda name: None
+                stack.enter_context(patch('wakeup.WakeupFlow',return_value=flow))
             elif isinstance(action, BestdoriProfiles):
                 def scan(*args, **kwargs):
                     execute()
@@ -216,9 +222,11 @@ class TaskLoggingTests(unittest.TestCase):
             'MineFullCombo':MineFullCombo, 'MineStories':MineStories,
             'MineChallenges':MineChallenges, 'UpdateSongCatalog':UpdateSongCatalog,
             'UpgradeSameMemberSkills':UpgradeSameMemberSkills,
+            'StartWakeup':StartWakeup,
         }
         interface=json.loads((ROOT/'assets/interface.json').read_text(encoding='utf8'))
-        self.assertEqual(set(actions), {task['entry'] for task in interface['task']})
+        # ExitGame runs in the desktop host; its legacy Agent guard is checked below.
+        self.assertEqual(set(actions) | {'ExitGame'}, {task['entry'] for task in interface['task']})
         actions['BestdoriProfiles'] = BestdoriProfiles  # Tool-only game-reading action.
         for name, factory in actions.items():
             for fail in (False,True):
@@ -233,6 +241,14 @@ class TaskLoggingTests(unittest.TestCase):
                     if fail:
                         self.assertIn('测试节点失败',text)
                         self.assertNotIn('success:',text)
+
+    def test_exit_agent_guard_reports_desktop_update_requirement(self):
+        context=SimpleNamespace(tasker=SimpleNamespace(stopping=False))
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertFalse(ExitGame().run(context,SimpleNamespace()))
+        self.assertTrue(output.getvalue().startswith('error: '))
+        self.assertIn('请更新主程序',output.getvalue())
+        self.assertNotIn('success:',output.getvalue())
 
     def test_action_preserves_normal_shortage_return_but_logs_reason(self):
         result,text=self.run_action(ChartLive(),status='insufficient_fire')

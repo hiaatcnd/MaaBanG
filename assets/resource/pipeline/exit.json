@@ -1,0 +1,28 @@
+{
+    "ExitGame": {
+        "action": "Custom",
+        "custom_action": "ExitGame"
+    },
+    "EX_Settings": {
+        "attach": {
+            "scope": "app",
+            "target": "follow",
+            "shutdown_timeout": "60"
+        }
+    },
+    "EX_Connection": {
+        "attach": {
+            "emulator": "mumu",
+            "emulator_path": "",
+            "instance": "0",
+            "adb_path": "",
+            "address": ""
+        }
+    },
+    "EX_Game": {
+        "attach": {
+            "package": "com.bilibili.star.bili",
+            "user": "0"
+        }
+    }
+}
