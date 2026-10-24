@@ -63,6 +63,7 @@ class WakeupReplayTests(unittest.TestCase):
                         with patch('wakeup.AndroidGame') as game:
                             game.return_value.user = 10
                             game.return_value.package = 'com.bilibili.star.bili'
+                            game.return_value.foreground.return_value = (10, 'com.bilibili.star.bili')
                             original = context.tasker.controller
                             proxy = SimpleNamespace(info=dict(type='adb', adb_path='unused', adb_serial='fixture'))
                             fake_context = SimpleNamespace(tasker=SimpleNamespace(controller=proxy, stopping=False))

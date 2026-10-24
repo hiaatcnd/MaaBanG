@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from wakeup_host import AndroidGame, Connection, WakeupError, bootstrap, command
-from wakeup import WakeupFlow, startup_decision, RULES
+from wakeup import WakeupFlow, startup_decision, RULES, _ForegroundPending
 
 
 def hit(text, box=(900, 620, 140, 50)):
@@ -58,13 +58,136 @@ class PolicyTests(unittest.TestCase):
 
     def test_click_rechecks_account_even_between_periodic_checks(self):
         flow = WakeupFlow.__new__(WakeupFlow)
-        flow.game = SimpleNamespace(selected_foreground=lambda: False)
+        flow.game = SimpleNamespace(user=0, package='com.bilibili.star.bili',
+                                    foreground=lambda: (10, 'com.bilibili.star.bili'))
+        flow.check_stop = Mock()
         flow.record = Mock()
         with patch('wakeup.DailyFlow.tap') as click:
-            with self.assertRaisesRegex(RuntimeError, '前台应用已改变'):
+            with self.assertRaisesRegex(RuntimeError, '切换了应用用户'):
                 flow.tap(600, 600)
         click.assert_not_called()
-        flow.record.assert_not_called()
+        self.assertNotIn('click', [call.args[0] for call in flow.record.call_args_list])
+
+
+class ForegroundTests(unittest.TestCase):
+    GAME = (0, 'com.bilibili.star.bili')
+    PERMISSION = (0, 'com.android.permissioncontroller')
+
+    def setUp(self):
+        self.now = 100.
+        clock = patch('wakeup.time.monotonic', side_effect=lambda: self.now)
+        clock.start(); self.addCleanup(clock.stop)
+        waiting = patch('wakeup.pause', side_effect=self.pause)
+        self.pause_mock = waiting.start(); self.addCleanup(waiting.stop)
+        self.flow = WakeupFlow.__new__(WakeupFlow)
+        self.flow.game = AndroidGame(Connection('unused', 'fixture'))
+        self.flow.game.foreground = Mock(return_value=self.GAME)
+        self.flow.game.launch = Mock()
+        self.flow.check_stop = Mock()
+        self.flow.record = Mock()
+        self.flow.foreground_wait_started = None
+        self.flow.recorded = 1
+
+    def pause(self, seconds, check_stop):
+        check_stop()
+        self.now += seconds
+
+    def prepare_run(self, hits):
+        flow = self.flow
+        flow.timeout = 30
+        flow.unknown_timeout = 5
+        flow.allow_download = True
+        flow.rules = json.loads(RULES.read_text(encoding='utf-8'))
+        flow.report = dict(status='running', steps=[])
+        flow.image = None
+        flow.snap = Mock()
+        flow.ocr = Mock(side_effect=hits)
+        flow.clear_home = Mock(return_value=True)
+        flow.save_frame = Mock()
+        flow.save_report = Mock()
+        return flow
+
+    def test_recorded_permission_transition_after_start_reaches_home(self):
+        # 2026-10-23: permission activity resumed at 00:05:45.970,
+        # game resumed at 00:05:46.092; the old guard failed in between.
+        flow = self.prepare_run([[hit('TAP TO START', (550, 622, 176, 27))], [], [], []])
+        flow.game.foreground.side_effect = [self.GAME, self.GAME, self.PERMISSION,
+                                            None, self.GAME, self.GAME, self.GAME, self.GAME]
+        with patch('wakeup.DailyFlow.tap') as click:
+            flow.run()
+        click.assert_called_once_with(638, 635)
+        self.assertEqual(flow.report['status'], 'finished')
+        self.assertEqual(len(flow.report['steps']), 1)
+        self.assertEqual(flow.snap.call_count, 4)
+        self.assertIn('foreground_recovered', [c.args[0] for c in flow.record.call_args_list])
+        flow.game.launch.assert_called_once()
+
+    def test_transition_before_click_discards_stale_button(self):
+        flow = self.prepare_run([[hit('TAP TO START', (550, 622, 176, 27))], [], [], []])
+        flow.game.foreground.side_effect = [self.GAME, self.PERMISSION,
+                                            self.GAME, self.GAME, self.GAME, self.GAME]
+        with patch('wakeup.DailyFlow.tap') as click:
+            flow.run()
+        click.assert_not_called()
+        self.assertEqual(flow.report, dict(status='finished', steps=[]))
+        self.assertEqual(flow.snap.call_count, 4)
+
+    def test_permission_at_home_confirmation_requires_three_fresh_frames(self):
+        flow = self.prepare_run([[]]*6)
+        flow.game.foreground.side_effect = [self.GAME]*3 + [self.PERMISSION] + [self.GAME]*4
+        flow.run()
+        self.assertEqual(flow.report['status'], 'finished')
+        self.assertEqual(flow.clear_home.call_count, 6)
+
+    def test_other_apps_and_users_stop_immediately_without_input(self):
+        for foreground in ((0, 'com.android.launcher3'), (10, self.GAME[1]),
+                           (10, self.PERMISSION[1]), (0, 'com.android.settings')):
+            with self.subTest(foreground=foreground):
+                self.flow.game.foreground.return_value = foreground
+                with patch('wakeup.DailyFlow.tap') as click:
+                    with self.assertRaisesRegex(RuntimeError, '切换了应用用户'):
+                        self.flow.tap(600, 600)
+                click.assert_not_called()
+        self.pause_mock.assert_not_called()
+
+    def test_permission_or_missing_foreground_has_bounded_wait(self):
+        for foreground in (self.PERMISSION, None):
+            with self.subTest(foreground=foreground):
+                self.flow.game.foreground.return_value = foreground
+                self.flow.foreground_wait_started = None
+                start = self.now
+                with patch('wakeup.DailyFlow.tap') as click:
+                    for _ in range(20):
+                        try:
+                            self.flow.tap(600, 600)
+                        except _ForegroundPending:
+                            continue
+                        except RuntimeError as exc:
+                            self.assertIn('等待游戏前台恢复超时', str(exc))
+                            break
+                        self.fail('Transient foreground allowed a click')
+                    else:
+                        self.fail('Foreground wait did not time out')
+                click.assert_not_called()
+                self.assertLess(self.now-start, 3.3)
+
+    def test_cancel_during_permission_wait_stops_without_input(self):
+        self.flow.game.foreground.return_value = self.PERMISSION
+        self.flow.check_stop.side_effect = [None, RuntimeError('任务已被用户停止')]
+        with patch('wakeup.DailyFlow.tap') as click:
+            with self.assertRaisesRegex(RuntimeError, '任务已被用户停止'):
+                self.flow.tap(600, 600)
+        click.assert_not_called()
+
+    def test_notification_click_transition_returns_to_fresh_outer_frame(self):
+        flow = self.prepare_run([[], [], [], []])
+        flow.game.foreground.side_effect = [self.GAME, self.PERMISSION] + [self.GAME]*4
+        flow.dismiss_notifications = Mock(side_effect=lambda: flow.tap(600, 600))
+        with patch('wakeup.dialog_box', side_effect=[[300, 100, 680, 500], None, None, None]), \
+                patch('wakeup.DailyFlow.tap') as click:
+            flow.run()
+        click.assert_not_called()
+        self.assertEqual(flow.report, dict(status='finished', steps=[]))
 
 
 class HostTests(unittest.TestCase):
