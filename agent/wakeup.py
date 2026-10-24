@@ -15,6 +15,11 @@ from wakeup_host import AndroidGame, Connection, integer, pause
 
 
 RULES = Path(__file__).with_name('data') / 'wakeup_rules.json'
+FOREGROUND_GRACE_SECONDS = 3
+
+
+class _ForegroundPending(Exception):
+    """Retry from a fresh frame after a transient Android foreground change."""
 
 
 def startup_decision(hits, rules, *, modal=False, allow_download=True):
@@ -70,6 +75,7 @@ class WakeupFlow(DailyFlow):
         self.started = time.monotonic()
         self.recorded = 0
         self.last_recorded = None
+        self.foreground_wait_started = None
         self.game.observe = self.snap
 
     def snap(self):
@@ -90,9 +96,32 @@ class WakeupFlow(DailyFlow):
             stream.write(json.dumps(dict(event=event, elapsed=round(time.monotonic()-self.started, 3),
                                          **details), ensure_ascii=False)+'\n')
 
+    def require_game_foreground(self):
+        self.check_stop()
+        foreground = self.game.foreground()
+        now = time.monotonic()
+        if foreground == (self.game.user, self.game.package):
+            if self.foreground_wait_started is not None:
+                self.record('foreground_recovered', foreground=foreground,
+                            waited=round(now-self.foreground_wait_started, 3))
+                self.foreground_wait_started = None
+            return
+        # Permission requests briefly own the resumed activity during login.
+        # No input is allowed until the exact game/user is foreground again.
+        if foreground is not None and foreground != (self.game.user, 'com.android.permissioncontroller'):
+            self.record('foreground_mismatch', foreground=foreground)
+            raise FlowError('游戏离开前台或切换了应用用户，停止唤醒并保留现场')
+        if self.foreground_wait_started is None:
+            self.foreground_wait_started = now
+            self.record('foreground_wait', foreground=foreground, timeout=FOREGROUND_GRACE_SECONDS)
+        if now-self.foreground_wait_started >= FOREGROUND_GRACE_SECONDS:
+            self.record('foreground_timeout', foreground=foreground)
+            raise FlowError('等待游戏前台恢复超时，请处理系统权限页面或检查应用状态，保留现场')
+        pause(.2, self.check_stop)
+        raise _ForegroundPending
+
     def tap(self, x, y):
-        if not self.game.selected_foreground():
-            raise FlowError('点击前发现游戏用户或前台应用已改变，停止操作')
+        self.require_game_foreground()
         self.record('click', x=int(x), y=int(y), frame=self.recorded-1)
         return super().tap(x, y)
 
@@ -128,65 +157,65 @@ class WakeupFlow(DailyFlow):
         unknown_since = None
         previous = None
         repeats = home_frames = 0
-        last_foreground = 0
         while time.monotonic() < deadline:
-            self.check_stop()
-            # Do not interact with a launcher, store, other account or another app.
-            if time.monotonic()-last_foreground > 5:
-                if not self.game.selected_foreground():
-                    raise FlowError('游戏离开前台或切换了应用用户，停止唤醒并保留现场')
-                last_foreground = time.monotonic()
-            self.snap()
-            box = dialog_box(self.image)
-            hits = self.ocr(box or [0, 0, 1280, 720])
-            mode, label, button = startup_decision(hits, self.rules, modal=box is not None,
-                                                  allow_download=self.allow_download)
-            self.record('recognition', mode=mode, label=label, modal=box,
-                        hits=[dict(text=hit.text, box=list(hit.box), score=float(hit.score)) for hit in hits])
-            if mode == 'blocked':
-                raise FlowError(label)
-            if mode == 'click':
-                fingerprint = (label, normalized(button.text),
-                               tuple(sorted(normalized(h.text) for h in hits if h.score >= .85))
-                               if label == '活动下一步' else ())
-                repeats = repeats+1 if fingerprint == previous else 1
-                if repeats > (8 if label == '活动下一步' else 5):
-                    raise FlowError(f'点击后页面未变化：{label}')
-                if len(self.report['steps']) >= 100:
-                    raise FlowError('启动页面处理超过 100 步，请检查循环弹窗')
-                self.save_frame(f'{len(self.report["steps"]):03d}-{label}.png')
-                self.report['steps'].append(dict(action=label, texts=[h.text for h in hits]))
-                self.save_report()
-                log(f'[开始唤醒] {label}')
-                self.tap_hit(button)
-                previous, unknown_since, home_frames = fingerprint, None, 0
-                pause(4 if label == '进入游戏' else 1, self.check_stop)
-                continue
-            if box is not None:
-                if self.dismiss_notifications():
-                    self.report['steps'].append(dict(action='通知弹窗'))
+            try:
+                self.require_game_foreground()
+                self.snap()
+                box = dialog_box(self.image)
+                hits = self.ocr(box or [0, 0, 1280, 720])
+                mode, label, button = startup_decision(hits, self.rules, modal=box is not None,
+                                                      allow_download=self.allow_download)
+                self.record('recognition', mode=mode, label=label, modal=box,
+                            hits=[dict(text=hit.text, box=list(hit.box), score=float(hit.score)) for hit in hits])
+                if mode == 'blocked':
+                    raise FlowError(label)
+                if mode == 'click':
+                    fingerprint = (label, normalized(button.text),
+                                   tuple(sorted(normalized(h.text) for h in hits if h.score >= .85))
+                                   if label == '活动下一步' else ())
+                    next_repeats = repeats+1 if fingerprint == previous else 1
+                    if next_repeats > (8 if label == '活动下一步' else 5):
+                        raise FlowError(f'点击后页面未变化：{label}')
+                    if len(self.report['steps']) >= 100:
+                        raise FlowError('启动页面处理超过 100 步，请检查循环弹窗')
+                    self.save_frame(f'{len(self.report["steps"]):03d}-{label}.png')
+                    self.tap_hit(button)
+                    repeats = next_repeats
+                    self.report['steps'].append(dict(action=label, texts=[h.text for h in hits]))
                     self.save_report()
-                    previous, unknown_since, home_frames = None, None, 0
+                    log(f'[开始唤醒] {label}')
+                    previous, unknown_since, home_frames = fingerprint, None, 0
+                    pause(4 if label == '进入游戏' else 1, self.check_stop)
                     continue
-            elif self.clear_home() and mode != 'wait':
-                home_frames += 1
-                if home_frames >= 3:
-                    if not self.game.selected_foreground():
-                        raise FlowError('到达主页时应用用户发生变化')
-                    self.save_frame('home.png')
-                    self.report['status'] = 'finished'
-                    return
+                if box is not None:
+                    if self.dismiss_notifications():
+                        self.report['steps'].append(dict(action='通知弹窗'))
+                        self.save_report()
+                        previous, unknown_since, home_frames = None, None, 0
+                        continue
+                elif self.clear_home() and mode != 'wait':
+                    home_frames += 1
+                    if home_frames >= 3:
+                        self.require_game_foreground()
+                        self.save_frame('home.png')
+                        self.report['status'] = 'finished'
+                        return
+                    pause(1, self.check_stop)
+                    continue
+                home_frames = 0
+                if mode == 'wait':
+                    unknown_since = None
+                else:
+                    unknown_since = unknown_since or time.monotonic()
+                    if time.monotonic()-unknown_since >= self.unknown_timeout:
+                        self.report['unknown_texts'] = [hit.text for hit in hits]
+                        raise FlowError('未知启动页面，已保存截图和识别文字，等待补充适配')
                 pause(1, self.check_stop)
-                continue
-            home_frames = 0
-            if mode == 'wait':
+            except _ForegroundPending:
+                # Discard any OCR/button from before the transition, including
+                # clicks attempted by the shared notification handler.
+                home_frames = 0
                 unknown_since = None
-            else:
-                unknown_since = unknown_since or time.monotonic()
-                if time.monotonic()-unknown_since >= self.unknown_timeout:
-                    self.report['unknown_texts'] = [hit.text for hit in hits]
-                    raise FlowError('未知启动页面，已保存截图和识别文字，等待补充适配')
-            pause(1, self.check_stop)
         raise FlowError('游戏唤醒超时，请检查下载进度或服务器状态')
 
 
