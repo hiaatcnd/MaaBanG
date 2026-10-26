@@ -846,6 +846,9 @@ public sealed class MaaBanGBestdoriView : UserControl
         if (empty) _scopeSummary.Foreground = _scanScope.Foreground = Brushes.IndianRed;
         else { _scopeSummary.ClearValue(TextBlock.ForegroundProperty); _scanScope.ClearValue(TextBlock.ForegroundProperty); }
         Dirty();
+        // Scope changes must update row comparisons even while a numeric editor
+        // is active. RefreshComparison preserves that edit and defers row filtering.
+        RefreshComparison();
         if (_rows.Count > 0) ScheduleCache();
     }
     private JObject Scope()
