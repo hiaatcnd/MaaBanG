@@ -6,11 +6,12 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from wakeup_host import AndroidGame, Connection, WakeupError, bootstrap, command
-from wakeup import WakeupFlow, startup_decision, RULES, _ForegroundPending
+from wakeup import WakeupFlow, StartupFallback, startup_decision, RULES, _ForegroundPending
 
 
 def hit(text, box=(900, 620, 140, 50)):
@@ -26,13 +27,18 @@ class PolicyTests(unittest.TestCase):
         return startup_decision(hits, self.rules, **kwargs)
 
     def test_event_next_does_not_depend_on_event_title_or_reward_currency(self):
-        for title in ('黄金周纪念特别礼物', '周年登录奖励', '全新联动活动'):
-            decision = self.decide(hit(title), hit('获得星石 500'), hit('下一步'))
-            self.assertEqual(decision[:2], ('click', '活动下一步'))
+        for title in ('黄金周纪念特别礼物', '周年登录奖励', '全新联动活动', 'HAPPY BIRTHDAY'):
+            for button in ('下一步', 'TAP TO NEXT', 'Touch the screen to continue',
+                           'TAP SCREEN', 'CONTINUE', '轻触屏幕继续'):
+                with self.subTest(title=title, button=button):
+                    decision = self.decide(hit(title), hit('获得星石 500'), hit(button))
+                    self.assertEqual(decision[:2], ('click', '活动下一步'))
 
     def test_multiple_buttons_and_background_next_are_not_guessed(self):
-        self.assertEqual(self.decide(hit('下一步'), hit('下一步', (700, 620, 100, 40)))[0], 'unknown')
-        self.assertEqual(self.decide(hit('下一步'), modal=True)[0], 'unknown')
+        for text in ('下一步', 'TAP TO NEXT'):
+            self.assertEqual(self.decide(hit(text), hit(text, (700, 620, 100, 40)))[0], 'unknown')
+            self.assertEqual(self.decide(hit(text), modal=True)[0], 'unknown')
+            self.assertEqual(self.decide(hit(text, (500, 100, 200, 40)))[0], 'unknown')
 
     def test_resource_update_is_scoped_and_can_be_disabled(self):
         hits = [hit('需要下载游戏数据 250MB', (300, 200, 500, 40)), hit('确定')]
@@ -42,7 +48,8 @@ class PolicyTests(unittest.TestCase):
 
     def test_transactions_and_manual_auth_are_never_accepted(self):
         for prompt in ('是否消耗星石购买下载资源', '确认购买', '付费奖励'):
-            self.assertNotEqual(self.decide(hit(prompt), hit('下一步'))[0], 'click')
+            for button in ('下一步', 'TAP TO NEXT', 'TOUCH SCREEN TO CONTINUE'):
+                self.assertNotEqual(self.decide(hit(prompt), hit(button))[0], 'click')
         for prompt in ('请输入账号密码', '服务器维护中', '前往应用商店更新客户端', '实名认证'):
             self.assertEqual(self.decide(hit(prompt), hit('确定'), modal=True)[0], 'blocked')
 
@@ -67,6 +74,73 @@ class PolicyTests(unittest.TestCase):
                 flow.tap(600, 600)
         click.assert_not_called()
         self.assertNotIn('click', [call.args[0] for call in flow.record.call_args_list])
+
+
+def illustration():
+    return np.tile(np.arange(1280, dtype=np.uint16).astype(np.uint8)[None, :, None], (720, 1, 3))
+
+
+class FallbackTests(unittest.TestCase):
+    def test_startup_promotion_words_do_not_disable_edge_taps(self):
+        for text in ('向那个誓言 伸出双手 招募', '新成员招募登场', '商品购买',
+                     '付费奖励', '消耗星石', '取消', 'PURCHASE'):
+            with self.subTest(text=text):
+                fallback = StartupFallback()
+                frame = illustration()
+                self.assertFalse(fallback.ready(frame, [hit(text)], 0))
+                self.assertTrue(fallback.ready(frame, [hit(text)], 3))
+
+    def test_no_ocr_needed_but_quiet_frame_and_click_interval_are_required(self):
+        fallback = StartupFallback()
+        frame = illustration()
+        self.assertFalse(fallback.ready(frame, [], 0))
+        self.assertFalse(fallback.ready(frame, [], 2))
+        for now in (3, 6, 9):
+            self.assertTrue(fallback.ready(frame, [], now))
+            fallback.clicked(now)
+            self.assertFalse(fallback.ready(frame, [], now+1))
+        self.assertFalse(fallback.ready(frame, [], 30), 'Unchanged art must stop after three taps')
+
+    def test_transitions_restart_wait_but_never_reset_total_budget(self):
+        fallback = StartupFallback()
+        for page in range(4):
+            frame = np.roll(illustration(), page*40, axis=1)
+            now = page*12
+            self.assertFalse(fallback.ready(frame, [], now))
+            for offset in (3, 6, 9):
+                self.assertTrue(fallback.ready(frame, [], now+offset))
+                fallback.clicked(now+offset)
+        fallback.suspend()
+        self.assertFalse(fallback.ready(illustration(), [], 50))
+        self.assertFalse(fallback.ready(illustration(), [], 60))
+        self.assertEqual(fallback.total, 12)
+
+    def test_ocr_flicker_and_foreground_wait_do_not_replenish_same_page_budget(self):
+        fallback = StartupFallback()
+        frame = illustration()
+        fallback.ready(frame, [], 0)
+        for now in (3, 6, 9):
+            self.assertTrue(fallback.ready(frame, [], now))
+            fallback.clicked(now)
+        self.assertFalse(fallback.ready(frame, [hit('登录')], 10))
+        self.assertFalse(fallback.ready(frame, [], 11))
+        self.assertFalse(fallback.ready(frame, [], 14))
+        fallback.suspend()
+        self.assertFalse(fallback.ready(frame, [], 15))
+        self.assertFalse(fallback.ready(frame, [], 18))
+        self.assertEqual(fallback.attempts, 3)
+
+    def test_auth_download_choices_and_blank_frames_have_no_fallback(self):
+        for prompt in ('请选择', '登录', '验证码', '资源下载', '商品跳转', '请输入密码'):
+            with self.subTest(prompt=prompt):
+                fallback = StartupFallback()
+                for now in (0, 4, 10):
+                    self.assertFalse(fallback.ready(illustration(), [hit(prompt)], now))
+        fallback = StartupFallback()
+        for now in (0, 4):
+            self.assertFalse(fallback.ready(np.zeros((720, 1280, 3), dtype=np.uint8), [], now))
+        fallback.ready(illustration(), [], 0)
+        self.assertFalse(fallback.ready(illustration(), [hit('未知按钮', (30, 340, 80, 40))], 4))
 
 
 class ForegroundTests(unittest.TestCase):
@@ -121,6 +195,46 @@ class ForegroundTests(unittest.TestCase):
         self.assertEqual(flow.snap.call_count, 4)
         self.assertIn('foreground_recovered', [c.args[0] for c in flow.record.call_args_list])
         flow.game.launch.assert_called_once()
+
+    def test_unknown_art_advances_then_requires_stable_home(self):
+        for texts in ([], [hit('向那个誓言'), hit('伸出双手'), hit('招募')]):
+            with self.subTest(texts=texts):
+                flow = self.prepare_run([])
+                flow.ocr = Mock(return_value=texts)
+                flow.image = illustration()
+                with patch('wakeup.DailyFlow.tap') as click:
+                    flow.clear_home.side_effect = lambda: click.called
+                    flow.run()
+                click.assert_called_once_with(*StartupFallback.POINT)
+                self.assertEqual(flow.report['status'], 'finished')
+                self.assertEqual([s['action'] for s in flow.report['steps']], ['启动页保底点击'])
+                self.assertEqual(flow.clear_home.call_count, 7)
+
+    def test_unknown_modal_loading_and_login_never_use_fallback(self):
+        for modal, texts in (([300, 100, 680, 500], []), (None, [hit('正在加载')]),
+                             (None, [hit('登录')])):
+            with self.subTest(modal=modal, texts=texts):
+                flow = self.prepare_run([])
+                flow.ocr = Mock(return_value=texts)
+                flow.image = illustration()
+                flow.clear_home.return_value = False
+                flow.dismiss_notifications = Mock(return_value=False)
+                with patch('wakeup.dialog_box', return_value=modal), patch('wakeup.DailyFlow.tap') as click:
+                    with self.assertRaisesRegex(RuntimeError, '超时|未知启动页面'):
+                        flow.run()
+                click.assert_not_called()
+
+    def test_fallback_rechecks_foreground_before_input(self):
+        flow = self.prepare_run([])
+        flow.ocr = Mock(return_value=[])
+        flow.image = illustration()
+        flow.clear_home.return_value = False
+        flow.game.foreground.side_effect = [self.GAME]*4 + [(10, self.GAME[1])]
+        with patch('wakeup.DailyFlow.tap') as click:
+            with self.assertRaisesRegex(RuntimeError, '切换了应用用户'):
+                flow.run()
+        click.assert_not_called()
+        self.assertEqual(flow.report['steps'], [])
 
     def test_transition_before_click_discards_stale_button(self):
         flow = self.prepare_run([[hit('TAP TO START', (550, 622, 176, 27))], [], [], []])

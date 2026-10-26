@@ -13,6 +13,7 @@ GROUPS = {**dict.fromkeys(('PoppinParty', 'Afterglow', 'HelloHappyWorld',
 FIELDS = {'level': (1, 100), 'skill': (0, 4), 'master': (0, 4),
           'ep': (0, 2), 'train': (0, 1), 'art': (0, 1)}
 NUMERIC = ('level', 'skill', 'master')
+ATTRIBUTES = ('powerful', 'cool', 'pure', 'happy')
 
 
 class ProfileError(ValueError):
@@ -197,6 +198,12 @@ def validate_scope(scope, catalog):
         if not isinstance(values, list) or not values or any(type(v) is not int or v not in valid for v in values):
             raise ProfileError('乐队、成员和星级都至少选择一项')
         result[key] = sorted(set(values))
+    # Profiles and scan caches created before attribute selection covered all kinds.
+    attributes = scope.get('attributes', list(ATTRIBUTES))
+    if (not isinstance(attributes, list) or not attributes
+            or any(not isinstance(v, str) or v not in ATTRIBUTES for v in attributes)):
+        raise ProfileError('种类至少选择一项，且必须是 Powerful、Cool、Pure 或 Happy')
+    result['attributes'] = [value for value in ATTRIBUTES if value in attributes]
     if not any(c['bandId'] in result['bands'] and int(id_) in result['members']
                for id_, c in catalog['characters'].items()):
         raise ProfileError('所选乐队和成员没有交集')
@@ -209,7 +216,8 @@ def in_scope(id_, scope, catalog):
         return False
     character = catalog['characters'].get(str(card['characterId']), {})
     return (card['characterId'] in scope['members'] and card['rarity'] in scope['rarities']
-            and character.get('bandId') in scope['bands'])
+            and character.get('bandId') in scope['bands']
+            and card.get('attribute') in scope.get('attributes', ATTRIBUTES))
 
 
 def validate_maximize(value=None):

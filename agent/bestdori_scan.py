@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image
 
 from bestdori_catalog import atomic_json, identify, normalized as identity_text
-from bestdori_profiles import in_scope, validate_scope, validate_maximize
+from bestdori_profiles import ATTRIBUTES, in_scope, validate_scope, validate_maximize
 from costume_unlock import FlowError, normalized
 from daily_tasks import DailyFlow
 from mining_policy import member_cards, member_signature, gold_member_stars
@@ -356,6 +356,7 @@ class BestdoriScan(DailyFlow):
                     self.snap()
                 if not all(self.checkbox(x, y) for x in xs):
                     raise FlowError('无法确认成员筛选已恢复全部')
+                self.filter_attributes(xs, y)
                 break
             self.swipe(left+width-25, top+160, top+450)
         else:
@@ -385,6 +386,16 @@ class BestdoriScan(DailyFlow):
                     return
                 raise FlowError('列表上滑无进展，且未确认顶部；已停止以免遗漏')
         raise FlowError('未能确认成员列表顶部')
+
+    def filter_attributes(self, xs, y):
+        wanted = self.scope['attributes']
+        for attribute, x in zip(ATTRIBUTES, xs):
+            if self.checkbox(x, y) != (attribute in wanted):
+                self.tap(x, y)
+                self.snap()
+        if any(self.checkbox(x, y) != (attribute in wanted) for attribute, x in zip(ATTRIBUTES, xs)):
+            raise FlowError('无法确认成员种类筛选，已停止以免遗漏')
+        self.save_frame('filter-attributes.png')
 
     def filter_characters(self):
         left, top, width, height = self.member_filter_box

@@ -18,6 +18,61 @@ RULES = Path(__file__).with_name('data') / 'wakeup_rules.json'
 FOREGROUND_GRACE_SECONDS = 3
 
 
+class StartupFallback:
+    """Bounded edge taps for quiet full-screen startup art, independent of OCR."""
+
+    POINT = (48, 360)  # Outside the centered dialog and bottom action buttons.
+    INTERVAL = 3
+    PAGE_LIMIT = 3
+    TOTAL_LIMIT = 12
+    MANUAL = re.compile(r'登录|登陆|注册|账号|帐号|密码|验证|授权|同意|协议|隐私|绑定|'
+                        r'下载|更新|安装|维护|选择|跳转|商店|'
+                        r'LOGIN|SIGNIN|PASSWORD|DOWNLOAD|UPDATE', re.I)
+
+    def __init__(self):
+        self.total = 0
+        self.last_click = None
+        self.sample = None
+        self.since = None
+        self.attempts = 0
+
+    def suspend(self):
+        # OCR flicker or a foreground interruption must not replenish tap budgets.
+        self.since = None
+
+    def ready(self, image, hits, now):
+        text = ' '.join(normalized(hit.text) for hit in hits)
+        # Startup art can advertise recruitment or paid content. Those words
+        # do not turn a full-screen introduction into a transaction page.
+        if (not isinstance(image, np.ndarray) or image.shape[:2] != (720, 1280)
+                or self.MANUAL.search(text)):
+            self.suspend()
+            return False
+        sample = image[::12, ::12].astype(np.int16)
+        # Blank loading frames are not actionable startup illustrations.
+        if float(np.std(sample, axis=(0, 1)).mean()) < 8:
+            self.suspend()
+            return False
+        if self.sample is None or float(np.mean(np.abs(sample-self.sample))) > 3:
+            self.sample, self.since, self.attempts = sample, now, 0
+            return False
+        if self.since is None:
+            self.since = now
+            return False
+        x, y = self.POINT
+        if any(h.box[0]-24 <= x <= h.box[0]+h.box[2]+24
+               and h.box[1]-24 <= y <= h.box[1]+h.box[3]+24 for h in hits):
+            return False  # Do not tap an OCR-visible control at the edge.
+        return (now-self.since >= self.INTERVAL
+                and (self.last_click is None or now-self.last_click >= self.INTERVAL)
+                and self.attempts < self.PAGE_LIMIT and self.total < self.TOTAL_LIMIT)
+
+    def clicked(self, now):
+        self.last_click = now
+        self.attempts += 1
+        self.total += 1
+
+
 class _ForegroundPending(Exception):
     """Retry from a fresh frame after a transient Android foreground change."""
 
@@ -157,6 +212,7 @@ class WakeupFlow(DailyFlow):
         unknown_since = None
         previous = None
         repeats = home_frames = 0
+        fallback = StartupFallback()
         while time.monotonic() < deadline:
             try:
                 self.require_game_foreground()
@@ -169,6 +225,8 @@ class WakeupFlow(DailyFlow):
                             hits=[dict(text=hit.text, box=list(hit.box), score=float(hit.score)) for hit in hits])
                 if mode == 'blocked':
                     raise FlowError(label)
+                if mode != 'unknown' or box is not None:
+                    fallback.suspend()
                 if mode == 'click':
                     fingerprint = (label, normalized(button.text),
                                    tuple(sorted(normalized(h.text) for h in hits if h.score >= .85))
@@ -194,6 +252,7 @@ class WakeupFlow(DailyFlow):
                         previous, unknown_since, home_frames = None, None, 0
                         continue
                 elif self.clear_home() and mode != 'wait':
+                    fallback.suspend()
                     home_frames += 1
                     if home_frames >= 3:
                         self.require_game_foreground()
@@ -210,12 +269,26 @@ class WakeupFlow(DailyFlow):
                     if time.monotonic()-unknown_since >= self.unknown_timeout:
                         self.report['unknown_texts'] = [hit.text for hit in hits]
                         raise FlowError('未知启动页面，已保存截图和识别文字，等待补充适配')
+                    if box is None and fallback.ready(self.image, hits, time.monotonic()):
+                        if len(self.report['steps']) >= 100:
+                            raise FlowError('启动页面处理超过 100 步，请检查循环弹窗')
+                        self.save_frame(f'{len(self.report["steps"]):03d}-启动页保底点击.png')
+                        self.tap(*fallback.POINT)
+                        fallback.clicked(time.monotonic())
+                        self.record('fallback', point=list(fallback.POINT),
+                                    page_attempt=fallback.attempts, total=fallback.total)
+                        self.report['steps'].append(dict(action='启动页保底点击',
+                            point=list(fallback.POINT), texts=[h.text for h in hits]))
+                        self.save_report()
+                        log(f'[开始唤醒] 启动页保底点击（当前画面 {fallback.attempts}/{fallback.PAGE_LIMIT}）')
+                        previous, repeats = None, 0
                 pause(1, self.check_stop)
             except _ForegroundPending:
                 # Discard any OCR/button from before the transition, including
                 # clicks attempted by the shared notification handler.
                 home_frames = 0
                 unknown_since = None
+                fallback.suspend()
         raise FlowError('游戏唤醒超时，请检查下载进度或服务器状态')
 
 

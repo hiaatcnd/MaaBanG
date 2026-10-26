@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from bestdori_scan import BestdoriScan, read_ratio, character_filter_rows, same_page_portrait, align_page
 from bestdori_catalog import load, identify
+from bestdori_profiles import ATTRIBUTES
 from costume_unlock import FlowError
 
 
@@ -74,6 +75,11 @@ class ScanTests(unittest.TestCase):
                         band = next(h for h in flow.ocr([149,124,966,433]) if 'Pastel' in h.text)
                         cy = band.box[1]+band.box[3]/2
                         owner.assertEqual(''.join(h.text for h in flow.ocr([418,round(cy)+10,80,42],'.+',True)), '彩')
+                        flow.image = np.array(Image.open(ROOT/'tests/fixtures/lowres/member_filter.png'))[:,:,::-1].copy()
+                        label = flow.hit_text([149,134,180,423], '^种类$|^属性$')
+                        owner.assertIsNotNone(label)
+                        y = label.box[1]+label.box[3]//2+54
+                        owner.assertTrue(all(flow.checkbox(x,y) for x in (184,383,582,781)))
                         return True
                     except Exception as exc:
                         errors.append(exc)
@@ -189,6 +195,25 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(selected,{(184,266),(184,446)})
         self.assertEqual(flow.report['extra_filters'],'all')
         flow.swipe.assert_not_called()
+
+    def test_attribute_filter_applies_each_nonempty_combination_and_checks_clicks(self):
+        for flags in product((False, True), repeat=4):
+            if not any(flags):
+                continue
+            with self.subTest(flags=flags):
+                flow = BestdoriScan.__new__(BestdoriScan)
+                flow.scope = {'attributes': [kind for kind, flag in zip(ATTRIBUTES, flags) if flag]}
+                flow.snap = flow.save_frame = Mock()
+                selected = {184, 383, 582, 781}
+                flow.checkbox = lambda x,y: x in selected
+                flow.tap = lambda x,y: selected.symmetric_difference_update({x})
+                flow.filter_attributes((184,383,582,781), 238)
+                self.assertEqual(selected, {x for x, flag in zip((184,383,582,781), flags) if flag})
+        flow.scope = {'attributes': ['cool']}
+        flow.checkbox = Mock(return_value=True)
+        flow.tap = Mock()
+        with self.assertRaisesRegex(FlowError, '种类筛选'):
+            flow.filter_attributes((184,383,582,781), 238)
 
     def fake_scan(self, pages, details, *, stuck=False, overlap=None):
         flow = BestdoriScan.__new__(BestdoriScan)
