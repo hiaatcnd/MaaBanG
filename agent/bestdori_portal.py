@@ -104,7 +104,8 @@ class Workspace:
             raw = {r['id']: r for r in rows if type(r.get('id')) is int}
             ids = [r.get('id') for r in self.observations]
             if (not ids or len(set(ids)) != len(ids) or len(raw) != len(rows)
-                    or set(ids) != set(raw) or request['scope'] != self.cached_scope
+                    or set(ids) != set(raw)
+                    or validate_scope(request['scope'], self.catalog) != validate_scope(self.cached_scope, self.catalog)
                     or not self.cached_at or datetime.fromisoformat(self.cached_at).timestamp() < request['created']):
                 return
             fields = ('level','skill','master','train')

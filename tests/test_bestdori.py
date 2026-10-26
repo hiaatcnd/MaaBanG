@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from bestdori_profiles import (parse_profile, empty_profile, export_profile, merge_profile,
-                              ProfileError, validate_scope, fingerprint)
+                              ATTRIBUTES, ProfileError, validate_scope, fingerprint)
 from bestdori_catalog import load, identify
 from bestdori_client import BestdoriClient, CloudError
 from bestdori_portal import Workspace, make_server
@@ -122,6 +122,35 @@ class ProfilesTests(unittest.TestCase):
         self.assertEqual(len(r['skipped']), 1)
         with self.assertRaises(ProfileError):
             merge_profile(p, [card(), card()], self.scope, 'max', self.catalog)
+
+    def test_attribute_selection_only_merges_matching_cards_and_preserves_the_rest(self):
+        ids = [next(int(id_) for id_, c in self.catalog['cards'].items()
+                    if c['characterId'] == 1 and c['rarity'] == 5 and c['attribute'] == kind)
+               for kind in ATTRIBUTES]
+        baseline = self.base()
+        baseline['cards'].extend(card(id_) for id_ in ids)
+        observations = [card(id_, skill=1, master=4) for id_ in ids]
+        scope = {**self.scope, 'rarities': [5], 'attributes': ['cool', 'happy']}
+        for policy in ('max', 'overwrite'):
+            result = merge_profile(baseline, observations, scope, policy, self.catalog)
+            by_id = {c['id']: c for c in result['profile']['cards']}
+            self.assertEqual(result['updated'], 2)
+            for original in baseline['cards']:
+                if original['id'] in (ids[1], ids[3]):
+                    self.assertEqual(by_id[original['id']]['master'], 4)
+                    self.assertEqual(by_id[original['id']]['skill'], 4 if policy == 'max' else 1)
+                else:
+                    self.assertEqual(by_id[original['id']], original)
+            self.assertEqual(result['profile']['items'], baseline['items'])
+        added = merge_profile(empty_profile(), observations, scope, 'max', self.catalog)
+        self.assertEqual({c['id'] for c in added['profile']['cards']}, {ids[1], ids[3]})
+
+    def test_legacy_scope_defaults_to_all_attributes_but_empty_or_invalid_selection_fails(self):
+        self.assertEqual(validate_scope(self.scope, self.catalog)['attributes'], list(ATTRIBUTES))
+        self.assertEqual(validate_scope({**self.scope, 'attributes': ['happy', 'cool', 'cool']}, self.catalog)['attributes'], ['cool', 'happy'])
+        for attributes in ([], None, 'cool', ['unknown'], ['Cool'], [True], [1], [{}]):
+            with self.subTest(attributes=attributes), self.assertRaises(ProfileError):
+                validate_scope({**self.scope, 'attributes': attributes}, self.catalog)
 
     def test_cross_server_and_inconsistent_training_are_not_written(self):
         p = self.base(); p['server'] = 0

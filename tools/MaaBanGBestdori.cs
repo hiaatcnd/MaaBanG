@@ -349,6 +349,8 @@ public sealed class MaaBanGBestdoriView : UserControl
     private bool _restoring, _cacheDirty;
     private readonly List<Button> _actions = new();
     private readonly Dictionary<int, CheckBox> _bands = new(), _members = new(), _rarities = new();
+    private static readonly string[] AttributeKinds = { "powerful", "cool", "pure", "happy" };
+    private readonly Dictionary<string, CheckBox> _attributes = new();
     private readonly ObservableCollection<MaaBanGBestdoriRow> _rows = new();
     private readonly DataGridCollectionView _rowView;
     private JArray _baseCards = new();
@@ -736,7 +738,8 @@ public sealed class MaaBanGBestdoriView : UserControl
             var known = int.TryParse(row.Id,out var id) && _catalog["cards"]?[row.Id] is JObject;
             var meta = known ? (JObject)_catalog["cards"]![row.Id]! : null;
             var inScope = meta != null && _members.TryGetValue(meta.Value<int>("characterId"),out var member) && member.IsChecked == true
-                && _rarities.TryGetValue(meta.Value<int>("rarity"),out var rarity) && rarity.IsChecked == true;
+                && _rarities.TryGetValue(meta.Value<int>("rarity"),out var rarity) && rarity.IsChecked == true
+                && _attributes.TryGetValue(meta.Value<string>("attribute") ?? "",out var attribute) && attribute.IsChecked == true;
             bases.TryGetValue(id,out var baseline);
             row.SetComparison(baseline?.FirstOrDefault(), _policy.SelectedIndex == 0, inScope, baseline?.Count > 1 || duplicateRows.Contains(row.Id),
                 meta?.Value<int>("levelLimit") ?? 60, meta?.Value<int>("trainingLevel") ?? 0);
@@ -763,8 +766,9 @@ public sealed class MaaBanGBestdoriView : UserControl
     {
         var selectedMembers = _members.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToHashSet();
         var selectedRarities = _rarities.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToHashSet();
+        var selectedAttributes = _attributes.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToHashSet();
         bool first = _bands.Count == 0;
-        _bands.Clear(); _members.Clear(); _rarities.Clear(); _scope.Children.Clear();
+        _bands.Clear(); _members.Clear(); _rarities.Clear(); _attributes.Clear(); _scope.Children.Clear();
         _scope.Children.Add(Wrap(Button("全选成员", () => { SetMembers(_members.Keys, true); return Task.CompletedTask; }),
             Button("清空成员", () => { SetMembers(_members.Keys, false); return Task.CompletedTask; })));
         var gameOrder = new[] { 1,2,4,5,3,21,18,45 };
@@ -801,6 +805,11 @@ public sealed class MaaBanGBestdoriView : UserControl
             var check = new CheckBox { Content = n + " 星", IsChecked = first || selectedRarities.Contains(n), Margin = new Thickness(0, 0, 14, 5) };
             _rarities[n] = check; check.IsCheckedChanged += (_, _) => ScopeChanged(); return (Control)check;
         }).ToArray()));
+        _scope.Children.Add(Wrap(new Control[] { Text("种类") }.Concat(AttributeKinds.Select(kind =>
+        {
+            var check = new CheckBox { Content = char.ToUpperInvariant(kind[0]) + kind[1..], IsChecked = first || selectedAttributes.Contains(kind), Margin = new Thickness(0, 0, 14, 5) };
+            _attributes[kind] = check; check.IsCheckedChanged += (_, _) => { if (!_updatingScope) ScopeChanged(); }; return (Control)check;
+        })).ToArray()));
         ScopeChanged(); SearchCards();
     }
     private IEnumerable<int> MembersOfBand(int band) => ((JObject)_catalog["characters"]!).Properties()
@@ -827,25 +836,30 @@ public sealed class MaaBanGBestdoriView : UserControl
         finally { _updatingScope = false; }
         var selected = _members.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToArray();
         var stars = _rarities.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToArray();
-        var empty = selected.Length == 0 || stars.Length == 0;
+        var attributes = _attributes.Where(p => p.Value.IsChecked == true).Select(p => p.Value.Content?.ToString()).ToArray();
+        var empty = selected.Length == 0 || stars.Length == 0 || attributes.Length == 0;
         var text = selected.Length == 0 ? "请选择要读取的成员：勾选乐队可选中整队。" : stars.Length == 0 ? "请选择要读取的星级。" :
-            $"读取范围：{_bands.Count(p => p.Value.IsChecked != false)} 个乐队中的 {selected.Length} 位成员 · {string.Join("、", stars)} 星";
+            attributes.Length == 0 ? "请选择要读取的种类。" :
+            $"读取范围：{_bands.Count(p => p.Value.IsChecked != false)} 个乐队中的 {selected.Length} 位成员 · {string.Join("、", stars)} 星 · {string.Join("、", attributes)}";
         _scopeSummary.Text = _scanScope.Text = text;
         _scopeSummary.FontWeight = _scanScope.FontWeight = FontWeight.SemiBold;
         if (empty) _scopeSummary.Foreground = _scanScope.Foreground = Brushes.IndianRed;
         else { _scopeSummary.ClearValue(TextBlock.ForegroundProperty); _scanScope.ClearValue(TextBlock.ForegroundProperty); }
         Dirty();
+        if (_rows.Count > 0) ScheduleCache();
     }
     private JObject Scope()
     {
         var members = _members.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToArray();
         var rarities = _rarities.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToArray();
+        var attributes = _attributes.Where(p => p.Value.IsChecked == true).Select(p => p.Key).ToArray();
         if (members.Length == 0) throw new InvalidOperationException("请选择要读取的成员，勾选乐队可选中整队。");
         if (rarities.Length == 0) throw new InvalidOperationException("请选择要读取的星级。");
+        if (attributes.Length == 0) throw new InvalidOperationException("请选择要读取的种类。");
         return new JObject
         {
             ["bands"] = new JArray(members.Select(id => _catalog["characters"]![id.ToString()]!.Value<int>("bandId")).Distinct()),
-            ["members"] = new JArray(members), ["rarities"] = new JArray(rarities),
+            ["members"] = new JArray(members), ["rarities"] = new JArray(rarities), ["attributes"] = new JArray(attributes),
         };
     }
     private string CardName(int id)
@@ -956,6 +970,8 @@ public sealed class MaaBanGBestdoriView : UserControl
                 foreach (var (id,check) in _members) check.IsChecked = wanted.Contains(id);
                 var stars = scope["rarities"]!.Values<int>().ToHashSet();
                 foreach (var (id,check) in _rarities) check.IsChecked = stars.Contains(id);
+                var attributes = scope["attributes"]?.Values<string>().ToHashSet() ?? AttributeKinds.ToHashSet();
+                foreach (var (kind,check) in _attributes) check.IsChecked = attributes.Contains(kind);
                 _updatingScope = false; ScopeChanged();
             }
             _rows.Clear(); foreach (var row in records) AddRow((JObject)row);

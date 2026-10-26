@@ -54,7 +54,9 @@ class DesktopTests(unittest.TestCase):
         self.assertTrue(self.w.busy)
 
     def test_scan_and_review_cache_survive_restart_without_cloud_or_result(self):
+        self.options['scope']['attributes'] = ['powerful', 'cool']
         id_,folder=self.start()
+        self.assertEqual(json.loads((folder/'request.json').read_text('utf8'))['scope']['attributes'], ['powerful', 'cool'])
         rows=[{'id':1703,'level':60,'skill':2,'master':0,'train':0}]
         atomic_json(folder/'scan.json',{'status':'partial','observations':rows,'errors':['已停止']})
         self.w.execute('scan_finish',{'scan_id':id_})
@@ -64,9 +66,11 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(restored.scan_status,'partial')
         self.assertIsNone(restored.result)
         self.assertIsNone(restored.client.username)
+        self.assertEqual(restored.cached_scope['attributes'], ['powerful', 'cool'])
         rows[0].update(skill=4,selected=False,maximize={'skill':True})
         restored.execute('cache_review',{'scope':self.options['scope'],'observations':rows})
         self.assertEqual(DesktopWorkspace(self.folder.name).observations,rows)
+        self.assertEqual(DesktopWorkspace(self.folder.name).cached_scope['attributes'], ['powerful', 'cool'])
         restored.execute('preview',{'observations':[{'id':1703,'level':60,'skill':4,'master':4,'train':1}],
                                   'scope':self.options['scope'],'policy':'max','name':'Preview'})
         self.assertEqual(restored.observations,rows,'preview must not replace review originals or selection')
@@ -112,6 +116,20 @@ class DesktopTests(unittest.TestCase):
         saved['version']=2
         atomic_json(path,saved)
         self.assertEqual(DesktopWorkspace(self.folder.name).observations,saved['observations'])
+
+    def test_legacy_recovery_does_not_mix_scans_with_different_attributes(self):
+        from datetime import datetime
+        self.options['scope']['attributes'] = ['powerful']
+        _, folder = self.start()
+        atomic_json(folder/'scan.json', {'status': 'complete', 'observations': [{'id': 1703, 'level': 35}]})
+        (folder/'finished').touch()
+        rows = [{'id': 1703, 'level': 60, 'original': {}}]
+        atomic_json(Path(self.folder.name)/'last-scan.json', {
+            'observations': rows, 'scope': {**self.options['scope'], 'attributes': ['cool']},
+            'saved_at': datetime.now().isoformat(), 'status': 'complete'})
+        restored = DesktopWorkspace(self.folder.name)
+        self.assertEqual(restored.observations, rows)
+        self.assertIsNone(restored.cache_recovery)
 
     def test_cancel_before_agent_starts_performs_no_game_input_and_cannot_replay(self):
         id_, folder = self.start()

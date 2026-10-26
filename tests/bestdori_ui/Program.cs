@@ -110,6 +110,17 @@ class Program
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert(Field<Dictionary<int, CheckBox>>(view, "_members").Count == 40, "member choices missing");
             Assert(Field<Dictionary<int, CheckBox>>(view, "_bands").Count == 8, "band choices missing");
+            var attributes = Field<Dictionary<string, CheckBox>>(view, "_attributes");
+            Assert(attributes.Keys.SequenceEqual(new[] { "powerful", "cool", "pure", "happy" }) && attributes.Values.All(c => c.IsChecked == true), "attribute choices or all-selected default missing");
+            foreach (var (kind, check) in attributes) check.IsChecked = kind == "cool" || kind == "happy";
+            Invoke(view, "BuildScope");
+            Assert(((JObject)Invoke(view, "Scope")!)["attributes"]!.Values<string>().SequenceEqual(new[] { "cool", "happy" }), "catalog rebuild lost selected attributes");
+            Assert(Field<TextBlock>(view, "_scopeSummary").Text!.Contains("Cool、Happy"), "scope summary omits attributes");
+            foreach (var check in attributes.Values) check.IsChecked = false;
+            Field<TabControl>(view, "_tabs").SelectedIndex = 1; Dispatcher.UIThread.RunJobs();
+            Click(view, "读取游戏");
+            Assert(Field<TextBlock>(view, "_status").Text!.Contains("种类"), "empty attributes must prevent scanning with clear feedback");
+            foreach (var check in attributes.Values) check.IsChecked = true;
             var members = Field<Dictionary<int, CheckBox>>(view, "_members");
             var bands = Field<Dictionary<int, CheckBox>>(view, "_bands");
             foreach (var check in members.Values) check.IsChecked = false;
@@ -171,6 +182,13 @@ class Program
             Click(view, "查看合并结果");
             var card = Card(State(client));
             Assert(card.Value<int>("level") == 60 && card.Value<int>("skill") == 4 && card.Value<int>("master") == 4, "all-max preview incorrect");
+            attributes["powerful"].IsChecked = false;
+            Assert(!Field<Button>(view, "_export").IsEnabled, "attribute change must invalidate preview");
+            Pump(() => !first.HasChanges);
+            Click(view, "重新计算结果");
+            Assert(!State(client)["result"]!["profile"]!["cards"]!.Any(), "unselected attribute entered merged profile");
+            attributes["powerful"].IsChecked = true;
+            Click(view, "重新计算结果");
             Assert(Field<Button>(view, "_export").IsEnabled, "export not enabled after preview: " + Field<TextBlock>(view, "_status").Text);
             first.SkillText = "技能资料已加载";
             Assert(Field<Button>(view, "_export").IsEnabled, "media load invalidated merge result");
@@ -184,8 +202,15 @@ class Program
             rows[0].Skill = "2";
             Click(view, "重新计算结果");
             Assert(Card(State(client)).Value<int>("skill") == 1, "skill display conversion incorrect");
+            attributes["pure"].IsChecked = false;
+            attributes["happy"].IsChecked = false;
+            Assert(Field<bool>(view,"_cacheDirty"), "scope change did not schedule review cache update");
             Wait((Task)Invoke(view,"SaveReviewAsync")!);
+            foreach (var check in attributes.Values) check.IsChecked = true;
+            Field<DispatcherTimer>(view,"_cacheTimer").Stop();
             rows.Clear(); Wait((Task)Invoke(view,"RestoreReviewAsync")!);
+            Assert(attributes.Where(p => p.Value.IsChecked == true).Select(p => p.Key).SequenceEqual(new[] { "powerful", "cool" }), "review cache lost selected attributes");
+            foreach (var check in attributes.Values) check.IsChecked = true;
             Assert(rows.Count == 2 && rows[0].Level == "60" && !rows[1].Selected, "review cache lost values or selection");
             Assert(rows[0].OriginalValues.Value<int>("level") == 35 && rows[0].OriginalValues.Value<int>("skill") == 1,
                    "review cache replaced original readings with adjusted values");
@@ -268,6 +293,8 @@ class Program
             Capture(window, Path.Combine(output, "review.png"));
             tabs.SelectedIndex = 0; Dispatcher.UIThread.RunJobs();
             Capture(window, Path.Combine(output, "settings.png"));
+            attributes["happy"].BringIntoView(); Dispatcher.UIThread.RunJobs();
+            Capture(window, Path.Combine(output, "settings-attributes.png"));
             tabs.SelectedIndex=3; Invoke(view,"RenderAccount","界面验证账号"); Dispatcher.UIThread.RunJobs();
             Capture(window, Path.Combine(output,"account.png"));
             Assert(Field<Button>(view,"_logout").Bounds.Width < 200,"logout stretches across window");
