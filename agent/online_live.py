@@ -667,8 +667,10 @@ class OnlineLiveFlow(ChartLiveFlow):
         # Only navigate from recognized pages/dialogs; never send stale ready taps.
         recovery_started=time.monotonic()
         deadline=recovery_started+30
+        connection_clicks=0
         while time.monotonic()<deadline:
             self.snap()
+            box=dialog_box(self.image)
             # Modal text takes precedence over a still-visible background header.
             if self.reco('OL_LeaveConfirm'):
                 button=self.hit_text([640,410,275,170],'^确定$|^确认$|^退出$|^解散$|^返回主页$|^中断$')
@@ -676,6 +678,32 @@ class OnlineLiveFlow(ChartLiveFlow):
                     self.tap_hit(button)
                     continue
             if self.reco('OL_Disconnected'):
+                if box is not None:
+                    # Leave a failed room rather than resubmitting its request.
+                    # Read the whole footer: the left Cancel label can be clipped
+                    # by the old centered ROI and misread as an affirmative button.
+                    x,y,w,h=box
+                    hits=self.ocr([x+12,y+h-115,w-24,105])
+                    footer=[hit for hit in hits if
+                            x+12 <= hit.box[0] and hit.box[0]+hit.box[2] <= x+w-12 and
+                            y+h-115 <= hit.box[1] and hit.box[1]+hit.box[3] <= y+h-10]
+                    cancel=[hit for hit in footer if hit.text.strip()=='取消']
+                    retry=[hit for hit in footer if hit.text.strip()=='重试']
+                    button=None
+                    if (len(cancel)==len(retry)==1 and len(footer)==2 and
+                            cancel[0].box[0]+cancel[0].box[2] < retry[0].box[0]):
+                        button=cancel[0]
+                    elif len(footer)==1 and footer[0].text.strip() in (
+                            '中断','确定','确认','关闭','OK','返回标题'):
+                        button=footer[0]
+                    if button is not None:
+                        if connection_clicks>=3:
+                            raise FlowError('连接错误弹窗操作后未消失，保留现场')
+                        self.tap_hit(button)
+                        connection_clicks+=1
+                        continue
+                    self.pause(.5)
+                    continue
                 interrupt=self.hit_text([380,400,260,100],'^中断$')
                 if interrupt:
                     self.tap_hit(interrupt)
@@ -684,11 +712,19 @@ class OnlineLiveFlow(ChartLiveFlow):
                 if button:
                     self.tap_hit(button)
                     continue
+                # An unhandled disconnect must not succeed via its background.
+                self.pause(.5)
+                continue
             if self.hit_text([210,210,850,85],'^暂停$'):
                 interrupt=self.hit_text([250,400,700,110],'^中断$')
                 if interrupt:
                     self.tap_hit(interrupt)
                     continue
+            if box is not None:
+                # Unknown choices remain owned by their task. Neither background
+                # headers nor Back/focus-loss prove that this overlay is gone.
+                self.pause(.5)
+                continue
             cancel=self.hit_text([490,470,300,110],'^取消$')
             if cancel:
                 self.tap_hit(cancel)
