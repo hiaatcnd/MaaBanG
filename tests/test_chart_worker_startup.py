@@ -101,7 +101,8 @@ class ChartWorkerStartupTests(unittest.TestCase):
             self.assertFalse((Path(folder)/'start').exists())
             resource.register_custom_action.assert_called_once()
             timings=report['startup_timings_ms']
-            self.assertEqual(set(timings),{'chart_compile','controllers_and_resource','ready_total'})
+            self.assertEqual(set(timings),{'chart_compile','controllers_and_resource',
+                                          'observer_thread_start','ready_total'})
             self.assertTrue(all(value>=0 for value in timings.values()))
             self.assertGreaterEqual(timings['ready_total'],timings['chart_compile']+timings['controllers_and_resource'])
             self.assertIn('已停止',report['error'])

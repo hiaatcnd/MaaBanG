@@ -34,7 +34,8 @@ class DirectChartWorkerTests(unittest.TestCase):
             start_authorized_stage(controller,'online_click')
         controller.post_click.assert_called_once_with(1130,616)
 
-    def run_startup(self,folder,*,click_succeeds=True,click_raises=False,start_mode='online_click'):
+    def run_startup(self,folder,*,click_succeeds=True,click_raises=False,start_mode='online_click',
+                    slow_thread=False):
         output=Path(folder)
         chart=[{'type':'BPM','beat':0,'bpm':120},
                {'type':'Single','beat':2,'lane':3,'skill':True}]
@@ -93,6 +94,13 @@ class DirectChartWorkerTests(unittest.TestCase):
         tasker.post_task.side_effect=post_task
         lock=Mock(points=[])
         lock.observe.return_value={'crossing':1.}
+        thread=Mock()
+        def start_thread():
+            if slow_thread:
+                self.assertFalse((output/'armed').exists())
+                lock.observe.assert_not_called()
+                now[0]+=.43
+        thread.start.side_effect=start_thread
         locate=Mock(return_value=500.)
         with patch('maa.controller.AdbController',side_effect=[controller,observer]), \
                 patch('maa.resource.Resource',return_value=resource), \
@@ -102,13 +110,22 @@ class DirectChartWorkerTests(unittest.TestCase):
                     'fake-adb','mock-device',{},4,'connection_explicit',4)), \
                 patch('chart_worker.compile_chart',return_value=[]), \
                 patch('chart_worker.time.perf_counter',side_effect=lambda:now[0]), \
-                patch('chart_worker.threading.Thread'), \
+                patch('chart_worker.threading.Thread',return_value=thread), \
                 patch('chart_sync.FirstNoteLock',return_value=lock), \
                 patch('chart_sync.stage_state',side_effect=lambda frame:None if frame[0,0,0]==0 else 'stage'), \
                 patch('chart_sync.locate_note_y',locate):
             result=play(config_path)
         report=json.loads((output/'playback.json').read_text(encoding='utf8'))
         return result,report,controller,lock,locate,recognized
+
+    def test_slow_observer_thread_start_is_paid_before_arming_and_note_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result,report,controller,lock,_,_=self.run_startup(folder,slow_thread=True)
+            self.assertEqual(result,0,report.get('error'))
+            self.assertGreaterEqual(report['startup_timings_ms']['ready_total'],430)
+            self.assertAlmostEqual(report['startup_timings_ms']['observer_thread_start'],430)
+            lock.observe.assert_called_once()
+            controller.post_click.assert_called_once_with(1130,616)
 
     def test_direct_online_waits_for_members_and_uses_online_skill_anchor(self):
         with tempfile.TemporaryDirectory() as folder:

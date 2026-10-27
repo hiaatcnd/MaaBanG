@@ -152,6 +152,7 @@ def play(config_path):
                           ('chart_sync',Path(chart_sync.__file__).resolve()))}
     active = set()
     observer_stop = threading.Event()
+    observer_start = threading.Event()
     observer_failed = threading.Event()
     thread = None
     controller = None
@@ -220,7 +221,74 @@ def play(config_path):
                 return True
         resource.register_custom_action('ChartWorkerOverlayCheck',CheckOverlay())
         popup_tasker=Tasker();popup_tasker.bind(resource,observer)
-        # Total from entering play, including its imports; no real-time timing work.
+        lock = FirstNoteLock(travel_scale=.245)
+        tracker = ChartPhaseTracker(chart)
+        clock = SlewedClock()
+        stage_seen = origin = initial_health = None
+        phase_guard = threading.Lock()
+        phase_recovery = None
+        phase_reset_at = 0.
+
+        def observe():
+            nonlocal popup_frame
+            last_popup_check=0.
+            observer_ready=False
+            try:
+                # Create the thread before arming. A slow OS thread startup must
+                # not consume the short interval between note lock and first input.
+                observer_start.wait()
+                while not observer_stop.is_set():
+                    before = time.perf_counter()
+                    frame=capture_observer_frame(observer,online)
+                    if frame is not None:
+                        after = time.perf_counter()
+                        if after-last_popup_check>.5 and (online or np.mean(np.all(frame[260:385,350:930]>220,axis=2))>.65):
+                            popup_frame=frame
+                            last_popup_check=after
+                            check_overlay(popup_tasker)
+                            if observer_failed.is_set():
+                                from PIL import Image
+                                Image.fromarray(frame[:,:,::-1]).save(output/'interruption.png')
+                                return
+                            if online and not observer_ready:
+                                # Hand over only after the observer has checked a real frame.
+                                (output/'observer_ready').write_text('ready')
+                                observer_ready=True
+                        stamp = (before+after)/2
+                        positions = ([(lane,locate_note_y(frame,lane)) for lane in range(7)]
+                                     if after-before < .040 else None)
+                        with phase_guard:
+                            # A capture already in flight when the origin changes
+                            # cannot contribute to the new phase history.
+                            if before >= phase_reset_at:
+                                phase_trace.append({'time':stamp-origin,
+                                    'capture_ms':(after-before)*1000, 'positions':positions,
+                                    'recovering':phase_recovery is not None})
+                                del phase_trace[:-64]
+                                if positions is not None:
+                                    if phase_recovery is not None:
+                                        phase_recovery.observe_positions(stamp-origin,positions,
+                                            received_at=time.perf_counter()-origin)
+                                    else:
+                                        estimate = tracker.observe_positions(stamp-origin,positions,clock.value)
+                                        if estimate and clock.update(estimate['correction']):
+                                            report['phase_updates'].append({**estimate,
+                                                'observed_at':stamp-origin,
+                                                'clock_ms':clock.value*1000})
+                    observer_stop.wait(.04 if phase_recovery is not None else .12)
+            except Exception as exc:
+                report['observer_error'] = str(exc)
+                observer_failed.set()
+
+        thread = threading.Thread(target=observe,daemon=True)
+        observer_started=time.perf_counter()
+        thread.start()
+        report['startup_timings_ms']['observer_thread_start']=(time.perf_counter()-observer_started)*1000
+        recovery = GestureRecovery()
+        report['recoveries'] = []
+        recovery_times = []
+
+        # Total from entering play, including observer startup, before authorization.
         report['startup_timings_ms']['ready_total']=(time.perf_counter()-startup_started)*1000
         (output/'armed').write_text('ready')
         deadline = time.perf_counter()+60
@@ -230,10 +298,6 @@ def play(config_path):
                 raise RuntimeError('等待开演确认超时')
             time.sleep(.05)
         stopped()
-        lock = FirstNoteLock(travel_scale=.245)
-        tracker = ChartPhaseTracker(chart)
-        clock = SlewedClock()
-        stage_seen = origin = initial_health = None
         start = time.perf_counter()
         try:
             start_authorized_stage(controller,cfg.get('start_mode','click'))
@@ -290,63 +354,7 @@ def play(config_path):
         if origin is None:
             raise RuntimeError('未锁定首键')
         report['status'] = 'playing'
-        phase_guard = threading.Lock()
-        phase_recovery = None
-        phase_reset_at = 0.
-
-        def observe():
-            nonlocal popup_frame
-            last_popup_check=0.
-            observer_ready=False
-            try:
-                while not observer_stop.is_set():
-                    before = time.perf_counter()
-                    frame=capture_observer_frame(observer,online)
-                    if frame is not None:
-                        after = time.perf_counter()
-                        if after-last_popup_check>.5 and (online or np.mean(np.all(frame[260:385,350:930]>220,axis=2))>.65):
-                            popup_frame=frame
-                            last_popup_check=after
-                            check_overlay(popup_tasker)
-                            if observer_failed.is_set():
-                                from PIL import Image
-                                Image.fromarray(frame[:,:,::-1]).save(output/'interruption.png')
-                                return
-                            if online and not observer_ready:
-                                # Hand over only after the observer has checked a real frame.
-                                (output/'observer_ready').write_text('ready')
-                                observer_ready=True
-                        stamp = (before+after)/2
-                        positions = ([(lane,locate_note_y(frame,lane)) for lane in range(7)]
-                                     if after-before < .040 else None)
-                        with phase_guard:
-                            # A capture already in flight when the origin changes
-                            # cannot contribute to the new phase history.
-                            if before >= phase_reset_at:
-                                phase_trace.append({'time':stamp-origin,
-                                    'capture_ms':(after-before)*1000, 'positions':positions,
-                                    'recovering':phase_recovery is not None})
-                                del phase_trace[:-64]
-                                if positions is not None:
-                                    if phase_recovery is not None:
-                                        phase_recovery.observe_positions(stamp-origin,positions,
-                                            received_at=time.perf_counter()-origin)
-                                    else:
-                                        estimate = tracker.observe_positions(stamp-origin,positions,clock.value)
-                                        if estimate and clock.update(estimate['correction']):
-                                            report['phase_updates'].append({**estimate,
-                                                'observed_at':stamp-origin,
-                                                'clock_ms':clock.value*1000})
-                    observer_stop.wait(.04 if phase_recovery is not None else .12)
-            except Exception as exc:
-                report['observer_error'] = str(exc)
-                observer_failed.set()
-
-        thread = threading.Thread(target=observe,daemon=True)
-        thread.start()
-        recovery = GestureRecovery()
-        report['recoveries'] = []
-        recovery_times = []
+        observer_start.set()
 
         def wait_event(event):
             while True:
@@ -459,6 +467,7 @@ def play(config_path):
         if lock is not None:
             report['start_points']=lock.points
         observer_stop.set()
+        observer_start.set()  # Release an armed observer even if start/lock failed.
         def save_diagnostics():
             if thread:
                 thread.join(timeout=3)
