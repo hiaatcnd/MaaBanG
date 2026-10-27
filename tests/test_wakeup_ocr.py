@@ -18,6 +18,19 @@ from notifications import dialog_box
 
 
 class WakeupReplayTests(unittest.TestCase):
+    def test_story_dialogue_uses_shared_menu_template_and_real_ocr(self):
+        def check(flow, hits):
+            rules = json.loads(RULES.read_text(encoding='utf-8'))
+            self.assertEqual(startup_decision(hits, rules)[0], 'unknown')
+            # Replay the failed screen through real OCR and template matching;
+            # the custom controller never sends input to a device.
+            label, button = WakeupFlow.story_button(flow, hits)
+            self.assertEqual(label, '打开剧情菜单')
+            self.assertEqual(button.text, '菜单')
+            x, y, w, h = button.box
+            self.assertTrue(1090 <= x < x+w <= 1267 and 16 <= y < y+h <= 103)
+        self.check_startup_art('story_dialogue.png', check)
+
     def test_birthday_art_with_real_ocr_and_missing_ocr_fallback(self):
         def check(flow, hits):
             rules = json.loads(RULES.read_text(encoding='utf-8'))

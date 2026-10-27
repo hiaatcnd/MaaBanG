@@ -203,6 +203,28 @@ class WakeupFlow(DailyFlow):
             from PIL import Image
             Image.fromarray(self.image[:, :, ::-1]).save(self.output / name)
 
+    def story_button(self, hits):
+        """Pair shared story templates with their visible control text.
+
+        Call only without an overlay and after the startup policy has excluded
+        loading/manual pages. A home/menu label or dialogue word alone is not
+        enough to identify a story control.
+        """
+        for node, text, label in (
+                ('LV_TalkSkip', '跳过', '跳过开场故事'),
+                ('LV_TalkMenu', '菜单', '打开剧情菜单')):
+            buttons = [hit for hit in hits if normalized(hit.text) == text]
+            if len(buttons) != 1:
+                continue
+            match = self.reco(node)
+            if not match:
+                continue
+            x, y, w, h = match.box
+            bx, by, bw, bh = buttons[0].box
+            if max(x, bx) < min(x+w, bx+bw) and max(y, by) < min(y+h, by+bh):
+                return label, buttons[0]
+        return None
+
     def save_report(self):
         (self.output / 'report.json').write_text(json.dumps(self.report, ensure_ascii=False, indent=2), encoding='utf-8')
 
@@ -221,6 +243,11 @@ class WakeupFlow(DailyFlow):
                 hits = self.ocr(box or [0, 0, 1280, 720])
                 mode, label, button = startup_decision(hits, self.rules, modal=box is not None,
                                                       allow_download=self.allow_download)
+                if mode == 'unknown' and box is None:
+                    story = self.story_button(hits)
+                    if story is not None:
+                        label, button = story
+                        mode = 'click'
                 self.record('recognition', mode=mode, label=label, modal=box,
                             hits=[dict(text=hit.text, box=list(hit.box), score=float(hit.score)) for hit in hits])
                 if mode == 'blocked':

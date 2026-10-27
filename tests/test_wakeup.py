@@ -177,6 +177,7 @@ class ForegroundTests(unittest.TestCase):
         flow.snap = Mock()
         flow.ocr = Mock(side_effect=hits)
         flow.clear_home = Mock(return_value=True)
+        flow.reco = Mock(return_value=None)
         flow.save_frame = Mock()
         flow.save_report = Mock()
         return flow
@@ -223,6 +224,76 @@ class ForegroundTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, '超时|未知启动页面'):
                         flow.run()
                 click.assert_not_called()
+
+    def test_story_dialogue_uses_menu_skip_confirmation_then_stable_home(self):
+        menu = hit('菜单', (1168, 46, 54, 29))
+        skip = hit('跳过', (540, 55, 60, 28))
+        flow = self.prepare_run([
+            [hit('任意人物', (144, 498, 72, 40)), hit('未结束的连续剧情'), menu],
+            [menu, skip],
+            [hit('要跳过剧情吗？', (480, 310, 337, 62)), hit('确定', (760, 450, 90, 40))],
+            [], [], []])
+        flow.reco.side_effect = lambda name: {
+            'LV_TalkMenu': SimpleNamespace(box=menu.box),
+            'LV_TalkSkip': SimpleNamespace(box=skip.box)}.get(name)
+        with patch('wakeup.dialog_box', side_effect=[None, None, [300, 200, 680, 380], None, None, None]), \
+                patch('wakeup.DailyFlow.tap') as click:
+            flow.run()
+        self.assertEqual([c.args for c in click.call_args_list], [(1195, 60), (570, 69), (805, 470)])
+        self.assertEqual([s['action'] for s in flow.report['steps']],
+                         ['打开剧情菜单', '跳过开场故事', '跳过开场故事'])
+        self.assertEqual(flow.report['status'], 'finished')
+        self.assertEqual(flow.clear_home.call_count, 3)
+
+    def test_story_control_requires_template_and_overlapping_unique_text(self):
+        flow = self.prepare_run([])
+        match = hit('菜单', (1115, 45, 120, 40))
+        for texts, template in (([match], None),
+                                ([hit('菜单', (300, 550, 120, 40))], match),
+                                ([match, match], match)):
+            flow.reco.return_value = template
+            self.assertIsNone(flow.story_button(texts))
+        flow.reco.return_value = match
+        self.assertEqual(flow.story_button([match]), ('打开剧情菜单', match))
+
+    def test_story_buttons_behind_unknown_modal_or_loading_are_not_used(self):
+        menu = hit('菜单', (1168, 46, 54, 29))
+        for modal, texts in (([300, 100, 680, 500], [menu]),
+                             (None, [menu, hit('正在加载')]),
+                             (None, [menu, hit('实名认证')])):
+            with self.subTest(modal=modal, texts=texts):
+                flow = self.prepare_run([])
+                flow.ocr = Mock(return_value=texts)
+                flow.reco.return_value = menu
+                flow.clear_home.return_value = False
+                flow.dismiss_notifications = Mock(return_value=False)
+                with patch('wakeup.dialog_box', return_value=modal), patch('wakeup.DailyFlow.tap') as click:
+                    with self.assertRaises(RuntimeError):
+                        flow.run()
+                click.assert_not_called()
+                flow.reco.assert_not_called()
+
+    def test_stuck_story_menu_has_bounded_retries_and_never_reports_success(self):
+        menu = hit('菜单', (1168, 46, 54, 29))
+        flow = self.prepare_run([])
+        flow.ocr = Mock(return_value=[menu])
+        flow.reco.return_value = menu
+        flow.clear_home.return_value = False
+        with patch('wakeup.DailyFlow.tap') as click:
+            with self.assertRaisesRegex(RuntimeError, '点击后页面未变化：打开剧情菜单'):
+                flow.run()
+        self.assertEqual(click.call_count, 5)
+        self.assertEqual(flow.report['status'], 'running')
+
+    def test_story_click_rechecks_foreground_before_input(self):
+        menu = hit('菜单', (1168, 46, 54, 29))
+        flow = self.prepare_run([[menu]])
+        flow.reco.return_value = menu
+        flow.game.foreground.side_effect = [self.GAME, (10, self.GAME[1])]
+        with patch('wakeup.DailyFlow.tap') as click:
+            with self.assertRaisesRegex(RuntimeError, '切换了应用用户'):
+                flow.run()
+        click.assert_not_called()
 
     def test_fallback_rechecks_foreground_before_input(self):
         flow = self.prepare_run([])
