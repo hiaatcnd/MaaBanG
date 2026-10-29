@@ -347,6 +347,8 @@ class DailyFlowTests(unittest.TestCase):
         f.wait=Mock()
         f.select_free_recruit=Mock()
         f.recruit_events=Mock()
+        f.snap=Mock()
+        f.reco=Mock(return_value=None)
         f.mission_page=Mock(return_value=None)
         f.hit_text=Mock(return_value=True)
         f.text=Mock(return_value='每日3次免费！演出招募')
@@ -579,7 +581,7 @@ class DailyFlowTests(unittest.TestCase):
         for node in ('DY_RecruitCut','DY_RecruitSkip','DY_MemberReveal','DY_FiveStarReveal',
                      'DY_ObtainedHeader','DY_RecruitResult'):
             with self.subTest(node=node):
-                f=self.recruit_scenes([node]*4)
+                f=self.recruit_scenes(['loading']+[node]*4)
                 f.free_remaining=Mock(return_value=3)
                 with patch('daily_tasks.time.monotonic',side_effect=range(0,100,4)):
                     with self.assertRaisesRegex(FlowError,'点击 3 次'):

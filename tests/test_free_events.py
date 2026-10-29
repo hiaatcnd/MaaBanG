@@ -119,7 +119,8 @@ class EventFreeTests(unittest.TestCase):
         snap()
         f.home=Mock(); f.click=Mock(); f.swipe=Mock(); f.wait=Mock(side_effect=snap)
         f.tap=Mock(side_effect=tap); f.tap_hit=Mock()
-        f.reco=Mock(side_effect=lambda node:pools[state['index']]=='daily')
+        f.snap=Mock(side_effect=snap)
+        f.reco=Mock(side_effect=lambda node:node!='DY_FreeConfirm' and pools[state['index']]=='daily')
         f.text=Mock(return_value=confirmation)
         f.event_free_button=Mock(side_effect=lambda:
             pools[state['index']]=='free' and (not state['drawn'] or stuck))

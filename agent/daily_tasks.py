@@ -519,6 +519,37 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         self.recruit_events()
         self.recruit_daily()
 
+    def submit_daily_draw(self):
+        confirmation = self.text([479,270,327,94])
+        verify_free_confirmation(confirmation)
+        confirmation = normalized(confirmation)
+        self.report.update(draw_in_flight=True, draw_stage="submitting",
+                           draw_attempts={}, draw_submit_attempts=1)
+        self.tap(770,476)
+        last_submit = time.monotonic()
+        deadline = last_submit + 12
+        while time.monotonic() < deadline:
+            self.snap()
+            # Retry only while this same verified confirmation stays visible.
+            # Any disappearance transfers ownership to result handling, even if
+            # it is just a loading frame; never resubmit from an uncertain result.
+            if not self.reco("DY_FreeConfirm"):
+                return
+            current = self.text([479,270,327,94])
+            verify_free_confirmation(current)
+            if normalized(current) != confirmation:
+                raise FlowError("免费招募确认内容发生变化，停止提交")
+            if time.monotonic() - last_submit < 3:
+                time.sleep(.4)
+                continue
+            if self.report["draw_submit_attempts"] >= 3:
+                break
+            self.report["draw_submit_attempts"] += 1
+            log(f'[免费招募] 免费确认框未关闭：第 {self.report["draw_submit_attempts"]}/3 次提交')
+            self.tap(770,476)
+            last_submit = time.monotonic()
+        raise FlowError("免费招募确认框点击 3 次或等待超时后仍未关闭，停止提交")
+
     def recruit_daily(self):
         log('[免费招募] 正在检查每日免费招募及剩余次数')
         self.select_free_recruit()
@@ -538,9 +569,7 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 return
             self.tap(1188,657)
             self.wait("DY_FreeConfirm")
-            verify_free_confirmation(self.text([479,270,327,94]))
-            self.report["draw_in_flight"] = True
-            self.tap(770,476)
+            self.submit_daily_draw()
             self.finish_draw()
             self.report["draw_in_flight"] = False
             self.report["draws"] += 1
