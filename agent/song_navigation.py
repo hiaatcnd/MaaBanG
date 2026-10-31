@@ -7,6 +7,10 @@ from live_policy import DIFFICULTIES
 BAND_BUTTONS={1:(877,208),2:(1000,208),4:(1120,208),5:(754,284),3:(877,284),
               21:(1000,284),18:(1120,284),45:(754,360)}
 OTHER_BAND_BUTTON=(877,360)
+_KANA_TRANSLATION = str.maketrans(
+    'ぁぃぅぇぉゃゅょっァィゥェォャュョッ〜へべぺ',
+    'あいうえおやゆよつアイウエオヤユヨツ~ヘベペ')
+_QUOTE_TRANSLATION = str.maketrans({'‘':"'", '’':"'", '“':'"', '”':'"'})
 
 
 def level_slider_handles(image,y):
@@ -21,12 +25,10 @@ def level_slider_handles(image,y):
 
 
 def title_key(text):
-    key = normalized(text).casefold().translate(str.maketrans(
-        'ぁぃぅぇぉゃゅょっァィゥェォャュョッ〜へべぺ',
-        'あいうえおやゆよつアイウエオヤユヨツ~ヘベペ'))
+    key = normalized(text).casefold().translate(_KANA_TRANSLATION)
     # OCR varies between straight/curly quotes and may repeat boundary quotes.
     # Keep the title body and punctuation here; fuzzy scoring is a later step.
-    return key.translate(str.maketrans({'‘':"'", '’':"'", '“':'"', '”':'"'})).strip("\"'")
+    return key.translate(_QUOTE_TRANSLATION).strip("\"'")
 
 
 class SongNavigationMixin:

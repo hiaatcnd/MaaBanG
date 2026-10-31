@@ -119,7 +119,7 @@ class AvoidFullComboTests(unittest.TestCase):
         option = interface['option']['谱面避免FullCombo']
         self.assertEqual(option['default_case'], '关')
         self.assertEqual([c['pipeline_override']['CL_avoid_full_combo']['attach']['value']
-                          for c in option['cases']], [False, True])
+                          for c in option['cases']], [False, True, 'unfc'])
         pipeline = json.loads((ROOT/'assets/resource/pipeline/chart_live.json').read_text(encoding='utf8'))
         self.assertIs(pipeline['CL_avoid_full_combo']['attach']['value'], False)
 
@@ -134,6 +134,7 @@ class AvoidFullComboTests(unittest.TestCase):
                 flow.disable_mv = Mock()
                 flow.verify_chart_start = Mock(return_value=None)
                 flow.save_frame = Mock()
+                flow.read_full_combo_state = Mock(side_effect=AssertionError('legacy choices must not read FC stars'))
                 metadata = {'duration': 120}
                 def worker(args, **kwargs):
                     path = Path(args[-1])

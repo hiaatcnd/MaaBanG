@@ -111,6 +111,16 @@ class Program
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert(Field<Dictionary<int, CheckBox>>(view, "_members").Count == 40, "member choices missing");
             Assert(Field<Dictionary<int, CheckBox>>(view, "_bands").Count == 8, "band choices missing");
+            var skipExisting = Field<CheckBox>(view, "_skipExisting");
+            Assert(skipExisting.IsChecked != true, "skip existing must default off");
+            skipExisting.IsChecked = true;
+            typeof(MaaBanGBestdoriView).GetField("_scanning", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, true);
+            Invoke(view, "UpdateButtons");
+            Assert(!skipExisting.IsEnabled, "skip mode can change during a scan");
+            typeof(MaaBanGBestdoriView).GetField("_scanning", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, false);
+            Invoke(view, "UpdateButtons");
+            Assert(skipExisting.IsEnabled && skipExisting.IsChecked == true, "skip mode selection was lost");
+            skipExisting.IsChecked = false;
             var attributes = Field<Dictionary<string, CheckBox>>(view, "_attributes");
             Assert(attributes.Keys.SequenceEqual(new[] { "powerful", "cool", "pure", "happy" }) && attributes.Values.All(c => c.IsChecked == true), "attribute choices or all-selected default missing");
             foreach (var (kind, check) in attributes) check.IsChecked = kind == "cool" || kind == "happy";

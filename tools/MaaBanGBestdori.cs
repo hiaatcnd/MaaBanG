@@ -355,6 +355,7 @@ public sealed class MaaBanGBestdoriView : UserControl
     private readonly DataGridCollectionView _rowView;
     private JArray _baseCards = new();
     private readonly CheckBox _onlyChanged = new() { Content = "只看有变化" };
+    private readonly CheckBox _skipExisting = new() { Content = "跳过已存在，只读取新卡" };
     private readonly TextBlock _comparisonSummary = Text("");
     private readonly DispatcherTimer _comparisonTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     private readonly SemaphoreSlim _mediaSlots = new(3);
@@ -468,7 +469,9 @@ public sealed class MaaBanGBestdoriView : UserControl
 
         var scanButton = Button("读取游戏", ScanAsync);
         ToolTip.SetTip(scanButton,"使用主页当前设备；游戏停在主页、乐队菜单或成员列表。只读取卡牌，不消耗材料。");
-        var review = Stack(_scanScope, Wrap(scanButton, _stop, _scanSummary),
+        var review = Stack(_scanScope, _skipExisting,
+            Text("开启后按当前底稿跳过已有卡，保留其培养数值。小图无法确认时进入详情核对；首次使用会准备卡牌小图。"),
+            Wrap(scanButton, _stop, _scanSummary),
             Wrap(Wrap(_maxLevel, _targetLevel), Wrap(_maxSkill, _targetSkill), Wrap(_maxMaster, _targetMaster),
                 Button("提升勾选卡牌", ApplyTargetsAsync), Button("还原勾选卡牌", RestoreOriginalAsync)),
             Text("按读取原值、当前值和指定值逐项取最大值，指定值不超过卡牌上限。还原会恢复读取原值。仅修改档案，不培养游戏卡牌。"),
@@ -613,6 +616,7 @@ public sealed class MaaBanGBestdoriView : UserControl
         _tabs.IsEnabled = !_starting;
         _table.IsEnabled = !_scanning && !_operation;
         _onlyChanged.IsEnabled = !_scanning && !_operation;
+        _skipExisting.IsEnabled = !_scanning && !_operation;
         _scope.IsEnabled = _name.IsEnabled = _policy.IsEnabled = !_scanning && !_operation;
         foreach (var check in new[] { _maxLevel, _maxSkill, _maxMaster }) check.IsEnabled = !_scanning && !_operation;
         _targetLevel.IsEnabled = _maxLevel.IsEnabled && _maxLevel.IsChecked == true;
@@ -962,7 +966,7 @@ public sealed class MaaBanGBestdoriView : UserControl
     private async Task RestoreReviewAsync()
     {
         var state = await _client!.CallAsync("state");
-        if (state["observations"] is not JArray records || records.Count == 0) return;
+        if (state["observations"] is not JArray records || (records.Count == 0 && state.Value<string>("scan_status") == null)) return;
         _restoring = true;
         try
         {
@@ -979,6 +983,8 @@ public sealed class MaaBanGBestdoriView : UserControl
             }
             _rows.Clear(); foreach (var row in records) AddRow((JObject)row);
             _scanSummary.Text = $"已恢复缓存：{records.Count} 张 · {state["cached_at"]} · {(state.Value<string>("scan_status") == "complete" ? "上次完整读取" : "上次部分读取")}\n缓存不是游戏实时状态，可重新读取更新。";
+            if (state["scan_summary"] is JObject summary && summary.Value<int>("existing_skipped") > 0)
+                _scanSummary.Text += $"\n上次已跳过 {summary["existing_skipped"]} 张已有卡。";
             if (state["cache_recovery"] is JObject recovery)
                 _scanSummary.Text += $"\n已从对应原始扫描补回 {recovery["fields"]} 项读取值，已修改的数值和勾选保持不变。";
         }
@@ -1019,7 +1025,7 @@ public sealed class MaaBanGBestdoriView : UserControl
         SetStatus("正在准备读取游戏……"); _scanSummary.Text = "正在准备读取游戏……";
         var targets = Targets();
         // Original values are needed for max(original, target) and one-click undo.
-        var start = await Api("scan", new JObject { ["scope"] = scope, ["maximize"] = new JObject() });
+        var start = await Api("scan", new JObject { ["scope"] = scope, ["maximize"] = new JObject(), ["skip_existing"] = _skipExisting.IsChecked == true });
         var scanId = start.Value<string>("scan_id")!;
         _scanning = true; _scanCancellation = new CancellationTokenSource(); Dirty(); UpdateButtons();
         string? error = null;
@@ -1039,6 +1045,8 @@ public sealed class MaaBanGBestdoriView : UserControl
                 }
                 var missing = ApplyTargets(_rows.Where(r => r.Selected), targets);
                 _scanSummary.Text = $"{(state.Value<string>("scan_status") == "complete" ? "扫描完成" : "部分读取")} · {_rows.Count} 张记录\n" + string.Join("\n", ((JArray)state["scan_errors"]!).Select(v => v.ToString()));
+                if (state["scan_summary"] is JObject summary && summary.Value<int>("existing_skipped") > 0)
+                    _scanSummary.Text += $"\n已跳过 {summary["existing_skipped"]} 张已有卡，其中 {summary["thumbnail_skipped"]} 次在列表小图确认。";
                 if (missing > 0) _scanSummary.Text += $"\n{missing} 项数值未读到，未应用提升。";
                 await SaveReviewAsync();
             }

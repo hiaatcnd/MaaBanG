@@ -18,6 +18,7 @@ from chart_policy import ChartOptions, ChartSelection, OPTION_DEFAULTS, OPTION_N
 from chart_store import ChartStore
 from costume_unlock import FlowError, normalized
 from live_policy import DIFFICULTIES
+from full_combo import ONLY_UNFC, ready_star_row
 from song_catalog import RECOGNITION_BY_ID
 
 
@@ -231,6 +232,39 @@ class ChartLiveFlow(LiveFlow):
     def playback_start_mode(self):
         return 'online' if self.settings.mode in ONLINE_MODES else 'click'
 
+    def read_full_combo_state(self, selection):
+        # A fresh pair belongs to this song on every attempt; never carry FC
+        # status across songs, difficulties, tour slots or room retries.
+        previous = None
+        for attempt in range(4):
+            self.snap()
+            stars = ready_star_row(self.image)
+            if stars is not None:
+                first, states = stars
+                rect = [220,541,570,38] if first == 317 else [111,541,420,38]
+                if not self.title_matches(self.text(rect), selection.song):
+                    stars = None
+                elif stars == previous:
+                    return states[DIFFICULTIES.index(selection.difficulty)]
+            previous = stars
+            if attempt < 3:
+                self.pause(.12)
+        return 'unknown'
+
+    def resolve_avoid_full_combo(self, selection, row):
+        policy = self.settings.avoid_full_combo
+        if policy != ONLY_UNFC:
+            return policy  # Preserve the existing off/on paths without extra reads.
+        state = self.read_full_combo_state(selection)
+        avoid = state != 'full_combo'
+        row['full_combo_check'] = {'song_id': selection.song_id,
+            'difficulty': selection.difficulty, 'state': state, 'avoid_full_combo': avoid}
+        reason = {'full_combo': '已 FC（红星或彩星），正常演奏',
+                  'clear': '尚未 FC，保留避免 FC', 'unplayed': '尚未 FC，保留避免 FC',
+                  'unknown': '星标未确认，保留避免 FC'}[state]
+        log(f'[谱面演出] {selection.difficulty.upper()}：{reason}')
+        return avoid
+
     def play_chart(self, index, selection, metadata, amount, row):
         preparation_started=time.perf_counter()
         timings=row['startup_timings_ms']={}
@@ -238,13 +272,16 @@ class ChartLiveFlow(LiveFlow):
         online=self.settings.mode in ONLINE_MODES
         if not online:
             self.wait_ready(index)
+        avoid_full_combo = self.settings.avoid_full_combo
+        if avoid_full_combo == ONLY_UNFC:
+            avoid_full_combo = self.resolve_avoid_full_combo(selection, row)
         start_mode=self.playback_start_mode()
         destination=self.output/(f'attempt{self.report["attempts"]}_playback' if online else
                                  f'round{self.report["completed_rounds"]+1}_song{index}')
         destination.mkdir()
         config={'controller':self.controller.info,'chart':metadata,
                 'jitter':self.settings.jitter,'seed':secrets.randbits(32),
-                'avoid_full_combo':self.settings.avoid_full_combo,
+                'avoid_full_combo':avoid_full_combo,
                 'start_mode':start_mode}
         (destination/'config.json').write_text(json.dumps(config),encoding='utf8')
         worker_log=(destination/'worker.log').open('w',encoding='utf8')
@@ -272,6 +309,11 @@ class ChartLiveFlow(LiveFlow):
             balance=self.verify_chart_start(index,selection,amount)
             # Every mode uses the same controls on the fresh final-check frame.
             self.disable_mv(fresh=False)
+            if self.settings.avoid_full_combo == ONLY_UNFC and not avoid_full_combo:
+                # The worker was compiled without an omission. If the page has
+                # changed while preparing it, do not authorize those inputs.
+                if self.read_full_combo_state(selection) != 'full_combo':
+                    raise FlowError('开演前已 FC 星标发生变化或无法确认，请重新启动任务')
             verified_at=time.perf_counter()
             timings['final_verification']=(verified_at-ready_at)*1000
             if balance is not None:

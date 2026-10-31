@@ -9,6 +9,13 @@ from urllib.request import Request, urlopen
 from bestdori_profiles import ProfileError
 
 
+# Names verified on the CN member-detail screen. Bestdori calls character 15
+# Michelle; these cards' CN titles are absent in the cached public catalog.
+# Keep corrections keyed by identity so a similar title never selects a card.
+GAME_MEMBER_ALIASES = {15: ('奥泽美咲', '奧澤美咲', '奥沢美咲')}
+GAME_TITLE_ALIASES = {2430: ('仅此一次的革命',), 2431: ('遗落之物',)}
+
+
 def normalized(value):
     return ''.join(c for c in unicodedata.normalize('NFKC', value).casefold() if c.isalnum())
 
@@ -69,13 +76,20 @@ def atomic_json(path, value):
             os.unlink(tmp)
 
 
+def identify_members(member_text, catalog):
+    member = normalized(member_text)
+    return {int(id_) for id_, c in catalog['characters'].items()
+               if member and member in {normalized(n) for n in
+                   [*c.get('characterName', []), *c.get('nickname', []),
+                    *GAME_MEMBER_ALIASES.get(int(id_), ())] if n}}
+
+
 def identify(title_text, member_text, rarity, catalog):
     """Require full title and character identity, never pick a fuzzy first match."""
-    title, member = normalized(title_text), normalized(member_text)
-    members = {int(id_) for id_, c in catalog['characters'].items()
-               if member and member in {normalized(n) for n in
-                   [*c.get('characterName', []), *c.get('nickname', [])] if n}}
+    title = normalized(title_text)
+    members = identify_members(member_text, catalog)
     matches = [int(id_) for id_, c in catalog['cards'].items()
                if c['characterId'] in members and c['rarity'] == rarity
-               and title and title in {normalized(n) for n in c['prefix'] if n}]
+               and title and title in {normalized(n) for n in
+                   [*c['prefix'], *GAME_TITLE_ALIASES.get(int(id_), ())] if n}]
     return matches[0] if len(matches) == 1 else None

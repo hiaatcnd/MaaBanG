@@ -7,6 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from chart_policy import OPTION_DEFAULTS, OPTION_NODES, JITTER_PROFILES, COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS, CURRENT_SONG
 from live_policy import DIFFICULTIES, REFILL_PRIORITIES
+from full_combo import AVOID_FULL_COMBO_CHOICES
 from interface_descriptions import OPTION_DESCRIPTIONS, INPUT_DESCRIPTIONS, TASK_DESCRIPTIONS
 
 
@@ -39,7 +40,7 @@ def update(interface):
         'cases':[choice(label,'from_favorites',value) for label,value in [('关',False),('开',True)]]}
     options['谱面避免FullCombo']={'type':'select','label':'避免 Full Combo','default_case':'关',
         'description':OPTION_DESCRIPTIONS['谱面避免FullCombo'],
-        'cases':[choice(label,'avoid_full_combo',value) for label,value in [('关',False),('开',True)]]}
+        'cases':[choice(label,'avoid_full_combo',value) for label,value in AVOID_FULL_COMBO_CHOICES]}
     fire_options=['谱面每首火数','谱面火不足策略']
     options['谱面演出模式']={'type':'select','label':'演出模式','cases':[
         choice('自由演出','mode','free',[selectors[0],'谱面从收藏选择',*fire_options]),

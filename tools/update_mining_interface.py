@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from mining_policy import DEFAULTS, NODES, DIFFICULTY_NODES, STAR_NODES
 from live_policy import REFILL_PRIORITIES
+from full_combo import AVOID_FULL_COMBO_CHOICES
 from interface_descriptions import OPTION_DESCRIPTIONS, TASK_DESCRIPTIONS
 
 
@@ -55,7 +56,7 @@ def update(interface):
     options['挖矿舞台避免FullCombo'] = dict(type='select',default_case='关',
         description=OPTION_DESCRIPTIONS['挖矿舞台避免FullCombo'],
         cases=[dict(name=name,pipeline_override={NODES['avoid_full_combo']:{'attach':{'value':value}}})
-               for name,value in [('关',False),('开',True)]])
+               for name,value in AVOID_FULL_COMBO_CHOICES])
     options.pop('挖矿材料解锁',None)
     options['挖矿练习满级'] = dict(type='select',label='练习至满级',default_case='关闭',
         description=OPTION_DESCRIPTIONS['挖矿练习满级'],
