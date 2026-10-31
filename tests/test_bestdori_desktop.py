@@ -44,6 +44,40 @@ class DesktopTests(unittest.TestCase):
         self.assertIn('设备已断开', self.w.scan_errors)
         self.assertTrue((folder/'finished').exists())
 
+    def test_skip_existing_captures_only_current_base_ids_inside_scope(self):
+        self.w.base['cards'] = [{'id':1703}, {'id':1704}, {'id':1}]
+        self.w.observations = [{'id':1712}]
+        self.options.update(skip_existing=True, existing_ids=[1712])
+        id_, folder = self.start()
+        request = json.loads((folder/'request.json').read_text('utf8'))
+        self.assertEqual(request['existing_ids'], [1703])
+        with patch('bestdori_scan.BestdoriScan') as scan:
+            scan.return_value.run.return_value = {'status':'complete'}
+            run_scan(Mock(), id_, self.folder.name)
+            self.assertEqual(scan.call_args.kwargs['existing_ids'], [1703])
+            self.assertEqual(scan.call_args.kwargs['portraits_root'], Path(self.folder.name)/'public-cache')
+
+    def test_skip_defaults_off_and_invalid_options_do_not_clear_records(self):
+        self.w.base['cards'] = [{'id':1703}]
+        self.w.observations = [{'id':1712}]
+        for value in ('true', 1, None):
+            with self.assertRaises(ProfileError):
+                self.w.execute('scan', {**self.options, 'skip_existing':value})
+            self.assertFalse(self.w.busy)
+            self.assertEqual(self.w.observations, [{'id':1712}])
+        _, folder = self.start()
+        self.assertEqual(json.loads((folder/'request.json').read_text('utf8'))['existing_ids'], [])
+
+    def test_all_existing_summary_survives_finish_and_restart_with_no_new_rows(self):
+        id_, folder = self.start()
+        summary = {'existing_skipped':238, 'thumbnail_skipped':230}
+        atomic_json(folder/'scan.json', {'status':'complete','observations':[], 'errors':[], 'summary':summary})
+        self.w.execute('scan_finish', {'scan_id':id_})
+        self.assertEqual(self.w.state()['scan_summary'], summary)
+        restored = DesktopWorkspace(self.folder.name)
+        self.assertEqual(restored.state()['scan_summary'], summary)
+        self.assertEqual(restored.observations, [])
+
     def test_connection_failure_and_stale_finish_do_not_corrupt_next_scan(self):
         id_, _ = self.start()
         self.w.execute('scan_finish', {'scan_id':id_})

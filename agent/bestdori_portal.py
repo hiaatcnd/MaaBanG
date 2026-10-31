@@ -13,7 +13,7 @@ from bestdori_catalog import load, refresh, atomic_json, validate
 from bestdori_client import BestdoriClient, CloudError
 from bestdori_media import CardMedia
 from bestdori_profiles import (ProfileError, empty_profile, parse_profile, export_profile,
-                              merge_profile, fingerprint, validate_scope, validate_maximize, MAX_BYTES)
+                              merge_profile, fingerprint, validate_scope, validate_maximize, in_scope, MAX_BYTES)
 from user_data import data_root
 
 
@@ -44,6 +44,7 @@ class Workspace:
         self.message = '导入已有资料或从空白档案开始。'
         self.scan_status = None
         self.scan_errors = []
+        self.scan_summary = {}
         self.cached_at = None
         self.cached_scope = None
         self.cached_scan_id = None
@@ -56,6 +57,7 @@ class Workspace:
                 self.observations = saved['observations']
                 self.scan_status = saved.get('status','partial')
                 self.scan_errors = saved.get('errors',[])
+                self.scan_summary = saved.get('summary', {})
                 self.cached_at = saved.get('saved_at')
                 self.cached_scope = saved.get('scope')
                 self.cached_scan_id = saved.get('scan_id')
@@ -79,6 +81,7 @@ class Workspace:
                             row['maximize']=request.get('maximize',{})
                     self.scan_status=saved.get('status','partial')
                     self.scan_errors=saved.get('errors',[])
+                    self.scan_summary=saved.get('summary', {})
                     self.cached_at=datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec='seconds')
                     self.cached_scope=request.get('scope')
                     self.cached_scan_id=path.parent.name
@@ -140,6 +143,7 @@ class Workspace:
                     'observations': self.observations, 'result': self.result,
                     'result_token': self.result_token, 'busy': self.busy,
                     'message': self.message, 'scan_status': self.scan_status, 'scan_errors': self.scan_errors,
+                    'scan_summary': self.scan_summary,
                     'cached_at':self.cached_at,'cached_scope':self.cached_scope,
                     'cache_recovery':self.cache_recovery})
 
@@ -151,7 +155,7 @@ class Workspace:
             if not backup.exists():
                 atomic_json(backup, json.loads((self.root/'last-scan.json').read_text(encoding='utf8')))
         atomic_json(self.root/'last-scan.json',{'version':2,'scan_id':self.cached_scan_id,'observations':self.observations,'status':self.scan_status,
-            'errors':self.scan_errors,'saved_at':self.cached_at,'scope':self.cached_scope})
+            'errors':self.scan_errors,'saved_at':self.cached_at,'scope':self.cached_scope,'summary':self.scan_summary})
 
     def invalidate(self):
         self.result = self.result_token = None
@@ -211,6 +215,11 @@ class Workspace:
                     raise ProfileError('游戏扫描仅支持中国服，请更换中国服底稿')
                 scope = validate_scope(body.get('scope'), self.catalog)
                 maximize = validate_maximize(body.get('maximize'))
+                skip_existing = body.get('skip_existing', False)
+                if type(skip_existing) is not bool:
+                    raise ProfileError('跳过已存在选项无效')
+                existing_ids = sorted({card['id'] for card in self.base['cards']
+                                       if in_scope(card['id'], scope, self.catalog)}) if skip_existing else []
                 with self.lock:
                     self.busy = True
                     self.cancel.clear()
@@ -218,8 +227,9 @@ class Workspace:
                     self.observations = []
                     self.scan_status = 'running'
                     self.scan_errors = []
+                    self.scan_summary = {}
                     self.message = '正在读取游戏成员列表……'
-                    self.jobs.put({'scope': scope, 'maximize': maximize})
+                    self.jobs.put({'scope': scope, 'maximize': maximize, 'existing_ids': existing_ids})
                 return {'message': '扫描已开始'}
             if action == 'preview':
                 rows = body.get('observations')
@@ -306,11 +316,13 @@ class Workspace:
                     self.message = message
             report = BestdoriScan(context, self.catalog, job['scope'],
                          self.root/'snapshots'/self.run_id/'scan', cancel=self.cancel, progress=progress,
-                         maximize=job['maximize']).run()
+                         maximize=job['maximize'], existing_ids=job.get('existing_ids', []),
+                         portraits_root=self.root/'public-cache').run()
             with self.lock:
                 self.observations = report['observations']
                 self.scan_status = report['status']
                 self.scan_errors = report['errors']
+                self.scan_summary = report.get('summary', {})
                 self.message = ('列表扫描完成' if report['status'] == 'complete' else '扫描未全部完成，已保留读到的记录')
                 self.cache_scan(job['scope'])
         except Exception as exc:

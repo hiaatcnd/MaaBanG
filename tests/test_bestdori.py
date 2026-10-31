@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
 from bestdori_profiles import (parse_profile, empty_profile, export_profile, merge_profile,
                               ATTRIBUTES, ProfileError, validate_scope, fingerprint)
-from bestdori_catalog import load, identify
+from bestdori_catalog import load, identify, identify_members
 from bestdori_client import BestdoriClient, CloudError
 from bestdori_portal import Workspace, make_server
 
@@ -165,6 +165,36 @@ class ProfilesTests(unittest.TestCase):
         self.assertIsNone(identify('奋不顾身', '户山香澄', 1, self.catalog))
         self.assertIsNone(identify('奋不顾身向前冲！', '花园多惠', 1, self.catalog))
         self.assertIsNone(identify('奋不顾身向前冲！', '户山香澄', 5, self.catalog))
+
+    def test_verified_game_aliases_resolve_missing_catalog_names(self):
+        cases = [('我所不知道的', '奥泽美咲', 1754),
+                 ('与印象重合的笑容', '奥泽美咲', 1965),
+                 ('让世界充满笑容的每一天', '奥泽美咲', 2023),
+                 ('屏幕上映出的笑容', '奥泽美咲', 2142),
+                 ('放学后，雨天和好友', '牛込里美', 2247),
+                 ('仅此一次的革命', '濑田薰', 2430),
+                 ('遗落之物', '白鹭千圣', 2431)]
+        catalog = copy.deepcopy(self.catalog)
+        # Exercise the saved scan's missing CN translations even after refresh.
+        for id_ in ('2430', '2431'):
+            catalog['cards'][id_]['prefix'][3] = None
+        for title, member, id_ in cases:
+            with self.subTest(id=id_):
+                self.assertEqual(identify(title, member, 5, catalog), id_)
+                self.assertIsNone(identify(title, member, None, catalog))
+                self.assertIsNone(identify(title, member, 4, catalog))
+                self.assertIsNone(identify(title, '户山香澄', 5, catalog))
+        for member in ('奥泽 美咲', '奧澤美咲', '奥沢美咲', '米歇尔'):
+            self.assertEqual(identify_members(member, catalog), {15})
+        self.assertIsNone(identify('仅此一次', '濑田薰', 5, catalog))
+        self.assertIsNone(identify('遗失之物', '白鹭千圣', 5, catalog))
+
+    def test_alias_collision_still_requires_a_unique_card(self):
+        catalog = copy.deepcopy(self.catalog)
+        duplicate = copy.deepcopy(catalog['cards']['2430'])
+        duplicate['prefix'] = [None, None, None, '仅此一次的革命', None]
+        catalog['cards']['99999'] = duplicate
+        self.assertIsNone(identify('仅此一次的革命', '濑田薰', 5, catalog))
 
     def test_maximum_settings_override_base_observations_and_conflict_policy(self):
         p = self.base()

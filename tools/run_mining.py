@@ -18,8 +18,11 @@ def main():
     parser.add_argument('--unlock',action='store_true')
     parser.add_argument('--stars',default='1,2,3')
     parser.add_argument('--stage',choices=['main','special'],default='main')
-    parser.add_argument('--avoid-full-combo',action=argparse.BooleanOptionalAction,default=False,
+    fc = parser.add_mutually_exclusive_group()
+    fc.add_argument('--avoid-full-combo',action=argparse.BooleanOptionalAction,default=False,
                         help='Avoid Full Combo in stage challenges only (default: disabled)')
+    fc.add_argument('--avoid-new-full-combo',dest='avoid_full_combo',action='store_const',const='unfc',
+                    help='Only avoid FC on charts without a confirmed FC/AP star in stage challenges')
     parser.add_argument('--difficulties',nargs='*',choices=['easy','normal','hard','expert','special'],
                         default=['easy','normal','hard','expert','special'])
     parser.add_argument('--no-stories',action='store_true')

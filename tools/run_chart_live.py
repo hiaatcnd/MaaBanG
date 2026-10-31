@@ -29,7 +29,10 @@ def main():
         parser.add_argument(f'--song{i}',default='306')
         parser.add_argument(f'--difficulty{i}',default='expert')
     parser.add_argument('--jitter',choices=JITTER_PROFILES,default='small')
-    parser.add_argument('--avoid-full-combo',action='store_true',help='跳过最后一个非长条音符，长条和滑条完整演奏')
+    fc = parser.add_mutually_exclusive_group()
+    fc.add_argument('--avoid-full-combo',action='store_true',help='跳过最后一个非长条音符，长条和滑条完整演奏')
+    fc.add_argument('--avoid-new-full-combo',dest='avoid_full_combo',action='store_const',const='unfc',
+                    help='仅避免未 FC 的当前难度 FC；红星和彩星正常演奏，识别不明时仍避免 FC')
     parser.add_argument('--cp',type=int,choices=[200,400,800,1600],default=200)
     parser.add_argument('--cp-song',default='',help='挑战活动歌曲ID或完整歌名；留空沿用当前活动选曲')
     parser.add_argument('--coop-room',choices=COOP_ROOMS,default='free')

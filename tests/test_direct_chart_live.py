@@ -247,7 +247,7 @@ class DirectChartLiveTests(unittest.TestCase):
         self.assertEqual(OPTION_NODES['avoid_full_combo'],'DL_avoid_full_combo')
         context=SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False))
         with tempfile.TemporaryDirectory() as folder:
-            for enabled in (False,True):
+            for enabled in (False,True,'unfc'):
                 flow=DirectChartLive().create_flow(context,dict(OPTION_DEFAULTS,avoid_full_combo=enabled),folder)
                 self.assertIs(flow.settings.avoid_full_combo,enabled)
                 self.assertIs(flow.report['options']['avoid_full_combo'],enabled)
@@ -259,7 +259,7 @@ class DirectChartLiveTests(unittest.TestCase):
         option=load_interface()['option']['直接演出避免FullCombo']
         self.assertEqual(option['default_case'],'关')
         self.assertEqual([c['pipeline_override']['DL_avoid_full_combo']['attach']['value']
-                          for c in option['cases']],[False,True])
+                          for c in option['cases']],[False,True,'unfc'])
         pipeline=json.loads((ROOT/'assets/resource/pipeline/direct_chart_live.json').read_text(encoding='utf8'))
         for choice in ('default','legacy','关','开'):
             with self.subTest(choice=choice),tempfile.TemporaryDirectory() as folder:
@@ -306,13 +306,13 @@ class DirectChartLiveTests(unittest.TestCase):
 
     def test_direct_cli_passes_avoid_full_combo_to_independent_node(self):
         from run_chart_live import main
-        for enabled in (False,True):
+        for enabled in (False,True,'unfc'):
             with self.subTest(enabled=enabled),tempfile.TemporaryDirectory() as folder:
                 resource=Mock()
                 tasker=Mock()
                 tasker.post_task.return_value=SimpleNamespace(done=True,succeeded=True)
                 args=['run_chart_live.py','--adb','test-adb','--address','test-device','--direct']
-                if enabled:args.append('--avoid-full-combo')
+                if enabled:args.append('--avoid-new-full-combo' if enabled=='unfc' else '--avoid-full-combo')
                 device=SimpleNamespace(address='test-device',screencap_methods=64,input_methods=15,
                     config={'extras':{'mumu':{'enable':True,'index':1,'path':'test-emulator'}}})
                 with patch.object(sys,'argv',args),patch.dict('os.environ',{}), \
@@ -328,7 +328,7 @@ class DirectChartLiveTests(unittest.TestCase):
                 self.assertIsInstance(resource.register_custom_action.call_args.args[1],DirectChartLive)
                 name,overrides=tasker.post_task.call_args.args
                 self.assertEqual(name,'DirectChartLive')
-                self.assertIs(overrides['DL_avoid_full_combo']['attach']['value'],enabled)
+                self.assertEqual(overrides['DL_avoid_full_combo']['attach']['value'],enabled)
                 self.assertNotIn('CL_avoid_full_combo',overrides)
 
     def test_generated_ui_is_idempotent_and_exposes_exact_cn_difficulties(self):

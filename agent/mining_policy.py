@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import re
 import numpy as np
 from live_policy import refill_priority_option
+from full_combo import avoid_full_combo_option
 
 DIFFICULTIES = ('easy', 'normal', 'hard', 'expert', 'special')
 DEFAULTS = dict(max_rounds='', stories=True, memories=True, practice=False,
@@ -26,7 +27,7 @@ class MiningOptions:
     fire: int
     shortage: str
     challenge_target: str
-    avoid_full_combo: bool = False
+    avoid_full_combo: bool | str = False
     refill_priority: str = 'small'
 
     @classmethod
@@ -42,8 +43,7 @@ class MiningOptions:
         for key in ('stories', 'memories', 'practice', 'unlock'):
             if not isinstance(values[key], bool):
                 raise ValueError(f'{key} 必须为布尔值')
-        if not isinstance(values['avoid_full_combo'], bool):
-            raise ValueError('避免 Full Combo 必须为开或关')
+        values['avoid_full_combo'] = avoid_full_combo_option(values['avoid_full_combo'])
         raw_stars = values['stars']
         if not isinstance(raw_stars, str) or (raw_stars and not re.fullmatch(r'[1-5](?:,[1-5])*', raw_stars)):
             raise ValueError('成员星级请用英文逗号分隔，例如 1,2,3')

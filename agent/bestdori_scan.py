@@ -7,8 +7,10 @@ from types import SimpleNamespace
 import numpy as np
 from PIL import Image
 
-from bestdori_catalog import atomic_json, identify, normalized as identity_text
+from bestdori_catalog import atomic_json, identify, identify_members, normalized as identity_text
 from bestdori_profiles import ATTRIBUTES, in_scope, validate_scope, validate_maximize
+from bestdori_portraits import CardPortraits
+from user_data import data_root
 from costume_unlock import FlowError, normalized
 from daily_tasks import DailyFlow
 from mining_policy import member_cards, member_signature, gold_member_stars
@@ -122,11 +124,15 @@ class BestdoriScan(DailyFlow):
     checkbox = StoryMiningFlow.checkbox
     filter_member_stars = StoryMiningFlow.filter_member_stars
 
-    def __init__(self, context, catalog, scope, output, *, cancel=None, progress=None, maximize=None):
+    def __init__(self, context, catalog, scope, output, *, cancel=None, progress=None, maximize=None,
+                 existing_ids=None, portraits_root=None):
         super().__init__(context)
         self.catalog = catalog
         self.scope = validate_scope(scope, catalog)
         self.maximize = validate_maximize(maximize)
+        self.existing_ids = {id_ for id_ in (existing_ids or []) if in_scope(id_, self.scope, catalog)}
+        self.portraits_root = Path(portraits_root) if portraits_root else data_root()/'bestdori/public-cache'
+        self.portraits = None
         self.output = Path(output)
         self.output.mkdir(parents=True, exist_ok=True)
         self.cancel = cancel
@@ -503,19 +509,26 @@ class BestdoriScan(DailyFlow):
         if identity is None:
             raise FlowError('卡牌身份读取不稳定')
         title, member, rarity = identity
-        member_ids = [int(id_) for id_, c in self.catalog['characters'].items()
-                      if normalized(member) in {normalized(n) for n in c['characterName'] if n}]
-        if len(member_ids) == 1 and (member_ids[0] not in self.scope['members'] or
-                self.catalog['characters'][str(member_ids[0])]['bandId'] not in self.scope['bands']):
+        # Two identical tuples can still contain a missing star count while the
+        # rainbow border animates. Retry that field until two valid reads agree.
+        if rarity is None:
+            rarity = self.stable(self.rarity)
+        member_ids = identify_members(member, self.catalog)
+        member_id = next(iter(member_ids)) if len(member_ids) == 1 else None
+        if member_id is not None and (member_id not in self.scope['members'] or
+                self.catalog['characters'][str(member_id)]['bandId'] not in self.scope['bands']):
             return None
         id_ = identify(title, member, rarity, self.catalog)
         row = {'id': id_, 'title': title, 'member': member, 'rarity': rarity,
                'evidence': f'detail-{number:04d}.png'}
         if id_ is None:
-            row['warning'] = '卡名、成员和星级未能唯一匹配，请通过搜索确认卡牌身份'
+            row['warning'] = ('星级未读清，请通过搜索确认卡牌身份' if rarity is None else
+                              '卡名、成员和星级未能唯一匹配，请通过搜索确认卡牌身份')
         self.save_frame(row['evidence'])
         if id_ is not None and not in_scope(id_, self.scope, self.catalog):
             return None
+        if id_ in self.existing_ids:
+            return row  # An uncertain thumbnail only needs an identity check.
         # Opening a card always lands on its values page. No redundant tab tap.
         levels = None if self.maximize['level'] else self.stable(lambda: read_ratio(self.text([650, 350, 160, 40])))
         skill = None if self.maximize['skill'] else self.stable(lambda: read_ratio(self.text([650, 478, 130, 40]), skill=True))
@@ -561,8 +574,20 @@ class BestdoriScan(DailyFlow):
 
     def run(self, *, limit=None):
         ids, visits, no_new_pages = {}, 0, 0
+        seen, existing_seen = set(), set()
         self.overlap_slots = set()
+        self.report['summary'] = {'existing_skipped': 0, 'thumbnail_skipped': 0}
+        def progress(page):
+            summary = self.report['summary']
+            summary['existing_skipped'] = len(existing_seen)
+            message = f'第 {page+1} 页 · 已读取 {len(ids)} 张 · 已跳过 {len(existing_seen)} 张已有卡 · 重叠位置 {self.report.get("overlap_skipped",0)} 个'
+            self.progress(message)
+            log('[Bestdori] '+message)
+            self.save_report()
         try:
+            if self.existing_ids:
+                self.portraits = CardPortraits.prepare(self.portraits_root, self.catalog, self.scope,
+                    self.existing_ids, self.check_stop, self.progress)
             self.open_list()
             for page in range(600):
                 self.wait('MN_Members')
@@ -576,13 +601,20 @@ class BestdoriScan(DailyFlow):
                             break
                     raise FlowError('未识别到卡片，也未确认列表为空')
                 before = self.page_signature()
-                initial_count = len(ids)
+                initial_count = len(seen)
                 self.save_frame(f'page-{page+1:04d}.png')
                 for slot in range(len(cards)):
                     if slot in self.overlap_slots:
                         self.report['overlap_skipped'] = self.report.get('overlap_skipped',0)+1
                         continue
                     self.check_stop()
+                    portrait_id = self.portraits.identify(before[slot][1]) if self.portraits else None
+                    if portrait_id in self.existing_ids:
+                        seen.add(portrait_id)
+                        existing_seen.add(portrait_id)
+                        self.report['summary']['thumbnail_skipped'] += 1
+                        progress(page)
+                        continue
                     if visits >= 5000:
                         raise FlowError('读取次数达到保护上限，尚未确认全部完成')
                     before = self.open_card(before,slot)
@@ -591,7 +623,10 @@ class BestdoriScan(DailyFlow):
                     row = self.read_detail(visits)
                     if row:
                         key = row['id'] if row['id'] is not None else (row['title'], row['member'], row['rarity'])
-                        if key not in ids:
+                        seen.add(key)
+                        if row['id'] in self.existing_ids:
+                            existing_seen.add(row['id'])
+                        elif key not in ids:
                             ids[key] = row
                             self.report['observations'].append(row)
                         elif any(ids[key].get(k) != row.get(k) for k in ('level', 'skill', 'master', 'train')):
@@ -600,10 +635,7 @@ class BestdoriScan(DailyFlow):
                     else:
                         raise FlowError('发现所选范围外的卡牌，成员筛选可能已改变，已停止读取')
                     before = self.return_to_list(before)
-                    message = f'第 {page+1} 页 · 已读取 {len(ids)} 张 · 已跳过 {self.report.get("overlap_skipped",0)} 个重叠位置'
-                    self.progress(message)
-                    log('[Bestdori] '+message)
-                    self.save_report()
+                    progress(page)
                     if limit is not None and visits >= limit:
                         raise FlowError('仅完成指定数量的验证扫描')
                 self.report['pages'] = page+1
@@ -611,7 +643,7 @@ class BestdoriScan(DailyFlow):
                 if not self.advance_page():
                     self.report['status'] = 'complete'
                     break
-                no_new_pages = no_new_pages+1 if len(ids) == initial_count else 0
+                no_new_pages = no_new_pages+1 if len(seen) == initial_count else 0
                 if no_new_pages >= 3:
                     raise FlowError('连续翻页没有新卡片，可能出现重复页面；已保留部分结果')
             else:

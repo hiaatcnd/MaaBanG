@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from live_policy import DIFFICULTIES, number, fever_option, favorites_option, refill_priority_option
 from song_catalog import RECOGNITION_BY_ID, resolve_song, available_difficulties
+from full_combo import avoid_full_combo_option
 
 # Truncated normal timing and position jitter (sigma = bound/3), without clipping.
 # Every profile is nonzero. Profiles describe input variation, not guaranteed judgments.
@@ -65,7 +66,7 @@ class ChartOptions:
     coop_song: str = ''
     fever: str = 'off'
     from_favorites: bool = False
-    avoid_full_combo: bool = False
+    avoid_full_combo: bool | str = False
     versus_room: str = 'event'
     versus_song: str = ''
     versus_room_group: str = 'normal'
@@ -77,9 +78,7 @@ class ChartOptions:
         if mode not in ('free', 'tour_free', 'tour_fixed', *ONLINE_MODES, 'challenge'):
             raise ValueError('未知谱面演出模式')
         jitter = data.get('jitter', 'small')
-        avoid_full_combo = data.get('avoid_full_combo', False)
-        if not isinstance(avoid_full_combo, bool):
-            raise ValueError('避免 Full Combo 必须为开或关')
+        avoid_full_combo = avoid_full_combo_option(data.get('avoid_full_combo', False))
         if jitter not in JITTER_PROFILES:
             raise ValueError('请选择非零随机偏差档位')
         challenge = mode == 'challenge'

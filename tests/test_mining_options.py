@@ -140,7 +140,7 @@ class MiningOptionTests(unittest.TestCase):
                     self.assertEqual(configs[0]['chart']['duration'],120)
 
     def test_stage_option_does_not_disable_fc_mining(self):
-        for enabled in (False,True):
+        for enabled in (False,True,'unfc'):
             with self.subTest(enabled=enabled),tempfile.TemporaryDirectory() as folder:
                 context=SimpleNamespace(tasker=SimpleNamespace(controller=SimpleNamespace(info={})))
                 flow=MiningLiveFlow(context,MiningOptions.parse({'avoid_full_combo':enabled}),folder)

@@ -57,10 +57,12 @@ class DesktopWorkspace(Workspace):
                     self.cached_scan_id = self.scan_id
                     self.cache_recovery = None
                     self.scan_errors = report['errors']
+                    self.scan_summary = report.get('summary', {})
                     self.scan_status = report['status'] if report['status'] == 'complete' else 'partial'
                 except (OSError, ValueError, KeyError):
                     self.scan_status = 'partial'
                     self.scan_errors = ['未读到游戏资料，请检查设备连接和游戏页面后重试']
+                    self.scan_summary = {}
                 if body.get('error'):
                     self.scan_status = 'partial'
                     self.scan_errors.append(str(body['error']))
@@ -97,6 +99,10 @@ def run_scan(context, job_id, root=None):
         catalog = validate(request['catalog'])
         scope = validate_scope(request['scope'], catalog)
         maximize = validate_maximize(request['maximize'])
+        existing_ids = request.get('existing_ids', [])
+        if (not isinstance(existing_ids, list) or len(existing_ids) > 10000 or
+                any(type(id_) is not int or str(id_) not in catalog['cards'] for id_ in existing_ids)):
+            raise ValueError('invalid existing card IDs')
         # A replay cannot start a second scan, even if the first one failed.
         with (folder/'claimed').open('x', encoding='utf-8') as marker:
             marker.write('claimed')
@@ -111,6 +117,7 @@ def run_scan(context, job_id, root=None):
         atomic_json(folder/'scan.json', report)
         return report
     return BestdoriScan(context, catalog, scope, folder, cancel=Cancel(), maximize=maximize,
+            existing_ids=existing_ids, portraits_root=folder.parent.parent/'public-cache',
             progress=lambda message: atomic_json(folder/'progress.json', {'message': message})).run()
 
 
