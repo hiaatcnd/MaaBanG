@@ -9,7 +9,7 @@ from maa.custom_action import CustomAction
 
 from costume_unlock import CostumeFlow, FlowError, normalized
 from notifications import NotificationMixin
-from daily_policy import (EXCHANGE_CATEGORIES, integer, mission_page,
+from daily_policy import (EXCHANGE_CATEGORIES, integer, mission_page, mission_tab_index,
                           remaining_draws, verify_exchange, verify_free_confirmation,
                           selected_exchange_categories, verify_event_free_confirmation)
 
@@ -226,6 +226,23 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             log(f"[任务奖励] {category}：本批奖励领取已确认")
         raise FlowError(f"任务奖励领取未收敛：{category}")
 
+    def confirm_mission_tab(self, name, tabs):
+        names = [label for label, _ in tabs]
+        for attempt in range(3):
+            self.wait("DY_MissionHeader")
+            self.require_clear_notification_overlay()
+            selected = normalized(''.join(hit.text for hit in sorted(
+                self.ocr([80,178,160,72]), key=lambda hit:(hit.box[1],hit.box[0]))))
+            index = mission_tab_index(selected, names)
+            if index is not None and names[index] == name:
+                if selected != name:
+                    record_warning(self.report, '[任务奖励] 标签识别有单字差异，已唯一确认分类',
+                                   expected=name, selected=selected)
+                return selected
+            if attempt < 2:
+                time.sleep(.25)
+        raise FlowError(f"未确认任务标签：{name} / {selected}")
+
     def missions(self):
         log('[任务奖励] 正在打开任务列表，从第一页检查各分类')
         self.home()
@@ -237,21 +254,19 @@ class DailyFlow(NotificationMixin, CostumeFlow):
         else:
             raise FlowError('任务标签未滚动到顶部')
         visited = self.report['mission_tabs'] = []
+        visited_names = set()
         for _ in range(100):
             self.wait("DY_MissionHeader")
             tabs = self.mission_tabs()
-            pending = next(((name,point) for name,point in tabs if name not in visited),None)
+            pending = next(((name,point) for name,point in tabs if name not in visited_names),None)
             if pending:
                 name,point = pending
                 log(f"[任务奖励] 检查：{name}")
                 self.tap(*point)
-                self.wait("DY_MissionHeader")
-                selected = normalized(''.join(hit.text for hit in sorted(
-                    self.ocr([80,178,160,72]),key=lambda hit:(hit.box[1],hit.box[0]))))
-                if selected != name:
-                    raise FlowError(f"未确认任务标签：{name} / {selected}")
-                self.claim_mission_category(name)
-                visited.append(name)
+                selected = self.confirm_mission_tab(name, tabs)
+                self.claim_mission_category(selected)
+                visited.append(selected)
+                visited_names.update((name, selected))
             elif not self.scroll_mission_tabs((560,320)):
                 self.report["status"] = "finished"
                 self.home()

@@ -36,6 +36,22 @@ def mission_page(text):
     return int(match[1]), int(match[2])
 
 
+def mission_tab_index(selected, names):
+    """Resolve a normalized label, allowing one nonnumeric OCR insertion/deletion."""
+    exact = [i for i, name in enumerate(names) if selected and name == selected]
+    if exact:
+        return exact[0] if len(exact) == 1 else None
+    matches = []
+    for i, name in enumerate(names):
+        short, long = sorted((selected, name), key=len)
+        if len(short) < 6 or len(long) != len(short) + 1:
+            continue
+        if any(not char.isdigit() and long[:j] + long[j+1:] == short
+               for j, char in enumerate(long)):
+            matches.append(i)
+    return matches[0] if len(matches) == 1 else None
+
+
 def remaining_draws(text):
     text = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
     match = re.fullmatch(r"剩余([0-3])(?:回|次)", text)
