@@ -3,6 +3,7 @@ import argparse
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -12,6 +13,10 @@ def development_environment(data_dir=None):
     selected = data_dir or env.get('MAABANG_DATA_DIR') or ROOT / '.maabang-dev'
     env['MAABANG_DATA_DIR'] = str(Path(selected).expanduser().resolve())
     env['PYTHONUTF8'] = '1'
+    # PYTHONIOENCODING takes precedence over UTF-8 mode for redirected output.
+    # Override a legacy host value so children and grandchildren use the same
+    # encoding as this launcher's messages in their shared stdout/stderr pipes.
+    env['PYTHONIOENCODING'] = 'utf-8'
     if os.name == 'nt':
         # Keep the short Windows IPC path used by the production launcher.
         temp = Path.home() / '.maabang/temp'
@@ -32,6 +37,11 @@ def ui_executable(path):
 
 
 def main(argv=None):
+    # Setting the child's environment cannot change streams already opened by
+    # this process. Configure both before argparse can print help or errors.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='backslashreplace')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--app', type=Path, help='本地构建包目录或 MaaBanG.exe 路径')
     parser.add_argument('--data-dir', type=Path, help='覆盖默认 .maabang-dev，可用于全新配置测试')

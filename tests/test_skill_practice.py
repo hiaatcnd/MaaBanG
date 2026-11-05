@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT/'agent'))
 sys.path.insert(0, str(ROOT/'tools'))
 from costume_unlock import FlowError
 from skill_practice import (SkillPracticeFlow, skill_level, pink_checked,
-                            same_member_slots, verify_confirmation)
+                            grey_unchecked, same_member_slots, verify_confirmation)
 from interface_descriptions import TASK_DESCRIPTIONS
 
 
@@ -57,6 +57,160 @@ class SkillPracticeTests(unittest.TestCase):
                      good+'星石', good+'金币', good+'购买'):
             with self.assertRaises(FlowError):
                 verify_confirmation(text)
+
+    def selection_flow(self):
+        f = self.flow()
+        f.image = np.array(Image.open(ROOT/'tests/fixtures/skill_practice'/
+                                      'materials.png').convert('RGB'))[:, :, ::-1].copy()
+        f.controller = Mock()
+        f.controller.post_click.return_value.wait.return_value.succeeded = True
+        f.material_slots = Mock(return_value=[(715, 274)])
+        state = {'time': 0., 'value': (2, 2, 0)}
+        f.preview = Mock(side_effect=lambda: state['value'])
+        return f, state
+
+    def select_with_clock(self, f, state):
+        def sleep(seconds):
+            state['time'] += seconds
+        with patch('skill_practice.time.monotonic', side_effect=lambda: state['time']), \
+                patch('skill_practice.time.sleep', side_effect=sleep):
+            return f.select_material((715, 274), (2, 2, 0))
+
+    def mark_material_selected(self, f, state):
+        f.image[234:249, 674:689] = (106, 47, 245)
+        state['value'] = (2, 3, 135)
+
+    def test_missed_material_click_retries_then_confirms_without_submitting(self):
+        for successful_click in (1, 2, 3):
+            with self.subTest(successful_click=successful_click):
+                f, state = self.selection_flow()
+                times = []
+                def click(*point):
+                    times.append(state['time'])
+                    if len(times) == successful_click:
+                        self.mark_material_selected(f, state)
+                    return f.controller.post_click.return_value
+                f.controller.post_click.side_effect = click
+                self.assertEqual(self.select_with_clock(f, state), (2, 3, 135))
+                self.assertEqual(f.controller.post_click.call_count, successful_click)
+                self.assertTrue(all(b-a >= 8 for a, b in zip(times, times[1:])))
+                f.click.assert_not_called()
+                f.tap_hit.assert_not_called()
+
+    def test_material_click_retries_are_bounded_and_do_not_submit(self):
+        f, state = self.selection_flow()
+        with self.assertRaisesRegex(FlowError, '不提交练习（已点击 3 次）'):
+            self.select_with_clock(f, state)
+        self.assertEqual(f.controller.post_click.call_count, 3)
+        f.click.assert_not_called()
+        f.tap_hit.assert_not_called()
+
+    def test_delayed_material_response_does_not_toggle_selection_off(self):
+        f, state = self.selection_flow()
+        def snap():
+            if state['time'] >= 7.5:
+                self.mark_material_selected(f, state)
+        f.snap.side_effect = snap
+        self.assertEqual(self.select_with_clock(f, state), (2, 3, 135))
+        f.controller.post_click.assert_called_once_with(715, 274)
+
+    def test_any_selection_or_preview_change_prevents_retry_even_if_it_reverts(self):
+        for effect in ('checkbox', 'experience', 'level'):
+            with self.subTest(effect=effect):
+                f, state = self.selection_flow()
+                original = f.image.copy()
+                def snap():
+                    f.image = original.copy()
+                    state['value'] = (2, 2, 0)
+                    if .3 <= state['time'] < .8:
+                        if effect == 'checkbox':
+                            f.image[234:249, 674:689] = (106, 47, 245)
+                        else:
+                            state['value'] = (2, 2, 135) if effect == 'experience' else (2, 3, 0)
+                f.snap.side_effect = snap
+                with self.assertRaisesRegex(FlowError, '已点击 1 次'):
+                    self.select_with_clock(f, state)
+                f.controller.post_click.assert_called_once_with(715, 274)
+
+    def test_changed_or_uncertain_material_page_prevents_retry(self):
+        for change in ('member', 'card', 'label_missing', 'label_moved', 'unknown_checkbox'):
+            with self.subTest(change=change):
+                f, state = self.selection_flow()
+                def snap():
+                    if change == 'member':
+                        f.image[145:525, 110:610] = 0
+                    elif change == 'card':
+                        f.image[260:310, 700:750] = 0
+                    elif change == 'unknown_checkbox':
+                        f.image[234:249, 674:689] = 255
+                    else:
+                        f.material_slots.return_value = [] if change == 'label_missing' else [(715, 400)]
+                f.snap.side_effect = snap
+                with self.assertRaisesRegex(FlowError, '已点击 1 次'):
+                    self.select_with_clock(f, state)
+                f.controller.post_click.assert_called_once_with(715, 274)
+
+    def test_retry_requires_two_unchanged_frames_and_checks_stop(self):
+        for change in ('selected', 'experience', 'member', 'stop'):
+            with self.subTest(change=change):
+                f, state = self.selection_flow()
+                reference = f.image.copy()
+                samples = []
+                def snap():
+                    samples.append(state['time'])
+                    if len(samples) == 1:
+                        return
+                    if change == 'selected':
+                        f.image[234:249, 674:689] = (106, 47, 245)
+                    elif change == 'experience':
+                        state['value'] = (2, 3, 135)
+                    elif change == 'member':
+                        f.image[145:525, 110:610] = 0
+                    else:
+                        f.ctx.tasker.stopping = True
+                        f.check_stop()
+                f.snap.side_effect = snap
+                with patch('skill_practice.time.sleep'):
+                    if change == 'stop':
+                        with self.assertRaisesRegex(FlowError, '用户停止'):
+                            f.material_retry_ready((715, 274), (2, 2, 0), reference)
+                    else:
+                        self.assertFalse(f.material_retry_ready((715, 274), (2, 2, 0), reference))
+                self.assertEqual(len(samples), 2)
+                f.controller.post_click.assert_not_called()
+
+    def test_material_success_requires_consecutive_confirming_frames(self):
+        f, state = self.selection_flow()
+        original = f.image.copy()
+        frames = []
+        def snap():
+            frames.append(state['time'])
+            self.mark_material_selected(f, state)
+            if len(frames) == 2:
+                f.image = original.copy()
+        f.snap.side_effect = snap
+        self.assertEqual(self.select_with_clock(f, state), (2, 3, 135))
+        self.assertEqual(len(frames), 4)
+        f.controller.post_click.assert_called_once_with(715, 274)
+
+    def test_selected_material_and_controller_failure_are_not_retried(self):
+        f, state = self.selection_flow()
+        self.mark_material_selected(f, state)
+        with self.assertRaisesRegex(FlowError, '材料已选中'):
+            self.select_with_clock(f, state)
+        f.controller.post_click.assert_not_called()
+        f, state = self.selection_flow()
+        f.controller.post_click.return_value.wait.return_value.succeeded = False
+        with self.assertRaisesRegex(FlowError, '选择同名材料失败'):
+            self.select_with_clock(f, state)
+        f.controller.post_click.assert_called_once_with(715, 274)
+
+    def test_invalid_material_page_stops_before_retry(self):
+        f, state = self.selection_flow()
+        f.preview.side_effect = FlowError('未知弹窗')
+        with self.assertRaisesRegex(FlowError, '未知弹窗'):
+            self.select_with_clock(f, state)
+        f.controller.post_click.assert_called_once_with(715, 274)
 
     def batch_flow(self, count, maximum_at=None):
         f = self.flow()
@@ -308,15 +462,26 @@ class SkillPracticeTests(unittest.TestCase):
                 def frame(name):
                     f.image = np.array(Image.open(ROOT/'tests/fixtures/skill_practice'/
                                                  (name+'.png')).convert('RGB'))[:, :, ::-1].copy()
-                for name, expected, selected in [('materials', (1, 1, 0), False),
-                                                  ('selected', (1, 2, 135), True),
-                                                  ('max_preview', (3, 5, 1500), True)]:
+                cases = [('materials', (1, 1, 0), False),
+                         ('selected', (1, 2, 135), True),
+                         ('max_preview', (3, 5, 1500), True)]
+                # Recorded failures remain local; public fixtures and the
+                # missed-click unit tests still run in a clean checkout.
+                if (ROOT/'tests/fixtures/skill_practice/selection_missed.png').is_file():
+                    cases.append(('selection_missed', (2, 2, 0), False))
+                for name, expected, selected in cases:
                     frame(name)
                     test.assertEqual(f.preview(), expected)
                     slots = f.material_slots()
                     test.assertEqual(len(slots), 2 if name == 'max_preview' else 1)
                     test.assertTrue(all(f.selected(point) == selected for point in slots))
+                    test.assertTrue(all(grey_unchecked(f.image, x-34, y-33) == (not selected)
+                                        for x, y in slots))
                     test.assertFalse(f.clipped_same_members())
+                    if name == 'selection_missed':
+                        reference = f.image.copy()
+                        with patch.object(f, 'snap'), patch('skill_practice.time.sleep'):
+                            test.assertTrue(f.material_retry_ready(slots[0], expected, reference))
                 frame('no_same_members')
                 test.assertEqual(f.material_slots(), [])
                 frame('list')

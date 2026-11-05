@@ -24,7 +24,7 @@ def dialog_box(image):
     if not isinstance(image, np.ndarray) or image.shape[:2] != (720, 1280):
         return None
     white = (image.min(axis=2) > 235) & (np.ptp(image, axis=2) < 18)
-    for y in range(24, 241, 4):
+    for y in range(12, 241, 4):
         if not white[y, 640]:
             continue
         dark = np.flatnonzero(~white[y])
@@ -39,7 +39,10 @@ def dialog_box(image):
         sides = white[y:, x+16] & white[y:, end-17]
         gaps = np.flatnonzero(~sides)
         bottom = y+int(gaps[0]) if len(gaps) else 720
-        if 180 <= bottom-y <= 660 and bottom < 690:
+        # Trial-goal notifications nearly fill the screen (y=16..705).
+        # Still require visible side/bottom margins and the title separator;
+        # reaching a screen edge is not sufficient evidence of a dialog.
+        if 180 <= bottom-y <= 696 and bottom <= 708:
             # Side decorations can end the detected panel inside a loading
             # illustration. Require an actual white bottom margin as well.
             if white[bottom-8:bottom,x+24:end-24].mean()<.75:
@@ -118,6 +121,9 @@ class NotificationMixin:
             if repeats >= 3:
                 raise FlowError(f'通知弹窗点击后未消失：{title}')
             previous = fingerprint
+            self.check_stop()
+            if repeats:
+                log(f'[通知] 等待后同一弹窗仍存在，第 {repeats}/2 次补点：{title}', level='warn')
             self.tap_hit(buttons[0])
             handled = True
             action = '已选择稍后再读' if normalized(buttons[0].text) == '稍后再读' else '已确认'

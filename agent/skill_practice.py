@@ -30,6 +30,15 @@ def pink_checked(image, x, y):
     return float(np.mean((r > 190) & (r-g > 65) & (r-b > 15))) > .3
 
 
+def grey_unchecked(image, x, y):
+    """Positive evidence of an unchecked box, not just absence of pink."""
+    area = image[y-7:y+8, x-7:x+8].astype(np.int16)
+    if area.shape[:2] != (15, 15):
+        return False
+    low, high = area.min(axis=2), area.max(axis=2)
+    return float(np.mean((low > 120) & (high < 225) & (high-low < 15))) > .6
+
+
 def same_member_slots(hits):
     """Bind bonus labels to complete material cards, excluding clipped rows."""
     slots = []
@@ -177,24 +186,65 @@ class SkillPracticeFlow(DailyFlow):
         # Every member is freshly opened from the target list. The game starts
         # at the top of its lounge pool with no selected materials.
 
+    def material_retry_ready(self, point, previous, reference):
+        """Recheck the unchanged member/card on two fresh frames before a retry."""
+        x, y = point
+        regions = ((slice(145, 525), slice(110, 610)),
+                   (slice(y-50, y+52), slice(x-50, x+52)))
+        for sample in range(2):
+            if sample:
+                time.sleep(.2)
+            self.snap()
+            # preview also requires a clear lounge page, rejecting other tabs
+            # and overlays. A grey box is required before toggling it again.
+            if (self.preview() != previous or self.selected(point)
+                    or not grey_unchecked(self.image, x-34, y-33)):
+                return False
+            if not any(abs(px-x) <= 3 and abs(py-y) <= 3
+                       for px, py in self.material_slots()):
+                return False
+            if any(np.mean(np.abs(self.image[roi].astype(np.int16)
+                                  - reference[roi].astype(np.int16))) > 2
+                   for roi in regions):
+                return False
+        return True
+
     def select_material(self, point, previous):
-        """Select one more card within the batch, waiting only for its preview."""
+        """Retry a missed selection only while its unchanged state is certain."""
         self.check_stop()
         if self.selected(point):
             raise FlowError('材料已选中，不重复点击取消选择')
-        if not self.controller.post_click(*point).wait().succeeded:
-            raise FlowError('选择同名材料失败')
-        deadline = time.monotonic()+8
-        last = None
-        while time.monotonic() < deadline:
-            time.sleep(.15)
-            self.snap()
-            value = self.preview()
-            if self.selected(point) and value[0] == previous[0] and value[2] > previous[2]:
-                if value == last:
-                    return value
-                last = value
-        raise FlowError('未确认同名卡选中且经验增加，不提交练习')
+        reference = self.image.copy()
+        attempts = 0
+        retry_safe = True
+        for attempt in range(3):
+            if attempt:
+                if not retry_safe or not self.material_retry_ready(point, previous, reference):
+                    break
+                log(f'[同名成员技能升级] 材料未选中且经验未变化，补点 {attempt}/2')
+            self.check_stop()
+            if not self.controller.post_click(*point).wait().succeeded:
+                raise FlowError('选择同名材料失败')
+            attempts += 1
+            deadline = time.monotonic()+8
+            last = None
+            while time.monotonic() < deadline:
+                time.sleep(.15)
+                self.snap()
+                value = self.preview()
+                selected = self.selected(point)
+                # Latch any observed effect, even if a later frame looks
+                # unchanged: retrying a toggle could undo a delayed selection.
+                if selected or value != previous:
+                    retry_safe = False
+                if (selected and value[0] == previous[0]
+                        and value[1] >= previous[1] and value[2] > previous[2]):
+                    if value == last:
+                        return value
+                    last = value
+                else:
+                    last = None
+        raise FlowError(f'未确认同名卡选中且经验增加，不提交练习（已点击 {attempts} 次）')
 
     def select_batch(self, row):
         self.prepare_materials()

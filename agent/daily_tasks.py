@@ -14,6 +14,12 @@ from daily_policy import (EXCHANGE_CATEGORIES, integer, mission_page, mission_ta
                           selected_exchange_categories, verify_event_free_confirmation)
 
 
+class MissionTabUnconfirmed(FlowError):
+    def __init__(self, expected, selected):
+        super().__init__(f'未确认任务标签：{expected} / {selected}')
+        self.selected = selected
+
+
 class DailyFlow(NotificationMixin, CostumeFlow):
     def __init__(self, context):
         super().__init__(context, 0)
@@ -241,7 +247,55 @@ class DailyFlow(NotificationMixin, CostumeFlow):
                 return selected
             if attempt < 2:
                 time.sleep(.25)
-        raise FlowError(f"未确认任务标签：{name} / {selected}")
+        raise MissionTabUnconfirmed(name, selected)
+
+    def select_mission_tab(self, name, tabs):
+        """Retry only category navigation, after observing a stable fresh target."""
+        names = [label for label, _ in tabs]
+        point = tabs[names.index(name)][1]
+        for attempt in range(3):
+            self.check_stop()
+            self.require_clear_notification_overlay()
+            self.tap(*point)
+            try:
+                return self.confirm_mission_tab(name, tabs)
+            except MissionTabUnconfirmed as error:
+                if attempt == 2:
+                    raise
+                # Unreadable/ambiguous labels are not evidence of a missed tap.
+                if (mission_tab_index(error.selected, names) is None or
+                        sum(mission_tab_index(name, [label]) is not None for label in names) != 1):
+                    raise
+                previous = None
+                for observation in range(4):
+                    self.wait('DY_MissionHeader', timeout=2)
+                    self.require_clear_notification_overlay()
+                    selected = normalized(''.join(hit.text for hit in sorted(
+                        self.ocr([80,178,160,72]), key=lambda hit:(hit.box[1],hit.box[0]))))
+                    index = mission_tab_index(selected, names)
+                    if index is not None and names[index] == name:
+                        return selected  # Delayed success: never re-click the new page.
+                    if selected != error.selected:
+                        raise error
+                    fresh = self.mission_tabs()
+                    targets = [row for row in fresh if mission_tab_index(name, [row[0]]) is not None]
+                    if len(targets) != 1:
+                        raise error
+                    target = targets[0]
+                    if (previous is not None and target[0] == previous[0] and
+                            all(abs(a-b) <= 3 for a,b in zip(target[1],previous[1]))):
+                        point = target[1]
+                        break
+                    previous = target
+                    if observation < 3:
+                        time.sleep(.25)
+                else:
+                    raise error
+                detail = {'category': name, 'selected': selected,
+                          'retry': attempt+1, 'point': list(point)}
+                self.report.setdefault('mission_tab_retries', []).append(detail)
+                log(f'[任务奖励] 点击后仍停在“{selected}”，重新识别“{name}”后'
+                    f'第 {attempt+1}/2 次补点', level='warn')
 
     def missions(self):
         log('[任务奖励] 正在打开任务列表，从第一页检查各分类')
@@ -260,10 +314,9 @@ class DailyFlow(NotificationMixin, CostumeFlow):
             tabs = self.mission_tabs()
             pending = next(((name,point) for name,point in tabs if name not in visited_names),None)
             if pending:
-                name,point = pending
+                name,_ = pending
                 log(f"[任务奖励] 检查：{name}")
-                self.tap(*point)
-                selected = self.confirm_mission_tab(name, tabs)
+                selected = self.select_mission_tab(name, tabs)
                 self.claim_mission_category(selected)
                 visited.append(selected)
                 visited_names.update((name, selected))

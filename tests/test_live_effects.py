@@ -48,6 +48,22 @@ class FakeFlow(LiveEffectsMixin):
 
 
 class LiveEffectsTests(unittest.TestCase):
+    def test_checkbox_merged_into_label_is_read_without_toggling(self):
+        image, _ = frame(None)
+        flow = FakeFlow([(image, [hit(' 3D Cut in模式', 469, 627, 207, 45)])])
+        state = flow.disable_mv(fresh=False)
+        self.assertIsNone(state.background)
+        self.assertFalse(state.cut_in)
+        flow.tap.assert_not_called()
+
+    def test_cut_in_text_outside_its_control_does_not_authorize_input(self):
+        for x, width in ((420, 207), (600, 207)):
+            image, _ = frame(None, cut_in=True)
+            flow = FakeFlow([(image, [hit('3D Cut in模式', x, 627, width, 45)])])
+            with self.assertRaisesRegex(FlowError, 'Cut in 开关位置'):
+                flow.disable_mv(fresh=False)
+            flow.tap.assert_not_called()
+
     def test_one_pass_when_already_off_reuses_current_frame(self):
         flow = FakeFlow([frame()])
         state = flow.disable_mv(fresh=False)
