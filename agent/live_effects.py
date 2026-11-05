@@ -32,9 +32,12 @@ class LiveEffectsMixin:
             text = normalized(hit.text).upper()
             if not (615 <= y + h / 2 <= 690):
                 continue
-            if 175 <= x < 460 and not re.search('默认|乐队成员|进行演出', text):
+            if 175 <= x < 460 and not re.search('默认|乐队成员|进行演出|CUTIN', text):
                 selector.append(text)
-            if 470 <= x < 710:
+            # OCR can merge the checkbox into the label (recorded x=469).
+            # Keep the whole text box inside the Cut in control; a one-pixel
+            # change to its left edge must not discard correctly read text.
+            if 460 <= x < 710 and x + w <= 720:
                 cut_in_labels.append(text)
         label = ''.join(selector)
         if label == 'OFF':

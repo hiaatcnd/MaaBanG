@@ -10,13 +10,33 @@ from unittest.mock import Mock, patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
 from chart_policy import ChartOptions, ChartSelection, JITTER_PROFILES
-from chart_live import ChartLiveFlow, title_key
+from chart_live import ChartLive, ChartLiveFlow, title_key
 from chart_store import ChartStore
 from chart_timing import compile_chart
 from song_catalog import BY_ID, available_difficulties
 
 
 class ChartLiveTests(unittest.TestCase):
+    def test_failure_report_retains_exception_chain_and_original_step(self):
+        from costume_unlock import FlowError
+        def fail_at_step():
+            try:
+                raise ValueError('原始识别错误')
+            except ValueError as exc:
+                raise FlowError('开演确认失败') from exc
+        context = SimpleNamespace(tasker=SimpleNamespace(stopping=False), get_node_data=Mock(return_value=None))
+        flow = SimpleNamespace(report={}, image=None, run=fail_at_step)
+        action = ChartLive()
+        action.create_flow = Mock(return_value=flow)
+        with tempfile.TemporaryDirectory() as folder, patch('chart_live.Path', return_value=Path(folder)):
+            self.assertFalse(action.run(context, None))
+            report = json.loads(next(Path(folder).rglob('report.json')).read_text(encoding='utf8'))
+        self.assertEqual(report['error'], '开演确认失败')
+        self.assertEqual(report['error_type'], 'FlowError')
+        self.assertIn('fail_at_step', report['traceback'])
+        self.assertIn('ValueError: 原始识别错误', report['traceback'])
+        self.assertIn('FlowError: 开演确认失败', report['traceback'])
+
     def test_settlement_advances_unknown_page_by_footer_button(self):
         from auto_live import LiveFlow
         for settle in (ChartLiveFlow.settle_results,LiveFlow.settle_results):

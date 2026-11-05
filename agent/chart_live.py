@@ -510,7 +510,9 @@ class ChartLive(CustomAction):
             finish(label, flow.report)
             return True
         except Exception as exc:
-            report.update(status='error',error=str(exc))
+            import traceback
+            report.update(status='error',error=str(exc),
+                          error_type=type(exc).__name__,traceback=traceback.format_exc())
             failure(label, exc, context)
             return False
         finally:

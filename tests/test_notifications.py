@@ -134,12 +134,60 @@ class NotificationTests(unittest.TestCase):
         return f
 
     def test_geometry_handles_varying_heights_and_rejects_plain_page(self):
-        for y,bottom in ((34,686),(90,650),(110,608),(130,590),(170,550)):
+        for y,bottom in ((16,705),(34,686),(90,650),(110,608),(130,590),(170,550)):
             box=dialog_box(panel(y,bottom))
             self.assertIsNotNone(box)
             self.assertLessEqual(abs(box[1]-y),4)
             self.assertEqual(box[1]+box[3],bottom)
         self.assertIsNone(dialog_box(np.full((720,1280,3),255,dtype=np.uint8)))
+        self.assertIsNone(dialog_box(panel(16,720)))
+
+    @patch('notifications.time.sleep')
+    def test_tall_notice_missed_click_reidentifies_button_and_logs_retry(self, _):
+        first = hit('关闭', 610, 630)
+        second = hit('关闭', 600, 634)
+        f = self.flow([]); f.image = panel(16,705)
+        f.ocr.side_effect = [[hit('试炼目标',400,50),button] for button in (first,second)]
+        def observe():
+            if f.tap_hit.call_count == 2:
+                f.image.fill(0)
+        f.snap.side_effect = observe
+        with patch('notifications.log') as logger:
+            self.assertTrue(f.dismiss_notifications())
+        self.assertEqual([c.args[0] for c in f.tap_hit.call_args_list], [first,second])
+        self.assertTrue(any('补点' in c.args[0] for c in logger.call_args_list))
+
+    @patch('notifications.time.sleep')
+    def test_delayed_notice_close_waits_and_does_not_reclick(self, sleep):
+        f = self.flow([hit('试炼目标',400,50),hit('关闭',610,630)])
+        f.image = panel(16,705)
+        elapsed = [0.]
+        def tick(seconds):
+            elapsed[0] += seconds
+            if elapsed[0] >= 1.:
+                f.image.fill(0)
+        sleep.side_effect = tick
+        f.snap = Mock()
+        self.assertTrue(f.dismiss_notifications())
+        f.tap_hit.assert_called_once()
+
+    @patch('notifications.time.sleep')
+    def test_changed_tall_notice_defers_transaction_without_second_click(self, _):
+        f = self.flow([]); f.image = panel(16,705); f.snap = Mock()
+        f.ocr.side_effect = [[hit('试炼目标',400,50),hit('关闭',610,630)],
+                            [hit('购买确认',400,50),hit('消耗100星石',400,300),hit('确定',610,630)]]
+        self.assertTrue(f.dismiss_notifications())
+        f.tap_hit.assert_called_once()
+        with self.assertRaisesRegex(FlowError,'未识别的弹窗'):
+            f.require_clear_notification_overlay()
+
+    def test_stop_before_notice_click_sends_no_input(self):
+        f = self.flow([hit('试炼目标',400,50),hit('关闭',610,630)])
+        f.image = panel(16,705)
+        f.check_stop.side_effect = FlowError('任务已被用户停止')
+        with self.assertRaisesRegex(FlowError,'用户停止'):
+            f.dismiss_notifications()
+        f.tap_hit.assert_not_called()
 
     def test_real_result_panel_is_not_a_modal(self):
         from PIL import Image
