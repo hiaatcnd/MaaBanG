@@ -18,6 +18,7 @@ from chart_sync import stage_state
 
 
 UNCONFIRMED_PAGE_TIMEOUT = 8.
+MATCHING_CANCEL_WAIT = 3.
 
 
 class OnlineFatal(FlowError):
@@ -652,6 +653,25 @@ class OnlineLiveFlow(ChartLiveFlow):
             self.pause(.4)
         raise FlowError('联网演出结算超时，保留现场')
 
+    def matching_cancel_button(self, box):
+        """Only cancel an identified matchmaking dialog, never its background."""
+        x,y,w,h=box
+        hits=self.ocr([x+12,y+8,w-24,h-16])
+        hits=[hit for hit in hits if x+12 <= hit.box[0] and
+              hit.box[0]+hit.box[2] <= x+w-12 and y+8 <= hit.box[1] and
+              hit.box[1]+hit.box[3] <= y+h-8]
+        title_end=y+min(100,h*.2)
+        titles=[hit for hit in hits if hit.box[1] < title_end]
+        body=[hit for hit in hits if title_end <= hit.box[1] < y+h-115]
+        footer=[hit for hit in hits if hit.box[1] >= y+h-115]
+        if (not any(re.fullmatch('匹配中',normalized(hit.text)) for hit in titles) or
+                not any(re.fullmatch(r'正在寻找(?:房间|对手)[。.]?',normalized(hit.text))
+                        for hit in body) or
+                any(re.search('消耗|购买|招募|兑换|是否|重试|恢复',hit.text) for hit in hits) or
+                len(footer)!=1 or normalized(footer[0].text)!='取消'):
+            return None
+        return footer[0]
+
     def recover_room(self):
         self.room_active=False
         self.selection=None
@@ -668,7 +688,11 @@ class OnlineLiveFlow(ChartLiveFlow):
         recovery_started=time.monotonic()
         deadline=recovery_started+30
         connection_clicks=0
+        matching_clicks=0
+        matching_clicked_at=None
+        matching_target=None
         while time.monotonic()<deadline:
+            self.check_stop()
             self.snap()
             box=dialog_box(self.image)
             # Modal text takes precedence over a still-visible background header.
@@ -721,10 +745,35 @@ class OnlineLiveFlow(ChartLiveFlow):
                     self.tap_hit(interrupt)
                     continue
             if box is not None:
+                cancel=self.matching_cancel_button(box)
+                if cancel is not None:
+                    target=tuple(box)+tuple(cancel.box)
+                    stable=(matching_target is not None and
+                            all(abs(a-b)<=4 for a,b in zip(target,matching_target)))
+                    matching_target=target
+                    # Observe a fresh, stable target and allow delayed cancellation
+                    # to finish before considering another click on this dialog.
+                    if (stable and (matching_clicked_at is None or
+                            time.monotonic()-matching_clicked_at>=MATCHING_CANCEL_WAIT)):
+                        if matching_clicks>=3:
+                            raise FlowError('匹配取消点击3次后弹窗仍未消失，保留现场')
+                        reason=('匹配超时，取消当前匹配' if matching_clicks==0 else
+                                f'等待后同一匹配弹窗仍存在，第 {matching_clicks}/2 次补点取消')
+                        log(f'[联网演出] {reason}',level='warn')
+                        self.tap_hit(cancel)
+                        matching_clicks+=1
+                        matching_clicked_at=time.monotonic()
+                        matching_target=None
+                        if self.current_attempt is not None:
+                            self.current_attempt['matching_cancel_clicks']=matching_clicks
+                    self.pause(.25)
+                    continue
+                matching_target=None
                 # Unknown choices remain owned by their task. Neither background
                 # headers nor Back/focus-loss prove that this overlay is gone.
                 self.pause(.5)
                 continue
+            matching_target=None
             cancel=self.hit_text([490,470,300,110],'^取消$')
             if cancel:
                 self.tap_hit(cancel)
