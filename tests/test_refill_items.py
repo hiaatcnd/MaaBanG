@@ -253,7 +253,9 @@ class RefillItemOCRTests(unittest.TestCase):
                         for filename,expected in cases:
                             crop=np.array(Image.open(ROOT/f'tests/fixtures/refill/{filename}.png').convert('RGB'))
                             frame[135:455,340:940]=crop[:,:,::-1]
-                            flow.image=frame
+                            # A changed fixture is a new observation, even when
+                            # the fake controller reuses the same source buffer.
+                            flow.snap()
                             items=flow.refill_items()
                             case.assertEqual([(i['item'],i['gain'],i['inventory_before']) for i in items],
                                              [row[:3] for row in expected],filename)

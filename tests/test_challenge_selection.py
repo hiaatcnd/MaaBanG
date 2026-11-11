@@ -130,7 +130,8 @@ class ChallengeSelectionTests(unittest.TestCase):
                 setattr(f,name,Mock())
             f.challenge_cards=Mock(return_value=[(200,np.zeros((12,30)),0,90)])
             f.select_pending_stage=Mock(side_effect=[1,7])
-            f.text=Mock(return_value='306');f.title_matches=lambda text,song:song['id']==text
+            f.text=Mock(return_value='306')
+            f.matching_songs=lambda text,songs:[song for song in songs if song['id']==text]
             f.store.get=Mock(return_value=([],{}));f.refill_fire=Mock(return_value=True)
             f.recommend=Mock(return_value=True);f.reco=Mock(side_effect=lambda node:node=='MN_StageSelect')
             f.selected_level=Mock(side_effect=AssertionError('No post-result level gate'))

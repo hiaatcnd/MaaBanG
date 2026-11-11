@@ -621,7 +621,7 @@ class MiningTests(unittest.TestCase):
         flow.wait=Mock();flow.pause=Mock();flow.snap=Mock();flow.tap_hit=Mock()
         flow.text=Mock(return_value='target')
         flow.ocr=Mock(return_value=[SimpleNamespace(text='target')])
-        flow.title_matches=lambda text,song:song['id']=='306'
+        flow.matching_songs=lambda text,songs:[song for song in songs if song['id']=='306']
         flow.song_stars=Mock(return_value={'easy':'full_combo','normal':'unplayed'})
         flow.report.update(scanned=[],skipped=[])
         pending=flow.scan_pending_song({('306','easy')})
@@ -634,7 +634,7 @@ class MiningTests(unittest.TestCase):
         flow.scan_difficulty_index=0;flow.scan_initialized=False
         flow.open_all_songs=Mock();flow.wait=Mock()
         flow.text=Mock(return_value='target')
-        flow.title_matches=lambda text,song:song['id']=='306'
+        flow.matching_songs=lambda text,songs:[song for song in songs if song['id']=='306']
         flow.ocr=Mock();flow.tap_hit=Mock();flow.swipe=Mock();flow.song_stars=Mock()
         flow.scroll_songs_to_top=Mock()
         flow.report['scanned']=[]
@@ -652,7 +652,7 @@ class MiningTests(unittest.TestCase):
         flow.wait=Mock();flow.pause=Mock();flow.snap=Mock();flow.tap_hit=Mock()
         flow.scroll_songs_to_top=Mock()
         flow.text=Mock(return_value='306')
-        flow.title_matches=lambda text,song:text==song['id']
+        flow.matching_songs=lambda text,songs:[song for song in songs if text==song['id']]
         hit=SimpleNamespace(text='1')
         flow.ocr=Mock(return_value=[hit])
         flow.song_stars=Mock(return_value={'easy':'clear'})

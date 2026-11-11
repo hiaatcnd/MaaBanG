@@ -117,6 +117,7 @@ class FinalSelectionSafetyTests(unittest.TestCase):
         flow.image=np.zeros((720,1280,3),dtype=np.uint8)
         flow.image[574:606,805:835]=[255,0,0]
         flow.snap=Mock()
+        flow.check_stop=Mock()
         flow.pause=Mock()
         flow.reco=Mock(return_value=True)
         flow.text=Mock(return_value='魔法少女とチョコレト')
@@ -137,6 +138,45 @@ class FinalSelectionSafetyTests(unittest.TestCase):
         self.assertEqual(flow.read_final_song()['id'],'564')
         self.assertEqual(flow.snap.call_count,2)
         self.assertEqual(flow.text.call_count,2)
+
+    def test_confirmed_frame_is_only_the_first_stability_sample(self):
+        flow=self.make_flow()
+        observed=[]
+        flow.text.side_effect=lambda roi:observed.append('title') or '魔法少女とチョコレト'
+        flow.snap.side_effect=lambda:observed.append('snap')
+        flow.pause.side_effect=lambda seconds:observed.append('wait')
+        self.assertEqual(flow.read_final_song(fresh=False)['id'],'564')
+        self.assertEqual(observed,['title','wait','snap','title'])
+        flow.check_stop.assert_called_once()
+
+    def test_reused_frame_cannot_stabilize_a_changed_or_incomplete_song(self):
+        for first in (BY_ID['91']['title'],'魔法少女とチ'):
+            with self.subTest(first=first):
+                flow=self.make_flow()
+                flow.text.side_effect=[first,'魔法少女とチョコレト','魔法少女とチョコレト']
+                self.assertEqual(flow.read_final_song(fresh=False)['id'],'564')
+                self.assertEqual(flow.snap.call_count,2)
+                self.assertEqual(flow.text.call_count,3)
+
+    def test_reused_frame_still_checks_page_departure_and_stop(self):
+        flow=self.make_flow()
+        flow.reco.side_effect=[True,False]
+        with self.assertRaisesRegex(FlowError,'页面已离开'):
+            flow.read_final_song(fresh=False)
+        flow.text.assert_called_once()
+        flow.snap.assert_called_once()
+        flow=self.make_flow()
+        flow.check_stop.side_effect=FlowError('任务已被用户停止')
+        with self.assertRaisesRegex(FlowError,'停止'):
+            flow.read_final_song(fresh=False)
+        flow.text.assert_not_called()
+        flow.snap.assert_not_called()
+
+    def test_reuse_without_an_image_still_captures_two_samples(self):
+        flow=self.make_flow()
+        flow.image=None
+        self.assertEqual(flow.read_final_song(fresh=False)['id'],'564')
+        self.assertEqual(flow.snap.call_count,2)
 
     def test_changed_song_is_rejected_before_difficulty_read(self):
         flow=self.make_flow()
@@ -210,7 +250,7 @@ class SelectionActionTests(unittest.TestCase):
         selection=flow.read_final_selection()
         self.assertEqual((selection.song_id,selection.difficulty),('564','expert'))
         self.assertIs(flow.selection,selection)
-        flow.read_final_song.assert_called_once_with()
+        flow.read_final_song.assert_called_once_with(fresh=True)
         flow.quick_tap.assert_not_called()
         flow.snap.assert_not_called()
 

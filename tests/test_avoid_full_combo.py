@@ -125,27 +125,38 @@ class AvoidFullComboTests(unittest.TestCase):
 
     def test_playback_receives_option_and_original_duration(self):
         from chart_live import ChartLiveFlow
-        for enabled in (False, True):
-            with self.subTest(enabled=enabled), tempfile.TemporaryDirectory() as folder:
-                context = SimpleNamespace(tasker=SimpleNamespace(
-                    controller=SimpleNamespace(info={}), stopping=False))
-                flow = ChartLiveFlow(context, ChartOptions.parse({'avoid_full_combo': enabled}), folder)
-                flow.wait_ready = Mock()
-                flow.disable_mv = Mock()
-                flow.verify_chart_start = Mock(return_value=None)
-                flow.save_frame = Mock()
-                flow.read_full_combo_state = Mock(side_effect=AssertionError('legacy choices must not read FC stars'))
-                metadata = {'duration': 120}
-                def worker(args, **kwargs):
-                    path = Path(args[-1])
-                    config = json.loads(path.read_text(encoding='utf8'))
-                    self.assertIs(config['avoid_full_combo'], enabled)
-                    self.assertEqual(config['chart']['duration'], 120)
-                    (path.parent/'armed').write_text('ready')
-                    (path.parent/'playback.json').write_text('{"status":"input_complete"}')
-                    return SimpleNamespace(poll=lambda: 0, returncode=0)
-                with patch('chart_live.subprocess.Popen', side_effect=worker):
-                    flow.play_chart(1, ChartSelection('306', 'expert'), metadata, 0, {})
+        from online_live import OnlineLiveFlow
+        variants = [(ChartLiveFlow, 'free'), (OnlineLiveFlow, 'coop'),
+                    (OnlineLiveFlow, 'team'), (OnlineLiveFlow, 'versus')]
+        for kind, mode in variants:
+            for enabled in (False, True):
+                with self.subTest(mode=mode, enabled=enabled), tempfile.TemporaryDirectory() as folder:
+                    self.check_playback_option(kind, mode, enabled, folder)
+
+    def check_playback_option(self, kind, mode, enabled, folder):
+        context = SimpleNamespace(tasker=SimpleNamespace(
+            controller=SimpleNamespace(info={}), stopping=False))
+        flow = kind(context, ChartOptions.parse({'mode': mode, 'avoid_full_combo': enabled}), folder)
+        flow.wait_ready = Mock()
+        flow.disable_mv = Mock()
+        flow.verify_chart_start = Mock(return_value=None)
+        flow.save_frame = Mock()
+        flow.read_full_combo_state = Mock(side_effect=AssertionError('legacy choices must not read FC stars'))
+        flow._full_combo_sample = Mock(side_effect=AssertionError('legacy choices must not collect FC samples'))
+        flow.submit_online_ready = Mock()
+        metadata = {'duration': 120}
+        def worker(args, **kwargs):
+            path = Path(args[-1])
+            config = json.loads(path.read_text(encoding='utf8'))
+            self.assertIs(config['avoid_full_combo'], enabled)
+            self.assertEqual(config['chart']['duration'], 120)
+            (path.parent/'armed').write_text('ready')
+            (path.parent/'playback.json').write_text('{"status":"input_complete"}')
+            return SimpleNamespace(poll=lambda: 0, returncode=0)
+        with patch('chart_live.subprocess.Popen', side_effect=worker):
+            flow.play_chart(1, ChartSelection('306', 'expert'), metadata, 0, {})
+        flow.read_full_combo_state.assert_not_called()
+        flow._full_combo_sample.assert_not_called()
 
 
 if __name__ == '__main__':

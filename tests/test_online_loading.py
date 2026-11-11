@@ -19,7 +19,8 @@ from online_policy import RoomClock, RoomInterrupted
 
 class OnlineLoadingTests(unittest.TestCase):
     def flow(self,folder,mode='versus'):
-        return OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+        return OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False),
+                                              get_node_data=lambda name:None),
                               ChartOptions.parse({'mode':mode,'versus_room':'free','fire':0}),folder)
 
     def test_unconfirmed_loading_exits_even_when_background_says_matching(self):

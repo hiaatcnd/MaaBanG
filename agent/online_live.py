@@ -15,10 +15,13 @@ from online_errors import room_error as recognize_room_error
 from notifications import dialog_box
 from song_catalog import resolve_song
 from chart_sync import stage_state
+from full_combo import ONLY_UNFC, ready_star_row
+from live_policy import DIFFICULTIES
 
 
 UNCONFIRMED_PAGE_TIMEOUT = 8.
 MATCHING_CANCEL_WAIT = 3.
+FINAL_STAR_REUSE_SECONDS = 1.
 
 
 class OnlineFatal(FlowError):
@@ -92,14 +95,22 @@ class OnlineLiveFlow(ChartLiveFlow):
             if self.current_attempt is not None:
                 self.current_attempt.setdefault('states',[]).append(value)
 
+    def invalidate_frame_recognition(self):
+        # An FC pair is evidence about this exact observation and room, not a
+        # song-history cache. Capture attempts and every input end its lifetime.
+        self._final_star_pair = None
+        super().invalidate_frame_recognition()
+
     def snap(self):
         image=super().snap()
         if self.room_active:
             self.guard_room()
         else:
-            fatal=self.reco('OL_Fatal')
+            # Settlement and recovery may need the disconnect classification
+            # next. Share compatible OCR; custom checks keep their original timing.
+            fatal=self.room_error(fatal_only=True)
             if fatal:
-                raise OnlineFatal('联网演出无法继续：'+str(fatal.best_result.text))
+                raise OnlineFatal('联网演出无法继续：'+fatal[1])
         return image
 
     def save_error_frame(self,name):
@@ -136,8 +147,15 @@ class OnlineLiveFlow(ChartLiveFlow):
         if self.room_clock and self.room_clock.expired(time.monotonic()):
             raise RoomInterrupted('房间3分钟未开演')
 
-    def room_error(self):
-        return recognize_room_error(self.ctx,self.reco)
+    def room_error(self, *, fatal_only=False):
+        return recognize_room_error(self.ctx,self.reco,fatal_only=fatal_only)
+
+    def room_disconnected(self):
+        """Reuse this frame's error OCR, with fatal errors taking precedence."""
+        error=self.room_error()
+        if error and error[0]=='OL_Fatal':
+            raise OnlineFatal('联网演出无法继续：'+error[1])
+        return error is not None
 
     def foreground_package(self):
         info=self.controller.info
@@ -150,23 +168,27 @@ class OnlineLiveFlow(ChartLiveFlow):
     def resume_game(self):
         # Allow the server to observe loss of focus before resuming the game.
         self.pause(3)
+        self.invalidate_frame_recognition()
         if not self.controller.post_start_app('com.bilibili.star.bili').wait().succeeded:
             raise FlowError('无法返回游戏')
         self.pause(2)
 
     def background_room(self):
+        self.invalidate_frame_recognition()
         self.controller.post_key_down(3).wait()
         self.controller.post_key_up(3).wait()
         self.resume_game()
 
     def quick_tap(self,x,y):
         self.check_stop()
+        self.invalidate_frame_recognition()
         if not self.controller.post_click(int(x),int(y)).wait().succeeded:
             raise FlowError('联网页面点击失败')
         self.pause(.15)
 
     def quick_swipe(self,x,y1,y2):
         self.check_stop()
+        self.invalidate_frame_recognition()
         if not self.controller.post_swipe(x,y1,x,y2,400).wait().succeeded:
             raise FlowError('协力选曲滑动失败')
         self.pause(.2)
@@ -419,13 +441,23 @@ class OnlineLiveFlow(ChartLiveFlow):
                     raise FlowError('联网房间出现未知页面超过30秒')
             self.pause(.25)
 
-    def read_final_song(self,expected_id=None):
+    def read_final_song(self,expected_id=None,*,fresh=True):
         # The header appears before the title finishes its entrance animation.
         deadline=time.monotonic()+5
         previous=None
+        previous_stars=None
+        self._final_star_pair=None
+        collect_stars=getattr(self.settings,'avoid_full_combo',False)==ONLY_UNFC
         error='最终歌曲尚未显示完整'
+        reuse_current=not fresh and getattr(self,'image',None) is not None
         while time.monotonic()<deadline:
-            self.snap()
+            if reuse_current:
+                # await_final just confirmed this frame without sending input.
+                # It is only the first sample, never both stability samples.
+                self.check_stop()
+                reuse_current=False
+            else:
+                self.snap()
             if not self.is_final_page():
                 raise FlowError('最终确认页面已离开，停止读取旧页面歌曲')
             title=self.text([110,538,454,41])
@@ -433,22 +465,62 @@ class OnlineLiveFlow(ChartLiveFlow):
                 song=final_song(title)
             except ValueError as exc:
                 previous=None
+                previous_stars=None
                 error=str(exc)
             else:
+                stars=ready_star_row(self.image) if collect_stars else None
                 # An already confirmed song needs one fresh matching read;
                 # initial discovery and a different title still need stability.
                 if song['id']==expected_id or previous==song['id']:
+                    if previous==song['id'] and stars is not None and stars==previous_stars:
+                        self._final_star_pair=(self.image,song['id'],stars,
+                            getattr(self,'current_attempt',None),time.monotonic())
                     return song
                 previous=song['id']
+                previous_stars=stars
             self.pause(.2)
         raise FlowError(error)
+
+    def _full_combo_sample(self,selection):
+        # Share the final identity/selected-difficulty reads on this exact frame.
+        # In particular, effects changes must not leave an old page exemption.
+        if not self.is_final_page():
+            return None
+        stars=ready_star_row(self.image)
+        if stars is None:
+            return None
+        try:
+            if final_song(self.text([110,538,454,41]))['id']!=selection.song_id:
+                return None
+        except ValueError:
+            return None
+        labels=self.ocr([540,550,452,65],'EASY|NORMAL|HARD|EXPERT|SPECIAL')
+        target=next((hit for hit in labels if hit.text.strip().lower()==selection.difficulty),None)
+        if target is None or not self.difficulty_selected(target.box[0]+target.box[2]//2):
+            return None
+        return stars
+
+    def read_full_combo_state(self,selection,*,fresh=True):
+        self.check_stop()
+        pair=getattr(self,'_final_star_pair',None)
+        self._final_star_pair=None  # Only the immediate initial decision may consume it.
+        if fresh and pair is not None:
+            frame,song_id,stars,attempt,confirmed_at=pair
+            age=time.monotonic()-confirmed_at
+            if (frame is self.image and song_id==selection.song_id and
+                    attempt is getattr(self,'current_attempt',None) and
+                    self.selection==selection and 0<=age<=FINAL_STAR_REUSE_SECONDS):
+                return stars[1][DIFFICULTIES.index(selection.difficulty)]
+        # Downloads that captured again, effects/difficulty input, changed rooms
+        # or expired evidence retain the complete independent-sample fallback.
+        return super().read_full_combo_state(selection,fresh=fresh)
 
     def difficulty_selected(self,x):
         area=self.image[self.difficulty_y-20:self.difficulty_y+12,x-15:x+15].astype(float)
         return (area.max(2)-area.min(2)>75).mean()>=.25
 
-    def read_final_selection(self):
-        song=self.read_final_song()
+    def read_final_selection(self,*,fresh=True):
+        song=self.read_final_song(fresh=fresh)
         labels=self.ocr([540,550,452,65],'EASY|NORMAL|HARD|EXPERT|SPECIAL')
         centers={hit.text.strip().lower():hit.box[0]+hit.box[2]//2 for hit in labels}
         special='special' in centers
@@ -604,7 +676,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         overlay_since=None
         while time.monotonic()<deadline:
             self.snap()
-            if confirmed and self.reco('OL_Disconnected'):
+            if confirmed and self.room_disconnected():
                 self.recover_room()
                 return
             if self.result_modals() or self.dismiss_talk():
@@ -701,7 +773,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 if button:
                     self.tap_hit(button)
                     continue
-            if self.reco('OL_Disconnected'):
+            if self.room_disconnected():
                 if box is not None:
                     # Leave a failed room rather than resubmitting its request.
                     # Read the whole footer: the left Cancel label can be clipped
@@ -828,7 +900,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 return
             try:
                 self.await_final()
-                selection=self.read_final_selection()
+                selection=self.read_final_selection(fresh=False)
                 song={**asdict(selection),'requested_difficulty':self.settings.difficulties[0],
                       'fire':self.settings.fire}
                 self.current_attempt['songs'].append(song)

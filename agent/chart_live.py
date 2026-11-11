@@ -62,7 +62,7 @@ class ChartLiveFlow(LiveFlow):
         result=[]
         for i,difficulty in enumerate(self.settings.difficulties):
             text=self.text([30+413*i,345,385,37])
-            matches=[song for song in RECOGNITION_BY_ID.values() if self.title_matches(text,song)]
+            matches=self.matching_songs(text,RECOGNITION_BY_ID.values())
             if len(matches)!=1:
                 raise FlowError(f'课题巡演第 {i+1} 首无法唯一识别：{text}')
             result.append(ChartSelection.from_recognized(matches[0],difficulty))
@@ -136,8 +136,11 @@ class ChartLiveFlow(LiveFlow):
             items.append({'item':name,'gain':gain,'inventory_before':int(count[1]),'y':y})
         return sorted(items,key=lambda item:item['gain'])
 
-    def refill_fire(self, needed):
-        self.snap()
+    def refill_fire(self, needed, *, fresh=True):
+        # Only callers that have just observed the ready page can reuse its
+        # balance; every actual refill step keeps its post-input capture.
+        if fresh:
+            self.snap()
         balance=self.fire_balance()
         if balance>=needed:
             return True
@@ -232,20 +235,29 @@ class ChartLiveFlow(LiveFlow):
     def playback_start_mode(self):
         return 'online' if self.settings.mode in ONLINE_MODES else 'click'
 
-    def read_full_combo_state(self, selection):
+    def _full_combo_sample(self, selection):
+        stars = ready_star_row(self.image)
+        if stars is not None:
+            first, _ = stars
+            rect = [220,541,570,38] if first == 317 else [111,541,420,38]
+            if self.title_matches(self.text(rect), selection.song):
+                return stars
+        return None
+
+    def read_full_combo_state(self, selection, *, fresh=True):
         # A fresh pair belongs to this song on every attempt; never carry FC
         # status across songs, difficulties, tour slots or room retries.
         previous = None
+        reuse_current = not fresh and self.image is not None
         for attempt in range(4):
-            self.snap()
-            stars = ready_star_row(self.image)
-            if stars is not None:
-                first, states = stars
-                rect = [220,541,570,38] if first == 317 else [111,541,420,38]
-                if not self.title_matches(self.text(rect), selection.song):
-                    stars = None
-                elif stars == previous:
-                    return states[DIFFICULTIES.index(selection.difficulty)]
+            if reuse_current:
+                self.check_stop()
+                reuse_current = False
+            else:
+                self.snap()
+            stars = self._full_combo_sample(selection)
+            if stars is not None and stars == previous:
+                return stars[1][DIFFICULTIES.index(selection.difficulty)]
             previous = stars
             if attempt < 3:
                 self.pause(.12)
@@ -312,7 +324,7 @@ class ChartLiveFlow(LiveFlow):
             if self.settings.avoid_full_combo == ONLY_UNFC and not avoid_full_combo:
                 # The worker was compiled without an omission. If the page has
                 # changed while preparing it, do not authorize those inputs.
-                if self.read_full_combo_state(selection) != 'full_combo':
+                if self.read_full_combo_state(selection, fresh=not online) != 'full_combo':
                     raise FlowError('开演前已 FC 星标发生变化或无法确认，请重新启动任务')
             verified_at=time.perf_counter()
             timings['final_verification']=(verified_at-ready_at)*1000
@@ -449,7 +461,7 @@ class ChartLiveFlow(LiveFlow):
     def run(self):
         while self.settings.max_rounds is None or self.report['completed_rounds']<self.settings.max_rounds:
             selections,charts=self.prepare_round()
-            if not self.refill_fire(self.settings.fire*len(selections)):
+            if not self.refill_fire(self.settings.fire*len(selections), fresh=False):
                 self.report['status']='insufficient_fire'
                 self.navigate_menu()
                 self.home()
@@ -459,10 +471,12 @@ class ChartLiveFlow(LiveFlow):
             self.report['rounds'].append(row)
             for index,(selection,(_,metadata)) in enumerate(zip(selections,charts),1):
                 self.wait_ready(index)
-                if not self.refill_fire(self.settings.fire):
+                if not self.refill_fire(self.settings.fire, fresh=False):
                     self.report['status']='insufficient_fire'
                     return
-                self.wait_ready(index)
+                # play_chart refreshes readiness after any refill dialog has
+                # closed, and again after the worker is armed. Do not add a
+                # third capture between these two directly adjacent calls.
                 song={'index':index,**asdict(selection),'fire':self.settings.fire}
                 row['songs'].append(song)
                 log(f'[Maa代打演出] 第 {self.report["completed_rounds"]+1} 轮 / 第 {index} 首：'

@@ -15,6 +15,7 @@ from song_catalog import resolve_song
 from song_navigation import SongNavigationMixin
 from fever_settings import FeverSettingsMixin
 from live_effects import LiveEffectsMixin
+from frame_recognition import FrameRecognitionMixin
 from live_policy import (LiveOptions, DIFFICULTIES, parse_auto_remaining,
                          fire_for_song, round_stop_reason)
 
@@ -23,7 +24,7 @@ OPTION_NODES = {key: 'LV_' + suffix for key, suffix in (
     ('fire','Fire'), ('shortage','Shortage'), ('max_rounds','MaxRounds'), ('fever','Fever'))}
 
 
-class LiveFlow(LiveEffectsMixin, FeverSettingsMixin, SongNavigationMixin, DailyFlow):
+class LiveFlow(FrameRecognitionMixin, LiveEffectsMixin, FeverSettingsMixin, SongNavigationMixin, DailyFlow):
     def __init__(self, context, options):
         super().__init__(context)
         self.options = options
@@ -234,8 +235,11 @@ class LiveFlow(LiveEffectsMixin, FeverSettingsMixin, SongNavigationMixin, DailyF
         after=read_number([right+3,540,32,33])
         return int(before),int(after)
 
-    def verify_start(self, index, difficulty, amount, required_auto):
-        self.wait_ready(index)
+    def verify_start(self, index, difficulty, amount, required_auto, *, fresh=True):
+        # The caller may pass the ready frame it has just checked, with no
+        # intervening input. Public/default calls still acquire a fresh frame.
+        if fresh:
+            self.wait_ready(index)
         title=normalized(self.text([111 if self.options.mode=='tour' else 220,541,
                                     420 if self.options.mode=='tour' else 440,38]))
         if title != normalized(self.options.song): raise FlowError(f'开演前歌名不符：{title}')
@@ -250,7 +254,7 @@ class LiveFlow(LiveEffectsMixin, FeverSettingsMixin, SongNavigationMixin, DailyF
             if not self.reco('LV_AutoOff'): raise FlowError('未识别自动演出开关')
             self.tap(883,580)
             self.wait('LV_AutoOn')
-        self.wait_ready(index)
+            self.wait_ready(index)
         if not self.reco('LV_AutoOn'): raise FlowError('自动演出未开启')
         remaining=self.remaining()
         if remaining<required_auto: raise FlowError('自动演出剩余次数不足，不开演')
@@ -349,7 +353,8 @@ class LiveFlow(LiveEffectsMixin, FeverSettingsMixin, SongNavigationMixin, DailyF
                 self.report['returned_home']=True
                 return
             difficulty=self.prepare_round()
-            self.snap()
+            # prepare_round returns on a verified ready frame. These reads do
+            # not mutate the page, so the same capture supplies the budget.
             remaining=self.remaining()
             fire=self.fire_balance()
             reason=round_stop_reason(self.options,self.report['completed_rounds'],remaining,fire)
@@ -365,7 +370,8 @@ class LiveFlow(LiveEffectsMixin, FeverSettingsMixin, SongNavigationMixin, DailyF
                 self.wait_ready(index)
                 amount=fire_for_song(self.options.fire,self.fire_balance(),'stop')
                 if amount is None: raise FlowError('开演前火数减少，停止并保留现场')
-                before,balance=self.verify_start(index,difficulty,amount,self.options.songs_per_round-index+1)
+                before,balance=self.verify_start(index,difficulty,amount,self.options.songs_per_round-index+1,
+                                                fresh=False)
                 self.disable_mv(fresh=False)
                 song={'index':index,'fire':amount,'fire_before':balance,'auto_before':before,'status':'submitted'}
                 row['songs'].append(song)
