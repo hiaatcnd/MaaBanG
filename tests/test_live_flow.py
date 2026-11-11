@@ -35,7 +35,7 @@ class LiveFlowTests(unittest.TestCase):
         f.home.assert_called_once()
         self.assertEqual(f.report['completed_rounds'],1)
         self.assertEqual(f.report['status'],'max_rounds_reached')
-        self.assertEqual(order.mock_calls,[call.verify(1,'expert',3,1),
+        self.assertEqual(order.mock_calls,[call.verify(1,'expert',3,1,fresh=False),
                                           call.effects(fresh=False),call.start(1127,626)])
 
     def test_navigation_retries_lost_click_only_on_known_source(self):

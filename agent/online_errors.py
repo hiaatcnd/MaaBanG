@@ -2,7 +2,7 @@
 import re
 
 
-def room_error(context, recognize):
+def room_error(context, recognize, *, fatal_only=False):
     names=('OL_Fatal','OL_Disconnected')
     nodes=[context.get_node_data(name) for name in names]
     if all(node and node.get('enabled',True) and not node.get('inverse',False)
@@ -17,9 +17,14 @@ def room_error(context, recognize):
             if result:
                 fatal=next((hit for hit in result.filtered_results
                             if any(re.search(p,hit.text) for p in patterns[0])),None)
-                return (names[0],str(fatal.text)) if fatal else (names[1],str(result.best_result.text))
+                if fatal:
+                    return names[0],str(fatal.text)
+                if not fatal_only:
+                    return names[1],str(result.best_result.text)
             return None
-    for name in names:
+    # Inactive snapshots previously checked only fatal errors. If the nodes
+    # cannot share OCR, leave disconnect recognition until a caller needs it.
+    for name in names[:1] if fatal_only else names:
         result=recognize(name)
         if result:
             return name,str(result.best_result.text)

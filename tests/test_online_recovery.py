@@ -28,7 +28,8 @@ def hit(text,x,w=70):
 
 class OnlineRecoveryTests(unittest.TestCase):
     def flow(self,folder):
-        flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+        flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False),
+                                           get_node_data=lambda name:None),
                             ChartOptions.parse({'mode':'coop','fire':0}),folder)
         flow.image=failure_frame()
         flow.foreground_package=Mock(return_value='com.bilibili.star.bili')
@@ -36,8 +37,9 @@ class OnlineRecoveryTests(unittest.TestCase):
         flow.snap=Mock()
         flow.hit_text=Mock(return_value=None)
         flow.ocr=Mock(return_value=[hit('取消',477),hit('重试',733)])
-        flow.reco=Mock(side_effect=lambda name:name=='CU_HomeBand' or
-                       (name=='OL_Disconnected' and flow.image.any()))
+        disconnected=SimpleNamespace(best_result=SimpleNamespace(text='连接失败'))
+        flow.reco=Mock(side_effect=lambda name:disconnected if
+                       name=='OL_Disconnected' and flow.image.any() else name=='CU_HomeBand')
         flow.tap_hit=Mock(side_effect=lambda _:flow.image.fill(0))
         flow.back=Mock();flow.background_room=Mock()
         flow.pause=Mock()

@@ -41,7 +41,8 @@ class MatchingRecoveryTests(unittest.TestCase):
         self.now=0.
         clock=patch('online_live.time.monotonic',side_effect=lambda:self.now)
         clock.start();self.addCleanup(clock.stop)
-        self.flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False)),
+        self.flow=OnlineLiveFlow(SimpleNamespace(tasker=SimpleNamespace(controller=None,stopping=False),
+                                                get_node_data=lambda name:None),
                                  ChartOptions.parse({'mode':'coop','fire':0}),self.folder.name)
         flow=self.flow
         flow.image=frame()

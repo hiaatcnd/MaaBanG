@@ -1,0 +1,205 @@
+[
+  {
+    "id": "coop-japanese-title", "image": "coop/ready.png", "roi": [110, 538, 454, 41],
+    "kind": "song", "target": "91", "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire"
+  },
+  {
+    "id": "coop-japanese-punctuation-title", "image": "coop/title_punctuation.png", "roi": [110, 538, 454, 41],
+    "kind": "song", "target": "595", "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire"
+  },
+  {
+    "id": "versus-english-title", "image": "versus/ready.png", "roi": [110, 538, 454, 41],
+    "kind": "song", "target": "785", "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition"
+  },
+  {
+    "id": "team-quoted-title", "image": "fire_preview/team_6_to_3.png", "roi": [110, 538, 454, 41],
+    "kind": "song", "target": "646", "source": "tests/test_fire_preview_ocr.py::test_team_six_is_not_nine_and_production_confirmation_passes"
+  },
+  {
+    "id": "cp-selected-title", "image": "cp/select.png", "roi": [195, 329, 380, 34],
+    "kind": "song", "target": "774", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "cp-ready-title", "image": "cp/ready.png", "roi": [220, 541, 570, 38],
+    "kind": "song", "target": "774", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr; same captured song, visually verified"
+  },
+  {
+    "id": "lowres-japanese-title", "image": "lowres/challenge_ready.png", "roi": [220, 541, 570, 38],
+    "kind": "song", "target": "3", "source": "tests/test_lowres_regression.py::test_real_reveal_templates_reject_unrelated_screens"
+  },
+  {
+    "id": "long-japanese-english-title", "image": "mining/ready_long_title.png", "roi": [115, 11, 570, 38],
+    "kind": "song", "target": "25", "source": "tests/test_chart_live.py::test_long_ready_title_with_real_ocr_preserves_song_and_difficulty_checks; crop-local coordinates subtract (105,530)"
+  },
+  {
+    "id": "versus-selected-japanese-title", "image": "versus/song.png", "roi": [210, 332, 356, 32],
+    "kind": "song", "target": "24", "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition"
+  },
+  {
+    "id": "coop-difficulty-labels", "image": "coop/ready.png", "roi": [540, 550, 452, 65],
+    "expected": "EASY|NORMAL|HARD|EXPERT|SPECIAL", "kind": "set", "target": ["EASY", "NORMAL", "HARD", "EXPERT"],
+    "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire; labels visually verified"
+  },
+  {
+    "id": "versus-difficulty-labels", "image": "versus/ready.png", "roi": [540, 550, 452, 65],
+    "expected": "EASY|NORMAL|HARD|EXPERT|SPECIAL", "kind": "set", "target": ["EASY", "NORMAL", "HARD", "EXPERT"],
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition; labels visually verified"
+  },
+  {
+    "id": "team-difficulty-labels", "image": "fire_preview/team_6_to_3.png", "roi": [540, 550, 452, 65],
+    "expected": "EASY|NORMAL|HARD|EXPERT|SPECIAL", "kind": "set", "target": ["EASY", "NORMAL", "HARD", "EXPERT"],
+    "source": "tests/test_fire_preview_ocr.py::test_team_six_is_not_nine_and_production_confirmation_passes; labels visually verified"
+  },
+  {
+    "id": "cp-expert-label", "image": "cp/ready.png", "roi": [113, 561, 104, 33],
+    "kind": "text", "target": "EXPERT", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "long-title-easy-label", "image": "mining/ready_long_title.png", "roi": [8, 31, 104, 33],
+    "kind": "text", "target": "EASY", "source": "tests/test_chart_live.py::test_long_ready_title_with_real_ocr_preserves_song_and_difficulty_checks; crop-local coordinates subtract (105,530)"
+  },
+  {
+    "id": "coop-fire-before", "image": "coop/ready.png", "roi": [1043, 540, 32, 33],
+    "only_rec": true, "threshold": 0.9, "kind": "text", "target": "18",
+    "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire; ROI derived by LiveFlow.fire_preview arrow algorithm"
+  },
+  {
+    "id": "coop-fire-after", "image": "coop/ready.png", "roi": [1088, 540, 32, 33],
+    "only_rec": true, "threshold": 0.9, "kind": "text", "target": "18",
+    "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire; ROI derived by LiveFlow.fire_preview arrow algorithm"
+  },
+  {
+    "id": "versus-fire-before", "image": "versus/ready.png", "roi": [1043, 540, 34, 33],
+    "only_rec": true, "threshold": 0.9, "kind": "text", "target": "45",
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition; ROI derived by LiveFlow.fire_preview arrow algorithm"
+  },
+  {
+    "id": "versus-fire-after", "image": "versus/ready.png", "roi": [1090, 540, 32, 33],
+    "only_rec": true, "threshold": 0.9, "kind": "text", "target": "45",
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition; ROI derived by LiveFlow.fire_preview arrow algorithm"
+  },
+  {
+    "id": "team-fire-before-six", "image": "fire_preview/team_6_to_3.png", "roi": [1043, 540, 21, 33],
+    "only_rec": true, "threshold": 0.9, "kind": "text", "target": "6",
+    "source": "tests/test_fire_preview_ocr.py::test_team_six_is_not_nine_and_production_confirmation_passes; ROI derived by LiveFlow.fire_preview arrow algorithm"
+  },
+  {
+    "id": "team-fire-after-three", "image": "fire_preview/team_6_to_3.png", "roi": [1076, 540, 32, 33],
+    "only_rec": true, "threshold": 0.9, "kind": "text", "target": "3",
+    "source": "tests/test_fire_preview_ocr.py::test_team_six_is_not_nine_and_production_confirmation_passes; ROI derived by LiveFlow.fire_preview arrow algorithm"
+  },
+  {
+    "id": "team-fire-top-balance", "image": "fire_preview/team_6_to_3.png", "roi": [971, 24, 67, 32],
+    "kind": "text", "target": "6/25", "source": "tests/test_fire_preview_ocr.py::test_team_six_is_not_nine_and_production_confirmation_passes; denominator visually verified"
+  },
+  {
+    "id": "cp-inventory", "image": "cp/dialog.png", "roi": [772, 125, 67, 34],
+    "kind": "text", "target": "556", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "cp-cost-200", "image": "cp/dialog.png", "roi": [489, 193, 67, 39],
+    "kind": "text", "target": "200", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "cp-cost-400", "image": "cp/dialog.png", "roi": [489, 266, 67, 39],
+    "kind": "text", "target": "400", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "cp-cost-800", "image": "cp/dialog.png", "roi": [489, 339, 67, 39],
+    "kind": "text", "target": "800", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "cp-cost-1600", "image": "cp/dialog.png", "roi": [489, 412, 67, 39],
+    "kind": "text", "target": "1600", "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr"
+  },
+  {
+    "id": "coop-ready-button", "image": "coop/ready.png", "roi": [1010, 580, 225, 105],
+    "expected": "^准备完毕[！!]?$", "threshold": 0.85, "kind": "text", "target": "准备完毕!",
+    "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire; punctuation visually verified"
+  },
+  {
+    "id": "versus-ready-button", "image": "versus/ready.png", "roi": [1010, 580, 225, 105],
+    "expected": "^准备完毕[！!]?$", "threshold": 0.85, "kind": "text", "target": "准备完毕!",
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition; punctuation visually verified"
+  },
+  {
+    "id": "team-final-header", "image": "fire_preview/team_6_to_3.png", "roi": [110, 50, 340, 45],
+    "expected": "^最终确认$", "threshold": 0.85, "kind": "text", "target": "最终确认",
+    "source": "tests/test_fire_preview_ocr.py::test_team_six_is_not_nine_and_production_confirmation_passes; OL_FinalConfirm node"
+  },
+  {
+    "id": "cp-final-header", "image": "cp/ready.png", "roi": [115, 48, 260, 38],
+    "expected": "^最终确认$", "kind": "text", "target": "最终确认",
+    "source": "tests/test_cp_live.py::test_real_cp_screens_and_numbers_with_production_ocr; CP_Ready node"
+  },
+  {
+    "id": "coop-song-header", "image": "coop/song.png", "roi": [110, 50, 340, 45],
+    "expected": "^选择歌曲$|^选择乐曲$", "threshold": 0.85, "kind": "text", "target": "选择乐曲",
+    "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire; exact label visually verified"
+  },
+  {
+    "id": "coop-random-song-button", "image": "coop/song.png", "roi": [685, 605, 200, 80],
+    "expected": "^不指定歌曲$", "kind": "text", "target": "不指定歌曲",
+    "source": "tests/test_coop_live.py::test_real_coop_pages_song_difficulty_and_zero_fire"
+  },
+  {
+    "id": "versus-song-confirm-button", "image": "versus/song.png", "roi": [950, 605, 250, 80],
+    "expected": "^确定$", "kind": "text", "target": "确定",
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition"
+  },
+  {
+    "id": "cp-start-button", "image": "cp/ready.png", "roi": [1010, 590, 245, 85],
+    "expected": "^演出开始$", "kind": "text", "target": "演出开始",
+    "source": "tests/test_live_effects.py::test_real_screenshots_with_local_ocr; LiveEffectsMixin._is_effects_ready_page; label visually verified"
+  },
+  {
+    "id": "loading-is-not-ready", "image": "versus/song_loading.png", "roi": [1010, 580, 225, 105],
+    "expected": "^准备完毕[！!]?$", "threshold": 0.85, "kind": "absent", "target": null,
+    "source": "tests/test_online_loading.py::test_captured_loading_and_covered_ready_use_production_recognition; negative ready-button state visually verified"
+  },
+  {
+    "id": "coop-not-fatal", "image": "coop/ready.png", "roi": [240, 130, 800, 455],
+    "node": "OL_Fatal", "kind": "absent", "target": null,
+    "source": "tests/test_online_startup.py::RoomErrorOCRReplayTests.test_real_ready_frame_has_no_error_and_preserves_context_rules"
+  },
+  {
+    "id": "coop-not-disconnected", "image": "coop/ready.png", "roi": [240, 130, 800, 455],
+    "node": "OL_Disconnected", "kind": "absent", "target": null,
+    "source": "tests/test_online_startup.py::RoomErrorOCRReplayTests.test_real_ready_frame_has_no_error_and_preserves_context_rules"
+  },
+  {
+    "id": "versus-not-fatal", "image": "versus/ready.png", "roi": [240, 130, 800, 455],
+    "node": "OL_Fatal", "kind": "absent", "target": null,
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition; normal ready frame visually verified"
+  },
+  {
+    "id": "versus-not-disconnected", "image": "versus/ready.png", "roi": [240, 130, 800, 455],
+    "node": "OL_Disconnected", "kind": "absent", "target": null,
+    "source": "tests/test_versus_live.py::test_captured_room_and_final_page_use_production_recognition; normal ready frame visually verified"
+  },
+  {
+    "id": "matching-not-fatal", "image": "online_recovery/matching_timeout.png", "roi": [240, 130, 800, 455],
+    "node": "OL_Fatal", "kind": "absent", "target": null,
+    "source": "tests/test_matching_recovery.py::test_production_ocr_recovers_recorded_matching_dialog; matching dialog visually verified"
+  },
+  {
+    "id": "matching-not-disconnected", "image": "online_recovery/matching_timeout.png", "roi": [240, 130, 800, 455],
+    "node": "OL_Disconnected", "kind": "absent", "target": null,
+    "source": "tests/test_matching_recovery.py::test_production_ocr_recovers_recorded_matching_dialog"
+  },
+  {
+    "id": "matching-dialog-title", "image": "online_recovery/matching_timeout.png", "roi": [349, 140, 581, 442],
+    "expected": "^匹配中$", "kind": "text", "target": "匹配中",
+    "source": "tests/test_matching_recovery.py::matching_hits; recorded dialog visually verified"
+  },
+  {
+    "id": "matching-dialog-body", "image": "online_recovery/matching_timeout.png", "roi": [349, 140, 581, 442],
+    "expected": "^正在寻找房间[。.]?$", "kind": "text", "target": "正在寻找房间。",
+    "source": "tests/test_matching_recovery.py::matching_hits; recorded dialog visually verified"
+  },
+  {
+    "id": "matching-dialog-cancel", "image": "online_recovery/matching_timeout.png", "roi": [349, 140, 581, 442],
+    "expected": "^取消$", "kind": "text", "target": "取消",
+    "source": "tests/test_matching_recovery.py::test_production_ocr_recovers_recorded_matching_dialog"
+  }
+]

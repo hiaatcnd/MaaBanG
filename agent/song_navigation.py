@@ -1,4 +1,5 @@
 """Shared song selection for built-in auto live and chart-driven play."""
+from functools import lru_cache
 import numpy as np
 from costume_unlock import FlowError, normalized
 from song_catalog import needs_band_check, recognition_titles
@@ -24,6 +25,7 @@ def level_slider_handles(image,y):
     return centers
 
 
+@lru_cache(maxsize=8192)
 def title_key(text):
     key = normalized(text).casefold().translate(_KANA_TRANSLATION)
     # OCR varies between straight/curly quotes and may repeat boundary quotes.
@@ -117,6 +119,7 @@ class SongNavigationMixin:
             last_values,last_index=values,index
             self.report['level_filter_steps'][-1].update(handles=handles,index=index,x=target)
             self.check_stop()
+            getattr(self,'invalidate_frame_recognition',lambda:None)()
             try:
                 if not self.controller.post_touch_down(handles[index],y).wait().succeeded:
                     raise FlowError('乐曲等级滑块按下失败')
@@ -157,6 +160,25 @@ class SongNavigationMixin:
             return final_song(text)['id'] == song['id']
         except ValueError:
             return False
+
+    def matching_songs(self,text,songs):
+        """Match a candidate list with one global ambiguity check, preserving order."""
+        candidates=list(songs)
+        key=title_key(text)
+        exact=[key in {title_key(v) for v in recognition_titles(song)}
+               for song in candidates]
+        resolved_id=None
+        if not all(exact):
+            # The former per-song predicate repeated this whole-catalog scan
+            # for every non-exact candidate. Resolve once, retaining both exact
+            # duplicates and any additional ID accepted by that same fallback.
+            from online_policy import final_song
+            try:
+                resolved_id=final_song(text)['id']
+            except ValueError:
+                pass
+        return [song for song,is_exact in zip(candidates,exact)
+                if is_exact or (resolved_id is not None and song['id']==resolved_id)]
 
     def selected_song_matches(self,song):
         if not self.title_matches(self.text([210,332,356,32]),song):

@@ -43,7 +43,8 @@ def final_song(title, band=''):
             raise ValueError(error)
         return matches[0]
 
-    matches=[song for song in RECOGNITION_BY_ID.values() if title_key(title) in
+    exact_key=title_key(title)
+    matches=[song for song in RECOGNITION_BY_ID.values() if exact_key in
              {title_key(v) for v in recognition_titles(song)}]
     if matches:
         return disambiguate(matches)

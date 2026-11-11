@@ -282,10 +282,10 @@ class OnlineFlowTests(unittest.TestCase):
             flow.foreground_package=Mock(return_value='com.bilibili.star.bili')
             flow.snap=Mock()
             phase=[0]
+            disconnected=SimpleNamespace(best_result=SimpleNamespace(text='连接已断开'))
             flow.reco=Mock(side_effect=lambda node: (
-                node=='CU_HomeBand' or
-                node=='OL_Disconnected' and phase[0]==0 or
-                node=='OL_LeaveConfirm' and phase[0]==1))
+                disconnected if node=='OL_Disconnected' and phase[0]==0 else
+                node=='CU_HomeBand' or node=='OL_LeaveConfirm' and phase[0]==1))
             buttons=[object(),object()]
             def hit(roi,pattern):
                 if phase[0]==0 and pattern=='^中断$': return buttons[0]

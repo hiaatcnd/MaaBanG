@@ -187,7 +187,7 @@ class MiningLiveFlow(ChartLiveFlow):
             self.ensure_song_page()
         self.wait('LV_SongPage')
         title=self.text([210,332,356,32])
-        matches=[song for song in BY_ID.values() if self.title_matches(title,song)]
+        matches=self.matching_songs(title,BY_ID.values())
         selected=[song for song in matches if self.selected_song_matches(song)]
         if len(selected)==1:
             song=selected[0]
@@ -205,7 +205,7 @@ class MiningLiveFlow(ChartLiveFlow):
             self.wait('LV_SongPage')
             candidates = []
             for hit in self.ocr([201,105,365,590]):
-                matches = [s for s in BY_ID.values() if self.title_matches(hit.text,s)]
+                matches = self.matching_songs(hit.text,BY_ID.values())
                 if matches and any((s['id'],difficulty) not in seen for s in matches):
                     candidates.append((hit,matches))
             if candidates:
@@ -640,7 +640,7 @@ class ChallengeMiningFlow(MiningLiveFlow):
                 # The stage fixes the song. Read the wider final preparation
                 # title instead of making the stage list's clipped title a gate.
                 title = self.text([220,541,570,38])
-                songs = [s for s in BY_ID.values() if self.title_matches(title,s)]
+                songs = self.matching_songs(title,BY_ID.values())
                 if len(songs) != 1:
                     raise FlowError(f'舞台准备页歌曲无法唯一识别：{title}')
                 selection = ChartSelection.parse(songs[0]['id'],'expert')

@@ -52,7 +52,8 @@ class CPLiveFlow(ChartLiveFlow):
         if requested is None:
             requested=final_song(self.settings.cp_song)
         for attempt in range(8):
-            self.require_song_page()
+            # selected_song captures and verifies the page itself, including
+            # after a swipe/click. Do not immediately discard a duplicate frame.
             if self.selected_song()['id']==requested['id']:
                 return requested
             hits=[hit for hit in self.ocr([195,95,380,550]) if self.title_matches(hit.text,requested)]
