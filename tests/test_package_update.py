@@ -120,7 +120,9 @@ return ''' + str(code) + '; }}')
             self.fail(f'Lock fixture did not become ready: {process.poll()} {error}')
         pointer_size, observed_cwd = ready.read_text(encoding='utf-8-sig').splitlines()
         self.assertEqual(int(pointer_size), 4 if architecture == 'x86' else 8)
-        self.assertEqual(Path(observed_cwd), cwd)
+        # Windows may expand the inherited TEMP directory's 8.3 alias in the
+        # child process. Compare the directory identity, not its spelling.
+        self.assertTrue(Path(observed_cwd).samefile(cwd), (observed_cwd, str(cwd)))
         process.kill_marker = kill_marker
         process.connect_marker = connect_marker
         process.stub_port = port
@@ -226,6 +228,34 @@ return ''' + str(code) + '; }}')
 
     def test_x64_cwd_server_exits_through_its_exact_endpoint(self):
         self.assert_releases_cwd_server('x64')
+
+    def test_short_installation_alias_releases_long_cwd_server(self):
+        import ctypes
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        short_path = kernel.GetShortPathNameW
+        short_path.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint]
+        short_path.restype = ctypes.c_uint
+        buffer = ctypes.create_unicode_buffer(32768)
+        length = short_path(str(self.target), buffer, len(buffer))
+        self.assertGreater(length, 0, ctypes.get_last_error())
+        self.assertLess(length, len(buffer))
+        long_target = self.target.resolve()
+        alias = Path(buffer.value)
+        if alias.name.lower() == long_target.name.lower():
+            self.skipTest('This volume does not provide an 8.3 alias for the installation')
+        self.assertTrue(alias.samefile(long_target))
+        # Exercise the actual executable and its .NET runtime configuration:
+        # a reflection host may use different path compatibility switches.
+        self.target = alias
+        work = self.prepare()
+        server = self.lock_process(cwd=long_target / 'app', listen=True)
+        self.apply(work)
+        self.assertEqual(server.wait(timeout=5), 0)
+        self.assertEqual(server.kill_marker.read_text(), '0009host:kill')
+        self.assertEqual(json.loads((long_target / 'app/interface.json').read_text())['version'], 'v0.6.2')
+        self.assertTrue((work / 'previous/app/obsolete.dll').is_file())
+        self.assertEqual((work / 'status.txt').read_text(encoding='utf-8-sig'), 'complete')
+        self.assertEqual({p.name: p.read_bytes() for p in self.shared.iterdir()}, self.before)
 
     def test_non_adb_and_adb_client_blockers_are_not_stopped(self):
         work = self.prepare()
