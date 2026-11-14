@@ -10,9 +10,51 @@ from maa.custom_action import CustomAction
 from costume_unlock import FlowError, normalized
 from daily_tasks import DailyFlow
 from mining_policy import member_cards, member_signature, same_member_portrait
-from mining_stories import member_filter_box
+from mining_stories import StoryMiningFlow, member_filter_box
 from notifications import dialog_box
 from task_logging import failure, finish, log
+from skill_list import framed_member_cards, accounted_edge_cards
+
+
+def target_grid_clear(image, accounted=()):
+    """Require every small part of the grid to be blank, not a global majority.
+
+    Only positively identified, terminal members may be masked. A single missed
+    portrait or a clipped row must remain visible to this independent check.
+    """
+    panel = image[185:665, 285:1140].copy()
+    if panel.shape != (480, 855, 3):
+        return False
+    for x, y in accounted:
+        panel[max(0, y-77-185):min(480, y+57-185),
+              max(0, x-60-285):min(855, x+60-285)] = 255
+    dark = panel.min(axis=2) <= 235
+    blocks = dark.reshape(32, 15, 57, 15).mean(axis=(1, 3))
+    return bool(np.max(blocks) < .03)
+
+
+def target_grid_unchanged(before, after):
+    """Keep local movement evidence while ignoring a stationary card's badge."""
+    first, second = before[185:665, 285:1140], after[185:665, 285:1140]
+    if first.shape != (480, 855, 3) or second.shape != first.shape:
+        return False
+    changed = np.max(np.abs(first.astype(np.int16)-second.astype(np.int16)), axis=2) > 24
+    if np.max(changed.reshape(32, 15, 57, 15).mean(axis=(1, 3))) < .25:
+        return True
+    # Bonus badges bob independently of their cards. Mask only the badge of a
+    # complete card found in BOTH frames at the same position with matching
+    # interior artwork. Unknown or moving cards retain all movement evidence.
+    current = framed_member_cards(after)
+    for x, y in framed_member_cards(before):
+        signature = member_signature(before, (x, y))
+        matches = [(px, py) for px, py in current
+                   if abs(px-x) <= 3 and abs(py-y) <= 4
+                   and same_member_portrait(member_signature(after, (px, py)), signature)]
+        if len(matches) == 1:
+            px, py = matches[0]
+            changed[max(0, min(y, py)-77-185):max(0, max(y, py)-48-185),
+                    max(0, min(x, px)-60-285):min(855, max(x, px)+60-285)] = False
+    return bool(np.max(changed.reshape(32, 15, 57, 15).mean(axis=(1, 3))) < .25)
 
 
 def skill_level(text):
@@ -66,6 +108,16 @@ def verify_confirmation(text):
 
 
 class SkillPracticeFlow(DailyFlow):
+    # Both pages use the same member-display panel. Share its observed-state
+    # reset rather than treating preselected attributes as a successful tap.
+    checked_filter_box = StoryMiningFlow.checked_filter_box
+    position_filter_top = StoryMiningFlow.position_filter_top
+    filter_checkbox_state = StoryMiningFlow.filter_checkbox_state
+    filter_top_state = StoryMiningFlow.filter_top_state
+    reset_all_member_filters = StoryMiningFlow.reset_all_member_filters
+    confirm_all_characters = StoryMiningFlow.confirm_all_characters
+    confirm_member_filter = StoryMiningFlow.confirm_member_filter
+
     def __init__(self, context, output):
         super().__init__(context)
         self.output = Path(output)
@@ -75,6 +127,11 @@ class SkillPracticeFlow(DailyFlow):
     def save_frame(self, name):
         from PIL import Image
         Image.fromarray(self.image[:, :, ::-1]).save(self.output/name)
+
+    def load_frame(self, name):
+        from PIL import Image
+        with Image.open(self.output/name) as frame:
+            return np.array(frame.convert('RGB'))[:, :, ::-1].copy()
 
     def save_report(self):
         (self.output/'report.json').write_text(
@@ -107,33 +164,111 @@ class SkillPracticeFlow(DailyFlow):
         """Reset the target and lounge filters once each via the game's global toggle."""
         self.tap(1015, 141 if materials else 130)
         self.wait('MN_MemberFilter')
-        left, top, width, height = member_filter_box(self.image)
-        toggle = self.hit_text([left, top, width, 100], '^全选[/／]取消全选$')
-        if not toggle:
-            raise FlowError('未找到成员筛选的全选按钮')
-        self.tap_hit(toggle)
-        for _ in range(30):
-            self.snap()
-            label = self.hit_text([left+20, top+100, 180, height-230], '^种类$|^属性$')
-            if label and label.box[1]+label.box[3]//2+54 < top+height-140:
-                y = label.box[1]+label.box[3]//2+54
-                xs = [left+offset for offset in (55, 254, 453, 652)]
-                # If everything was already selected, the toggle clears it.
-                # Click it again only after observing that cleared state.
-                if not any(pink_checked(self.image, x, y) for x in xs):
-                    self.tap_hit(toggle)
-                    self.snap()
-                if not all(pink_checked(self.image, x, y) for x in xs):
-                    raise FlowError('未确认成员筛选已全选')
-                confirm = self.hit_text([left, top+height-110, width, 100], '^确定$')
-                if not confirm:
-                    raise FlowError('未找到成员筛选确定按钮')
-                self.tap_hit(confirm)
-                self.wait('SP_Page' if materials else 'SP_Filter')
-                log('[同名成员技能升级] 已将'+('休息室材料' if materials else '培养成员')+'筛选设为全选')
-                return
-            self.swipe(left+width-25, top+160, top+450)
-        raise FlowError('无法确认成员全选筛选')
+        box = member_filter_box(self.image)
+        self.reset_all_member_filters(box)
+        # Global selection resets checkboxes, but story/animation are radios.
+        # Explicitly remove those filters left by a previous story task.
+        if not materials:
+            for label in ('小故事', '动画'):
+                self.clear_story_radio(box, label)
+        self.confirm_member_filter(box, ready=lambda:
+                                   (self.reco('SP_Page') and self.reco('SP_Lounge')
+                                    and not self.reco('SP_Filter')) if materials else self.reco('SP_Filter'))
+        log('[同名成员技能升级] 已将'+('休息室材料' if materials else '培养成员')+'筛选设为全选')
+
+    def filter_radio_state(self, x, y):
+        """Positive filled/empty-circle evidence, never absence of pink alone."""
+        area=self.image[y-20:y+21,x-20:x+21].astype(np.int16)
+        if area.shape!=(41,41,3):
+            return None
+        b,g,r=(area[:,:,i] for i in range(3))
+        if np.mean((r[14:27,14:27]>190)&(r[14:27,14:27]-g[14:27,14:27]>45)
+                   &(r[14:27,14:27]-b[14:27,14:27]>10))>.25:
+            return True
+        if np.mean(area[16:25,16:25].min(axis=2)>245)<.9:
+            return None
+        gray=(area.min(axis=2)>175)&(area.max(axis=2)<243)&(np.ptp(area,axis=2)<18)
+        if all(np.count_nonzero(part)>=8 for part in (
+                gray[2:13,8:33],gray[28:39,8:33],
+                gray[8:33,2:13],gray[8:33,28:39])):
+            return False
+        return None
+
+    def clear_story_radio(self, box, label):
+        """Locate the radio's label afresh, and retry only a still-empty circle."""
+        left,top,width,height=box
+        roi=[left+25,top+100,180,height-230]
+        deadline=time.monotonic()+50
+        control_deadline=None
+        previous=None
+        next_click=0
+        attempts=expand_attempts=confirmed=scrolls=0
+        selected_seen=False
+        while time.monotonic()<deadline:
+            self.checked_filter_box(box)
+            hit=self.hit_text(roi,'^'+label+'$')
+            point=None
+            if hit:
+                y=hit.box[1]+hit.box[3]//2+54
+                if top+120<=y-20 and y+20<=top+height-140:
+                    point=(left+55,y)
+            if point:
+                if control_deadline is None:
+                    control_deadline=min(deadline,time.monotonic()+16)
+                state=self.filter_radio_state(*point)
+                if state is True:
+                    selected_seen=True
+                    confirmed+=1
+                    if confirmed>=2:
+                        return
+                    previous=None
+                else:
+                    confirmed=0
+                    if selected_seen and state is False:
+                        raise FlowError(f'{label}全部选中后状态再次变化，不重复切换')
+                    if state is False and previous==point and time.monotonic()>=next_click:
+                        if attempts>=3 or time.monotonic()>=control_deadline:
+                            break
+                        if attempts:
+                            log(f'[成员筛选] {label}全部仍未选中，重新确认空单选框后补点')
+                        self.tap(*point)
+                        attempts+=1
+                        next_click=time.monotonic()+3
+                        previous=None
+                    else:
+                        previous=point if state is False else None
+                if time.monotonic()>=control_deadline:
+                    break
+            elif control_deadline is not None:
+                raise FlowError(f'{label}筛选目标已变化，不沿用旧坐标')
+            else:
+                section=self.hit_text([left+25,top+100,width-50,height-230],'^限制条件$')
+                cy=section.box[1]+section.box[3]//2 if section else 0
+                cx=left+width-60
+                area=self.image[cy-7:cy+8,cx-1:cx+2].astype(np.int16)
+                plus=section is not None and area.shape==(15,3,3) and np.mean(
+                    (area[:,:,2]>190)&(area[:,:,2]-area[:,:,1]>45))>.6
+                if plus:
+                    expand=(cx,cy)
+                    if previous==expand and time.monotonic()>=next_click:
+                        if expand_attempts>=3 or time.monotonic()>=deadline:
+                            break
+                        if expand_attempts:
+                            log('[成员筛选] 限制条件仍未展开，重新定位后补点')
+                        self.tap(*expand)
+                        expand_attempts+=1
+                        next_click=time.monotonic()+3
+                        previous=None
+                    else:
+                        previous=expand
+                else:
+                    if scrolls>=20:
+                        break
+                    self.swipe(left+width-70,top+height-180,top+height-410)
+                    scrolls+=1
+                    previous=None
+            time.sleep(.2)
+        raise FlowError(f'未确认{label}筛选已恢复全部，不使用残留筛选结果')
 
     def ensure_filter(self):
         self.wait('SP_Filter')
@@ -348,51 +483,263 @@ class SkillPracticeFlow(DailyFlow):
             time.sleep(.3)
         raise FlowError('技能练习结果未确认，不重复提交')
 
+    def target_candidates(self, *, fallback=False):
+        points = list(member_cards(self.image))
+        if fallback:
+            for point in framed_member_cards(self.image):
+                if not any(abs(point[0]-x) < 10 and abs(point[1]-y) < 15 for x, y in points):
+                    points.append(point)
+        return [(point, member_signature(self.image, point)) for point in points]
+
+    def stable_target(self, signature, *, allow_open=False):
+        """Find the same target again on two fresh, stable list frames."""
+        previous = None
+        for sample in range(2):
+            if sample:
+                time.sleep(.2)
+            self.snap()
+            self.require_clear_notification_overlay()
+            if allow_open and self.reco('SP_Page') and self.reco('SP_Lounge'):
+                return None
+            try:
+                self.ensure_filter()
+            except FlowError:
+                # wait(SP_Filter) may lose the list while the earlier tap finally
+                # opens details. Accept that outcome instead of clicking again.
+                self.snap()
+                self.require_clear_notification_overlay()
+                if allow_open and self.reco('SP_Page') and self.reco('SP_Lounge'):
+                    return None
+                raise
+            self.require_clear_notification_overlay()
+            if allow_open and self.reco('SP_Page') and self.reco('SP_Lounge'):
+                return None
+            matches = [(point, current) for point, current in self.target_candidates(fallback=True)
+                       if same_member_portrait(current, signature)]
+            if len(matches) != 1:
+                raise FlowError('培养成员已变化或无法唯一定位，不沿用旧坐标')
+            point, current = matches[0]
+            if previous is not None and (abs(point[0]-previous[0][0]) > 3
+                    or abs(point[1]-previous[0][1]) > 4
+                    or not same_member_portrait(current, previous[1])):
+                raise FlowError('培养成员列表尚未稳定，不补点')
+            # Stability belongs to the selected artwork and position. A badge
+            # animation elsewhere in the grid must not block a safe first tap.
+            previous = (point, current)
+        return point
+
+    def open_target(self, signature):
+        for attempt in range(3):
+            self.check_stop()
+            # A delayed earlier tap may already have reached the detail page.
+            self.snap()
+            self.require_clear_notification_overlay()
+            if self.reco('SP_Page') and self.reco('SP_Lounge'):
+                if attempt:
+                    return
+                raise FlowError('打开培养成员前页面已变化，不选择未知成员')
+            point = self.stable_target(signature, allow_open=bool(attempt))
+            if point is None:
+                return
+            if attempt:
+                log(f'[同名成员技能升级] 成员详情未打开，重新确认原成员后补点 {attempt}/2')
+            self.tap(*point)
+            deadline = time.monotonic()+8
+            while time.monotonic() < deadline:
+                self.snap()
+                self.require_clear_notification_overlay()
+                if self.reco('SP_Page') and self.reco('SP_Lounge'):
+                    return
+                time.sleep(.2)
+        raise FlowError('培养成员详情未打开，已达到补点上限')
+
+    def return_to_list(self):
+        reference = None
+        for attempt in range(3):
+            self.check_stop()
+            self.snap()
+            self.require_clear_notification_overlay()
+            if self.reco('SP_Filter'):
+                return
+            self.require_material_page()
+            area = self.image[145:525, 110:610].copy()
+            if reference is not None and np.mean(np.abs(
+                    reference.astype(np.int16)-area.astype(np.int16))) > 2:
+                raise FlowError('返回前培养成员页面已变化，不补点')
+            reference = area
+            # Locate the back button again only on the unchanged material page.
+            button = self.reco('CU_Back')
+            if not button:
+                raise FlowError('未找到技能练习返回按钮')
+            if attempt:
+                log(f'[同名成员技能升级] 返回列表未生效，补点 {attempt}/2')
+            self.tap_hit(button)
+            deadline = time.monotonic()+8
+            while time.monotonic() < deadline:
+                self.snap()
+                self.require_clear_notification_overlay()
+                if self.reco('SP_Filter'):
+                    return
+                time.sleep(.2)
+        raise FlowError('未返回培养成员列表，已达到补点上限')
+
+    def select_target_batch(self, row):
+        # An empty material OCR result is not evidence that this filtered
+        # member is complete. Retry observation only; never replay submission.
+        for attempt in range(3):
+            self.check_stop()
+            if self.select_batch(row):
+                return True
+            if row['status'] == 'already_max':
+                return False
+            if attempt < 2:
+                log(f'[同名成员技能升级] 未识别到同名材料，重新确认 {attempt+1}/2')
+                time.sleep(.3)
+        row['status'] = 'unresolved_materials'
+        self.save_frame('unresolved-materials.png')
+        raise FlowError('筛选列表仍有该成员，但未确认可用同名材料，不报告完成')
+
+    def empty_target_message(self):
+        """Read the game's explicit empty state without hiding remaining cards."""
+        if target_grid_clear(self.image):
+            return False  # Plain white alone is not the explicit empty message.
+        hits = self.ocr([470, 365, 500, 75], r'^没有可以进行技能练习的成员[。.！!]?$')
+        if len(hits) != 1:
+            return False
+        hit = hits[0]
+        if normalized(hit.text).rstrip('。.！!') != '没有可以进行技能练习的成员':
+            return False
+        x, y, w, h = map(int, hit.box)
+        if not (470 <= x and x+w <= 970 and 375 <= y and y+h <= 430
+                and 260 <= w <= 460 and 16 <= h <= 40):
+            return False
+        copy = self.image.copy()
+        copy[y-4:y+h+4, x-4:x+w+4] = 255
+        return target_grid_clear(copy)
+
+    def confirm_empty_targets(self):
+        for sample in range(2):
+            if sample:
+                time.sleep(.3)
+            self.check_stop()
+            self.ensure_filter()
+            self.require_clear_notification_overlay()
+            if self.target_candidates(fallback=True) or not self.empty_target_message():
+                return False
+        self.save_frame('finished-list.png')
+        log('[同名成员技能升级] 已连续确认游戏提示：没有可以进行技能练习的成员')
+        self.report['completion_check'] = 'empty_message_confirmed'
+        self.home()
+        self.report['status'] = 'finished'
+        return True
+
     def run(self):
         log('[同名成员技能升级] 筛选同名成员，批量选择至材料用完或技能可升满')
         self.open_list()
         seen = []
         stationary = 0
+        # First reach the end, then return to the top and scan down again.
+        # Keep confirmed members across the rescan to avoid repeated spending.
+        direction = 'down'
+        verifying = False
+        unresolved = []
+        scrolls = 0
         for _ in range(2000):
+            self.check_stop()
             self.ensure_filter()
-            cards = member_cards(self.image)
-            candidates = [(point, member_signature(self.image, point)) for point in cards]
+            self.require_clear_notification_overlay()
+            candidates = self.target_candidates()
             pending = [(point, signature) for point, signature in candidates
                        if not any(same_member_portrait(signature, old) for old in seen)]
+            if not pending:
+                # Artwork and complete-frame detection have independent failure
+                # modes. Use both before concluding there is no next member.
+                candidates = self.target_candidates(fallback=True)
+                pending = [(point, signature) for point, signature in candidates
+                           if not any(same_member_portrait(signature, old) for old in seen)]
+            if not candidates and self.empty_target_message():
+                if self.confirm_empty_targets():
+                    return
+                # A member or an animation appeared during confirmation; read
+                # the current screen again instead of acting on stale results.
+                continue
             if pending:
                 point, signature = pending[0]
-                self.tap(*point)
-                self.wait('SP_Page')
+                self.save_frame('target-list.png')
+                self.open_target(signature)
                 self.require_clear_notification_overlay()
                 name = normalized(self.text([290, 155, 295, 75]))
                 if not name:
                     raise FlowError('技能练习成员名称无法读取')
                 row = dict(member=name, status='selecting')
                 self.report['members'].append(row)
-                if self.select_batch(row):
+                if self.select_target_batch(row):
                     self.submit_batch(row)
+                    if row['status'] != 'success_confirmed':
+                        raise FlowError('技能练习尚未确认成功，不重复提交或报告完成')
                 seen.append(signature)
                 self.save_report()
-                self.back()
-                self.wait('SP_Filter')
+                self.return_to_list()
                 stationary = 0
+                direction, verifying, unresolved, scrolls = 'down', False, [], 0
                 continue
-            before = candidates
-            self.swipe(1135, 598, 338)
+            accounted = [point for point, signature in candidates
+                         if any(same_member_portrait(signature, old) for old in seen)]
+            if verifying and not target_grid_clear(self.image, accounted):
+                # Keep evidence on disk, rather than retaining full screenshots
+                # in memory or permanently treating a known clipped card as an
+                # unresolved member. Only an actual artwork match may clear it.
+                name = f'unresolved-list-{len(unresolved):03d}.png'
+                self.save_frame(name)
+                unresolved.append((name, accounted))
+            before = self.image.copy()
+            if scrolls >= 100:
+                raise FlowError('培养成员列表复核达到滚动上限，未确认完成')
+            self.swipe(1135, 338 if direction == 'up' else 598,
+                       598 if direction == 'up' else 338)
+            scrolls += 1
             self.ensure_filter()
-            after = [(point, member_signature(self.image, point)) for point in member_cards(self.image)]
-            unchanged = len(before) == len(after) and all(
-                abs(p[0]-q[0]) < 5 and abs(p[1]-q[1]) < 8 and same_member_portrait(a, b)
-                for (p, a), (q, b) in zip(before, after))
+            self.require_clear_notification_overlay()
+            unchanged = target_grid_unchanged(before, self.image)
             stationary = stationary+1 if unchanged else 0
             if stationary >= 2:
-                if not after:
-                    # Empty detection must see the white grid, not a loading screen.
-                    panel = self.image[200:650, 280:1120]
-                    if np.mean(panel.min(axis=2) > 235) < .9:
-                        raise FlowError('未识别到成员，列表也未确认清空')
-                self.report['status'] = 'finished'
+                stationary = 0
+                if direction == 'up':
+                    direction, verifying, unresolved = 'down', True, []
+                    log('[同名成员技能升级] 已回到列表顶部，复核是否仍有遗漏成员')
+                    continue
+                if not verifying:
+                    direction = 'up'
+                    log('[同名成员技能升级] 列表暂未找到新成员，回到顶部复核')
+                    continue
+                # Re-read the final screen as well: it may have updated just
+                # after the last swipe. Unknown pixels must never mean success.
+                after = self.target_candidates(fallback=True)
+                if not after and self.empty_target_message():
+                    continue  # Confirm the new explicit empty state next loop.
+                if any(not any(same_member_portrait(signature, old) for old in seen)
+                       for _, signature in after):
+                    continue
+                accounted = [p for p, _ in after]
+                if not target_grid_clear(self.image, accounted):
+                    accounted += accounted_edge_cards(self.image, seen)
+                # A blank/loading panel is not the game's empty-list message.
+                # Without that message, only positively accounted terminal
+                # members can support this older traversal completion path.
+                clear = bool(accounted) and target_grid_clear(self.image, accounted)
+                for name, points in unresolved:
+                    self.check_stop()
+                    evidence = self.load_frame(name)
+                    if not target_grid_clear(evidence, points+accounted_edge_cards(evidence, seen)):
+                        clear = False
+                        break
+                if not clear:
+                    self.save_frame('unfinished-list.png')
+                    raise FlowError('未识别到全部成员，列表也未确认清空；已复核，仍有未确认内容，不报告完成')
+                self.save_frame('finished-list.png')
+                self.report['completion_check'] = 'rescanned_without_unresolved_cards'
                 self.home()
+                self.report['status'] = 'finished'
                 return
         raise FlowError('同名成员列表未收敛，停止以避免重复练习')
 

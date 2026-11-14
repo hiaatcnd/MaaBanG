@@ -1,4 +1,7 @@
-"""Run the same mining actions as the desktop UI against an ADB device."""
+"""Run the same mining actions as the desktop UI against an ADB device.
+
+Member stories automatically unlock when their level and material requirements are met.
+"""
 import argparse
 from pathlib import Path
 import sys
@@ -14,8 +17,10 @@ def main():
     parser.add_argument('--address',default='127.0.0.1:16416')
     parser.add_argument('--max-rounds',default='')
     parser.add_argument('--shortage',choices=['stop','items'],default='stop')
-    parser.add_argument('--practice',action='store_true')
-    parser.add_argument('--unlock',action='store_true')
+    parser.add_argument('--practice',action='store_true',
+                        help='Level members for stories using practice tickets and automatic-training materials')
+    # Keep old scripts accepted; story unlocking no longer has a separate switch.
+    parser.add_argument('--unlock',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--stars',default='1,2,3')
     parser.add_argument('--stage',choices=['main','special'],default='main')
     fc = parser.add_mutually_exclusive_group()
@@ -30,7 +35,7 @@ def main():
     parser.add_argument('--inspect-only',action='store_true',help='Only inspect next FC candidate or member filters; no spending/playback')
     args = parser.parse_args()
     from mining_policy import MiningOptions,NODES,DIFFICULTY_NODES
-    values = dict(max_rounds=args.max_rounds,practice=args.practice,unlock=args.unlock,
+    values = dict(max_rounds=args.max_rounds,practice=args.practice,
                   stars=args.stars,stage=args.stage,stories=not args.no_stories,memories=not args.no_memories,
                   difficulties=args.difficulties)
     values.update(shortage=args.shortage,avoid_full_combo=args.avoid_full_combo)

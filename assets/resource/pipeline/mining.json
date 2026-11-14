@@ -31,11 +31,6 @@
             "value": false
         }
     },
-    "MN_unlock": {
-        "attach": {
-            "value": false
-        }
-    },
     "MN_stars": {
         "attach": {
             "value": "1,2,3"

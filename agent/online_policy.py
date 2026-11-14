@@ -88,7 +88,23 @@ def final_selection(song, requested, special_visible):
 class RoomClock:
     def __init__(self, now):
         self.entered=now
+        self.ready_at=None
         self.started=False
 
+    def begin_ready_wait(self, now):
+        """Grant one bounded wait after final verification, never on OCR flicker."""
+        if self.ready_at is not None or self.started:
+            return False
+        if self.expired(now):
+            raise RoomInterrupted(self.timeout_reason)
+        self.ready_at=now
+        return True
+
+    @property
+    def timeout_reason(self):
+        return ('准备完成后3分钟未开演' if self.ready_at is not None else
+                '房间3分钟未开演（匹配及选曲阶段）')
+
     def expired(self, now):
-        return not self.started and now-self.entered>=ROOM_TIMEOUT
+        since=self.entered if self.ready_at is None else self.ready_at
+        return not self.started and now-since>=ROOM_TIMEOUT

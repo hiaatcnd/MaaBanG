@@ -73,6 +73,61 @@ class StartupFallback:
         self.total += 1
 
 
+class StartupMemberIntro(StartupFallback):
+    """Fast, bounded edge taps only after a new-member introduction banner."""
+
+    INTERVAL = 1
+    TOTAL_LIMIT = 40
+    TIMEOUT = 180
+    RESULT_WAIT = 3
+    TITLE = re.compile(r'新成[员員](?:即将|即將)?登[场場]')
+    TRANSACTION = re.compile(r'是否.*(?:消耗|购买|購買|招募)|确认.*(?:购买|招募)|'
+                             r'確認.*(?:購買|招募)|支付|充值', re.I)
+    CONTROLS = re.compile(r'确定|确认|確定|確認|取消|返回|关闭|關閉|菜单|選擇|选择|OK', re.I)
+
+    def __init__(self):
+        super().__init__()
+        self.active = False
+        self.used = False
+        self.started = None
+
+    def start(self, hits, now):
+        text = ''.join(normalized(hit.text) for hit in hits)
+        if self.used or not self.TITLE.search(text) or self.TRANSACTION.search(text):
+            return False
+        self.active = self.used = True
+        self.started = now
+        return True
+
+    def close(self):
+        self.active = False
+
+    def expired(self, now):
+        return self.active and now-self.started >= self.TIMEOUT
+
+    def ready(self, image, hits, now):
+        if not self.active or self.expired(now) or self.total >= self.TOTAL_LIMIT:
+            return False
+        text = ' '.join(normalized(hit.text) for hit in hits)
+        if (not isinstance(image, np.ndarray) or image.shape[:2] != (720, 1280)
+                or self.MANUAL.search(text) or self.TRANSACTION.search(text)
+                or any(self.CONTROLS.fullmatch(normalized(hit.text)) for hit in hits)):
+            return False
+        sample = image[::12, ::12].astype(np.int16)
+        if float(np.std(sample, axis=(0, 1)).mean()) < 8:
+            return False
+        x, y = self.POINT
+        if any(h.box[0]-24 <= x <= h.box[0]+h.box[2]+24
+               and h.box[1]-24 <= y <= h.box[1]+h.box[3]+24 for h in hits):
+            return False
+        # Animation frames may change before becoming quiet. The banner grants
+        # only this fixed window; visual changes never replenish the total budget.
+        if self.sample is None or float(np.mean(np.abs(sample-self.sample))) > 3:
+            self.sample, self.attempts = sample, 0
+        return (self.attempts < self.PAGE_LIMIT
+                and (self.last_click is None or now-self.last_click >= self.INTERVAL))
+
+
 class _ForegroundPending(Exception):
     """Retry from a fresh frame after a transient Android foreground change."""
 
@@ -235,6 +290,7 @@ class WakeupFlow(DailyFlow):
         previous = None
         repeats = home_frames = 0
         fallback = StartupFallback()
+        member_intro = StartupMemberIntro()
         while time.monotonic() < deadline:
             try:
                 self.require_game_foreground()
@@ -255,6 +311,7 @@ class WakeupFlow(DailyFlow):
                 if mode != 'unknown' or box is not None:
                     fallback.suspend()
                 if mode == 'click':
+                    member_intro.close()
                     fingerprint = (label, normalized(button.text),
                                    tuple(sorted(normalized(h.text) for h in hits if h.score >= .85))
                                    if label == '活动下一步' else ())
@@ -273,12 +330,14 @@ class WakeupFlow(DailyFlow):
                     pause(4 if label == '进入游戏' else 1, self.check_stop)
                     continue
                 if box is not None:
+                    member_intro.close()
                     if self.dismiss_notifications():
                         self.report['steps'].append(dict(action='通知弹窗'))
                         self.save_report()
                         previous, unknown_since, home_frames = None, None, 0
                         continue
                 elif self.clear_home() and mode != 'wait':
+                    member_intro.close()
                     fallback.suspend()
                     home_frames += 1
                     if home_frames >= 3:
@@ -289,8 +348,36 @@ class WakeupFlow(DailyFlow):
                     pause(1, self.check_stop)
                     continue
                 home_frames = 0
+                now = time.monotonic()
+                if mode == 'unknown' and box is None and member_intro.start(hits, now):
+                    unknown_since = None
+                    fallback.suspend()
+                    self.record('member_intro_started', timeout=member_intro.TIMEOUT,
+                                click_limit=member_intro.TOTAL_LIMIT)
+                    log('[开始唤醒] 已识别新成员登场，快速跳过展示动画')
+                if member_intro.expired(now):
+                    raise FlowError('新成员展示超时，已保存现场，请检查动画是否继续推进')
                 if mode == 'wait':
                     unknown_since = None
+                elif member_intro.active:
+                    if (member_intro.total >= member_intro.TOTAL_LIMIT
+                            and now-member_intro.last_click >= member_intro.RESULT_WAIT):
+                        raise FlowError('新成员展示点击次数达到上限，已保存现场')
+                    if member_intro.ready(self.image, hits, now):
+                        if len(self.report['steps']) >= 100:
+                            raise FlowError('启动页面处理超过 100 步，请检查循环弹窗')
+                        reason = '同一画面仍未推进，补点跳过' if member_intro.attempts else '继续展示动画'
+                        self.save_frame(f'{len(self.report["steps"]):03d}-跳过新成员展示.png')
+                        self.tap(*member_intro.POINT)
+                        member_intro.clicked(time.monotonic())
+                        self.record('member_intro_click', point=list(member_intro.POINT),
+                                    page_attempt=member_intro.attempts, total=member_intro.total,
+                                    reason=reason)
+                        self.report['steps'].append(dict(action='跳过新成员展示',
+                            point=list(member_intro.POINT), texts=[h.text for h in hits], reason=reason))
+                        self.save_report()
+                        log(f'[开始唤醒] 跳过新成员展示（{member_intro.total}/{member_intro.TOTAL_LIMIT}）：{reason}')
+                        previous, repeats = None, 0
                 else:
                     unknown_since = unknown_since or time.monotonic()
                     if time.monotonic()-unknown_since >= self.unknown_timeout:

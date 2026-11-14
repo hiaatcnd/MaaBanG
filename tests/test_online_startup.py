@@ -232,6 +232,7 @@ class FinalSelectionSafetyTests(unittest.TestCase):
 class SelectionActionTests(unittest.TestCase):
     def make_flow(self,mode='coop'):
         flow=OnlineLiveFlow.__new__(OnlineLiveFlow)
+        flow.check_stop=Mock()
         flow.settings=SimpleNamespace(mode=mode,difficulties=('expert',))
         flow.difficulty_y=594
         flow.image=np.zeros((720,1280,3),dtype=np.uint8)

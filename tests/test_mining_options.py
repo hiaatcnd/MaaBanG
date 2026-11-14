@@ -1,5 +1,7 @@
 """Verify displayed selections reach the production action without device actions."""
 import copy
+from contextlib import redirect_stdout
+import io
 import json
 from pathlib import Path
 import sys
@@ -10,9 +12,10 @@ from unittest.mock import Mock,patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'agent'))
+sys.path.insert(0,str(ROOT/'tools'))
 from mining import MineStories, MineChallenges
 from mining_live import MiningLiveFlow, ChallengeMiningFlow
-from mining_policy import MiningOptions,STAR_NODES
+from mining_policy import MiningOptions,STAR_NODES,DEFAULTS,NODES
 from mining_stories import StoryMiningFlow
 from chart_policy import ChartOptions, ChartSelection
 
@@ -78,6 +81,67 @@ class MiningOptionTests(unittest.TestCase):
         flow.run()
         flow.member_list.assert_not_called();flow.read_story.assert_not_called()
         self.assertEqual(flow.report['status'],'no_stars_selected')
+
+    def test_legacy_unlock_values_are_ignored_without_an_unlock_option(self):
+        self.assertNotIn('unlock',DEFAULTS)
+        self.assertNotIn('unlock',NODES)
+        self.assertNotIn('MN_unlock',self.nodes)
+        for practice in (False,True):
+            expected=MiningOptions.parse({'practice':practice})
+            for legacy in (False,True,'false',None):
+                with self.subTest(practice=practice,legacy=legacy):
+                    actual=MiningOptions.parse({'practice':practice,'unlock':legacy})
+                    self.assertEqual(actual,expected)
+                    self.assertFalse(hasattr(actual,'unlock'))
+
+    def test_practice_ui_only_controls_leveling_and_does_not_read_legacy_unlock(self):
+        test=self
+        class LegacyNodes(dict):
+            def get(self,key,default=None):
+                test.assertNotEqual(key,'MN_unlock')
+                return super().get(key,default)
+        option=self.interface['option']['挖矿练习满级']
+        for case in option['cases']:
+            for legacy in (False,True):
+                with self.subTest(case=case['name'],legacy=legacy):
+                    nodes=LegacyNodes(copy.deepcopy(self.nodes))
+                    nodes['MN_unlock']={'attach':{'value':legacy}}
+                    merge(nodes,case['pipeline_override'])
+                    ok,options=self.run_options(nodes)
+                    self.assertTrue(ok)
+                    self.assertEqual(options[0].practice,case['name']=='启用')
+                    self.assertFalse(hasattr(options[0],'unlock'))
+
+    def test_cli_legacy_unlock_flag_is_accepted_without_passing_a_permission(self):
+        import run_mining
+        class StopBeforeDevice(Exception):
+            pass
+        for practice in (False,True):
+            for legacy in (False,True):
+                with self.subTest(practice=practice,legacy=legacy):
+                    captured=[]
+                    def capture(values):
+                        captured.append(values)
+                        raise StopBeforeDevice()
+                    argv=['run_mining.py','MineStories','--adb','unused']
+                    if practice:argv.append('--practice')
+                    if legacy:argv.append('--unlock')
+                    with patch.object(sys,'argv',argv),patch.object(MiningOptions,'parse',side_effect=capture), \
+                            self.assertRaises(StopBeforeDevice):
+                        run_mining.main()
+                    self.assertEqual(captured[0]['practice'],practice)
+                    self.assertNotIn('unlock',captured[0])
+
+    def test_cli_help_explains_automatic_unlock_without_advertising_legacy_flag(self):
+        import run_mining
+        output=io.StringIO()
+        with patch.object(sys,'argv',['run_mining.py','--help']),redirect_stdout(output), \
+                self.assertRaises(SystemExit) as exit_result:
+            run_mining.main()
+        self.assertEqual(exit_result.exception.code,0)
+        self.assertIn('automatically unlock',output.getvalue())
+        self.assertIn('--practice',output.getvalue())
+        self.assertNotIn('--unlock',output.getvalue())
 
     def test_all_performance_limits_default_to_blank_unlimited(self):
         for key in ('最大演出次数','谱面最大演出次数','挖矿最大演出数'):

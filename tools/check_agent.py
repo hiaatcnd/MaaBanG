@@ -39,7 +39,7 @@ def main():
                 raise RuntimeError(f"Agent handshake failed; exit={process.poll()}; see {output}")
             actions = set(client.custom_action_list)
             expected = {"UnlockDefault3DCostumes", "ClaimHomeGifts", "ClaimHomeMissions",
-                        "ExchangeMichelle", "DailyFreeRecruit", "AutoLive", "ChartLive", "DirectChartLive", "UpdateSongCatalog",
+                        "ExchangeMichelle", "DailyFreeRecruit", "AutoLive", "ChartLive", "DirectChartLive", "UpdateSongCatalog", "LivePresets",
                         "MineFullCombo", "MineStories", "MineChallenges", "UpgradeSameMemberSkills", "BestdoriProfiles", "StartWakeup", "ExitGame"}
             if not expected.issubset(actions):
                 raise RuntimeError(f"Missing actions: {sorted(expected - actions)}")

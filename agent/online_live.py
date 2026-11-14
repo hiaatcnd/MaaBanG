@@ -6,6 +6,7 @@ from threading import Event, Thread
 import re
 import subprocess
 import time
+import numpy as np
 
 from chart_live import ChartLiveFlow
 from chart_policy import COOP_ROOMS, COOP_ROOM_GROUPS, VERSUS_ROOMS, CURRENT_SONG
@@ -21,6 +22,8 @@ from live_policy import DIFFICULTIES
 
 UNCONFIRMED_PAGE_TIMEOUT = 8.
 MATCHING_CANCEL_WAIT = 3.
+RECOVERY_CLICK_WAIT = 3.
+RECOVERY_CLICK_LIMIT = 3
 FINAL_STAR_REUSE_SECONDS = 1.
 
 
@@ -145,7 +148,7 @@ class OnlineLiveFlow(ChartLiveFlow):
         if not entry:
             self.left_entry=True
         if self.room_clock and self.room_clock.expired(time.monotonic()):
-            raise RoomInterrupted('房间3分钟未开演')
+            raise RoomInterrupted(self.room_clock.timeout_reason)
 
     def room_error(self, *, fatal_only=False):
         return recognize_room_error(self.ctx,self.reco,fatal_only=fatal_only)
@@ -623,6 +626,16 @@ class OnlineLiveFlow(ChartLiveFlow):
             raise FlowError('开演前联网难度发生变化')
 
     def submit_online_ready(self,selection):
+        # play_chart has verified song/difficulty/cost and authorized the worker.
+        # This is a new wait phase, not evidence that the song has started.
+        self.check_stop()
+        clock=getattr(self,'room_clock',None)
+        if clock is not None:
+            clock.begin_ready_wait(time.monotonic())
+            if (clock.ready_at is not None and self.current_attempt is not None
+                    and 'ready_wait_started_seconds' not in self.current_attempt):
+                self.current_attempt['ready_wait_started_seconds']=clock.ready_at-clock.entered
+                log('[联网演出] 开演前核验完成，开始独立等待队友准备（最多3分钟）')
         self.snap()
         final=self.reco('OL_FinalConfirm')
         if not final:
@@ -653,7 +666,7 @@ class OnlineLiveFlow(ChartLiveFlow):
                 # authorization. During playback the observer owns visual checks.
                 self.check_foreground()
                 if self.room_clock and self.room_clock.expired(time.monotonic()):
-                    raise RoomInterrupted('房间3分钟未开演')
+                    raise RoomInterrupted(self.room_clock.timeout_reason)
             else:
                 self.snap()
 
@@ -744,6 +757,60 @@ class OnlineLiveFlow(ChartLiveFlow):
             return None
         return footer[0]
 
+    def recovery_dialog_button(self,box,action):
+        """Bind exit controls to the current foreground panel, never its background."""
+        if box is None:
+            return None
+        x,y,w,h=box
+        hits=[hit for hit in self.ocr([x+12,y+8,w-24,h-16])
+              if x+12<=hit.box[0] and y+8<=hit.box[1]
+              and hit.box[0]+hit.box[2]<=x+w-12 and hit.box[1]+hit.box[3]<=y+h-8]
+        text=' '.join(normalized(hit.text) for hit in hits)
+        # A normal pause panel may offer resume beside interrupt. Exempt only
+        # that exact footer label; spending/resume prompts in the body stay blocked.
+        guarded_text=' '.join(normalized(hit.text) for hit in hits
+                              if not (action=='pause' and hit.box[1]>y+h*.55
+                                      and normalized(hit.text) in ('继续','继续演出','恢复演出')))
+        if re.search('购买|消耗|花费|招募|兑换|恢复|继续演出|选择|支付|充值',guarded_text):
+            return None
+        titles=[normalized(hit.text) for hit in hits if hit.box[1]<y+min(115,h*.3)]
+        if action=='pause':
+            if titles!=['暂停']:
+                return None
+            pattern='中断'
+        else:
+            if (not any(re.search('中断|退出|离开|解散|确认|提示',title) for title in titles)
+                    or not re.search('要退出房间|要离开房间|解散.*房间|退出此房间|退出私人房间|'
+                                     '即将退出.*房间|确定.*退出|中断.*演出返回主页',text)):
+                return None
+            pattern='确定|确认|退出|解散|返回主页|中断'
+        buttons=[hit for hit in hits if hit.box[1]>y+h*.55
+                 and re.fullmatch(pattern,normalized(hit.text))]
+        return buttons[0] if len(buttons)==1 else None
+
+    def recovery_pause_button(self):
+        """Locate the enabled pink pause bars and pale button on a fresh stage."""
+        if not isinstance(self.image,np.ndarray) or self.image.shape!=(720,1280,3):
+            return None
+        blue,green,red=self.image[10:90,1200:1280].astype(np.int16).transpose(2,0,1)
+        pink=(red>180)&(green<140)&(blue>50)&(blue<220)&(red>green+80)
+        columns=np.flatnonzero(pink.sum(axis=0)>=18)
+        groups=np.split(columns,np.flatnonzero(np.diff(columns)>1)+1)
+        if len(groups)!=2 or any(not 4<=len(group)<=14 for group in groups):
+            return None
+        if not 3<=groups[1][0]-groups[0][-1]-1<=16:
+            return None
+        rows=np.flatnonzero(pink[:,columns].mean(axis=1)>.85)
+        if not 20<=len(rows)<=42 or rows[-1]-rows[0]+1!=len(rows):
+            return None
+        x,y=1200+int(columns[0])-12,10+int(rows[0])-14
+        w,h=int(columns[-1]-columns[0])+25,len(rows)+28
+        if x<1200 or y<10 or x+w>1280 or y+h>90:
+            return None
+        if float(np.mean(self.image[y:y+h,x:x+w].min(axis=2)>200))<.5:
+            return None
+        return (x,y,w,h)
+
     def recover_room(self):
         self.room_active=False
         self.selection=None
@@ -752,7 +819,6 @@ class OnlineLiveFlow(ChartLiveFlow):
         foreground=self.foreground_package()
         backgrounded=False
         back_attempted=False
-        pause_attempted=False
         if foreground and foreground!='com.bilibili.star.bili':
             self.resume_game()
             backgrounded=True
@@ -763,16 +829,50 @@ class OnlineLiveFlow(ChartLiveFlow):
         matching_clicks=0
         matching_clicked_at=None
         matching_target=None
+        navigation_target=None
+        navigation_clicks={}
+        navigation_clicked_at={}
+
+        def navigate(action, target):
+            nonlocal navigation_target
+            navigation_target=(action,tuple(target))
+            stable=(previous_navigation_target is not None
+                    and previous_navigation_target[0]==action
+                    and all(abs(a-b)<=4 for a,b in zip(target,previous_navigation_target[1])))
+            now=time.monotonic()
+            if (not stable or now-navigation_clicked_at.get(action,float('-inf'))<RECOVERY_CLICK_WAIT):
+                return
+            count=navigation_clicks.get(action,0)
+            if count>=RECOVERY_CLICK_LIMIT:
+                raise FlowError(f'{action}点击3次后仍未确认页面变化，保留现场')
+            self.check_stop()
+            if self.foreground_package()!='com.bilibili.star.bili':
+                raise FlowError('退出恢复时游戏不在前台，停止点击并保留现场')
+            reason=('已确认当前按钮，执行退出恢复' if count==0 else
+                    f'等待后同一按钮仍存在，第 {count}/2 次补点')
+            log(f'[联网演出] {action}：{reason}',level='warn')
+            x,y,w,h=target
+            self.tap(x+w//2,y+h//2)
+            navigation_clicks[action]=count+1
+            navigation_clicked_at[action]=time.monotonic()
+            navigation_target=None
+            if self.current_attempt is not None:
+                self.current_attempt.setdefault('recovery_clicks',[]).append(
+                    dict(action=action,attempt=count+1,reason=reason,box=list(target)))
+
         while time.monotonic()<deadline:
             self.check_stop()
             self.snap()
+            previous_navigation_target=navigation_target
+            navigation_target=None
             box=dialog_box(self.image)
             # Modal text takes precedence over a still-visible background header.
             if self.reco('OL_LeaveConfirm'):
-                button=self.hit_text([640,410,275,170],'^确定$|^确认$|^退出$|^解散$|^返回主页$|^中断$')
+                button=self.recovery_dialog_button(box,'leave')
                 if button:
-                    self.tap_hit(button)
-                    continue
+                    navigate('确认退出',button.box)
+                self.pause(.25)
+                continue
             if self.room_disconnected():
                 if box is not None:
                     # Leave a failed room rather than resubmitting its request.
@@ -811,11 +911,11 @@ class OnlineLiveFlow(ChartLiveFlow):
                 # An unhandled disconnect must not succeed via its background.
                 self.pause(.5)
                 continue
-            if self.hit_text([210,210,850,85],'^暂停$'):
-                interrupt=self.hit_text([250,400,700,110],'^中断$')
-                if interrupt:
-                    self.tap_hit(interrupt)
-                    continue
+            interrupt=self.recovery_dialog_button(box,'pause')
+            if interrupt is not None:
+                navigate('中断演出',interrupt.box)
+                self.pause(.25)
+                continue
             if box is not None:
                 cancel=self.matching_cancel_button(box)
                 if cancel is not None:
@@ -855,12 +955,17 @@ class OnlineLiveFlow(ChartLiveFlow):
             if self.reco(self.home_node):
                 self.back()
                 continue
-            if not pause_attempted and self.image is not None and stage_state(self.image) is not None:
-                # Playback has already failed and its worker is stopped. Open
-                # the game's pause/interrupt flow instead of looking for a back
-                # button on the still-running stage.
-                self.tap(1240,50)
-                pause_attempted=True
+            if self.image is not None and stage_state(self.image) is not None:
+                # The stopped worker cannot resume. Wait for the loading cover
+                # to clear, then open Pause and verify its menu on a fresh frame.
+                # Never spend a pause attempt on the disabled waiting screen or
+                # fall through to focus loss while a delayed menu is opening.
+                covered=bool(self.reco('OL_WaitingMembers') or self.reco('OL_Loading')
+                             or self.ready_loading())
+                target=None if covered else self.recovery_pause_button()
+                if target is not None:
+                    navigate('打开暂停菜单',target)
+                self.pause(.25)
                 continue
             waiting=any(self.reco(node) for node in
                         ('OL_Matching','OL_FinalConfirm','OL_Loading','OL_WaitingMembers',
