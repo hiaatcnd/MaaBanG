@@ -249,6 +249,8 @@ VS Code 插件自身的任务配置仍由插件管理。测试 MFAAvalonia 的�
 | `tools/` | 校验、目录更新、任务运行与打包工具 |
 | `docs/zh_cn/develop/` | 功能行为、验证记录与开发说明 |
 
+模块职责、新增任务步骤、点击恢复、日志诊断及验证范围见 [Agent 开发指南](docs/zh_cn/develop/agent.md)。
+
 ### 检查与数据更新
 
 运行测试和资源检查，需要 Python 开发环境及 Node.js/npm：

@@ -78,6 +78,9 @@ def finish(label, report):
         text = '指定谱面输入完成，任务结束（未检查结算）'
     else:
         text = status_text(status)
+    if status == 'finished' and report.get('level_boundaries'):
+        text = '当前等级可处理的故事检查完毕'
+        details.append('仍有等级不足的回忆未解锁')
     if report.get('inspect_only'):
         details.append('仅检查模式')
     if report.get('warnings'):

@@ -330,10 +330,16 @@ class ChartLiveFlow(LiveFlow):
             timings['final_verification']=(verified_at-ready_at)*1000
             if balance is not None:
                 row['cp_before' if self.settings.mode=='challenge' else 'fire_before']=balance
-            row['status']='submitted'
             self.save_frame(f'ready_attempt{self.report["attempts"]}.png' if online else
                             f'ready_{self.report["completed_rounds"]+1}_{index}.png')
+            self.check_stop()
+            clock=getattr(self,'room_clock',None) if online else None
+            if clock is not None:
+                # The final checks and diagnostic capture must finish within the
+                # matching budget. Grant the ready wait before authorizing input.
+                clock.begin_ready_wait(time.monotonic())
             (destination/'start').write_text('start')
+            row['status']='submitted'
             authorized_at=time.perf_counter()
             timings['save_and_authorize']=(authorized_at-verified_at)*1000
             timings['total_to_authorize']=(authorized_at-preparation_started)*1000

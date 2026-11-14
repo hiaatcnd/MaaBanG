@@ -286,15 +286,19 @@ class OnlineFlowTests(unittest.TestCase):
             flow.reco=Mock(side_effect=lambda node: (
                 disconnected if node=='OL_Disconnected' and phase[0]==0 else
                 node=='CU_HomeBand' or node=='OL_LeaveConfirm' and phase[0]==1))
-            buttons=[object(),object()]
+            buttons=[SimpleNamespace(box=[400,430,100,40]),SimpleNamespace(box=[700,430,100,40])]
             def hit(roi,pattern):
                 if phase[0]==0 and pattern=='^中断$': return buttons[0]
                 if phase[0]==1 and '^中断$' in pattern: return buttons[1]
             flow.hit_text=Mock(side_effect=hit)
             flow.tap_hit=Mock(side_effect=lambda button: phase.__setitem__(0,phase[0]+1))
+            flow.tap=Mock(side_effect=lambda *point: phase.__setitem__(0,phase[0]+1))
+            flow.recovery_dialog_button=Mock(side_effect=lambda box,action:
+                                             buttons[1] if phase[0]==1 and action=='leave' else None)
             flow.back=Mock()
             OnlineLiveFlow.recover_room(flow)
-            self.assertEqual([call.args[0] for call in flow.tap_hit.call_args_list],buttons)
+            flow.tap_hit.assert_called_once_with(buttons[0])
+            flow.tap.assert_called_once_with(750,450)
             flow.back.assert_not_called()
 
     def test_matching_with_disabled_back_uses_background_once(self):
@@ -319,20 +323,27 @@ class OnlineFlowTests(unittest.TestCase):
             flow.foreground_package=Mock(return_value='com.bilibili.star.bili')
             flow.snap=Mock();flow.image=np.zeros((720,1280,3),dtype=np.uint8)
             flow.image[587:589,280:1000]=[255,255,0]
-            phase=[0];button=object()
+            phase=[0]
+            interrupt=SimpleNamespace(box=[350,430,100,40])
+            confirm=SimpleNamespace(box=[700,430,100,40])
             flow.reco=Mock(side_effect=lambda node: (node=='OL_LeaveConfirm' and phase[0]==2)
                            or (node=='CU_HomeBand' and phase[0]==3))
             def hit(roi,pattern):
-                if phase[0]==1 and pattern in ('^暂停$','^中断$'):return button
-                if phase[0]==2 and '^中断$' in pattern:return button
+                if phase[0]==1 and pattern in ('^暂停$','^中断$'):return interrupt
+                if phase[0]==2 and '^中断$' in pattern:return confirm
                 return None
             flow.hit_text=Mock(side_effect=hit)
-            flow.tap=Mock(side_effect=lambda *args:phase.__setitem__(0,1))
-            flow.tap_hit=Mock(side_effect=lambda hit:phase.__setitem__(0,phase[0]+1))
+            flow.recovery_pause_button=Mock(return_value=(1210,20,60,60))
+            flow.recovery_dialog_button=Mock(side_effect=lambda box,action:
+                interrupt if phase[0]==1 and action=='pause' else
+                confirm if phase[0]==2 and action=='leave' else None)
+            flow.tap=Mock(side_effect=lambda *args:phase.__setitem__(0,phase[0]+1))
+            flow.tap_hit=Mock()
             flow.back=Mock();flow.background_room=Mock()
             OnlineLiveFlow.recover_room(flow)
-            flow.tap.assert_called_once_with(1240,50)
-            self.assertEqual(flow.tap_hit.call_count,2)
+            self.assertEqual([call.args for call in flow.tap.call_args_list],
+                             [(1240,50),(400,450),(750,450)])
+            flow.tap_hit.assert_not_called()
             flow.back.assert_not_called();flow.background_room.assert_not_called()
 
     def test_real_errors_and_user_stop_are_not_retried(self):

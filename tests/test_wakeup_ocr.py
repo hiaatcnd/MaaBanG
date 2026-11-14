@@ -13,11 +13,22 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'agent'))
-from wakeup import WakeupFlow, StartupFallback, startup_decision, RULES
+from wakeup import WakeupFlow, StartupFallback, StartupMemberIntro, startup_decision, RULES
 from notifications import dialog_box
 
 
 class WakeupReplayTests(unittest.TestCase):
+    def test_new_member_banner_starts_fast_forward_with_real_ocr(self):
+        def check(flow, hits):
+            rules = json.loads(RULES.read_text(encoding='utf-8'))
+            self.assertEqual(startup_decision(hits, rules)[0], 'unknown')
+            intro = StartupMemberIntro()
+            self.assertTrue(intro.start(hits, 100))
+            self.assertTrue(intro.ready(flow.image, hits, 100))
+            intro.clicked(100)
+            self.assertFalse(intro.ready(flow.image, hits, 100.5))
+        self.check_startup_art('new_member_banner_20261113.png', check)
+
     def test_story_dialogue_uses_shared_menu_template_and_real_ocr(self):
         def check(flow, hits):
             rules = json.loads(RULES.read_text(encoding='utf-8'))

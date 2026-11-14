@@ -61,7 +61,7 @@ def update(interface):
     options['挖矿练习满级'] = dict(type='select',label='练习至满级',default_case='关闭',
         description=OPTION_DESCRIPTIONS['挖矿练习满级'],
         cases=[dict(name='启用' if enabled else '关闭',pipeline_override={
-            NODES[key]:{'attach':{'value':enabled}} for key in ('practice','unlock')}) for enabled in (False,True)])
+            NODES['practice']:{'attach':{'value':enabled}}}) for enabled in (False,True)])
     options['挖矿练习星级'] = dict(type='checkbox',default_case=['1★','2★','3★'],
         description=OPTION_DESCRIPTIONS['挖矿练习星级'],
         cases=[dict(name=f'{stars}★',pipeline_override={node:{'attach':{'enabled':True}}})

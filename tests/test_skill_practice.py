@@ -13,7 +13,8 @@ sys.path.insert(0, str(ROOT/'agent'))
 sys.path.insert(0, str(ROOT/'tools'))
 from costume_unlock import FlowError
 from skill_practice import (SkillPracticeFlow, skill_level, pink_checked,
-                            grey_unchecked, same_member_slots, verify_confirmation)
+                            grey_unchecked, same_member_slots, verify_confirmation,
+                            target_grid_clear, target_grid_unchanged)
 from interface_descriptions import TASK_DESCRIPTIONS
 
 
@@ -30,6 +31,10 @@ class SkillPracticeTests(unittest.TestCase):
                      'require_clear_notification_overlay', 'tap', 'tap_hit',
                      'click', 'wait', 'prepare_materials'):
             setattr(f, name, Mock())
+        frames = {}
+        f.save_frame.side_effect = lambda name: frames.update({name: f.image.copy()})
+        f.load_frame = Mock(side_effect=lambda name: frames[name].copy())
+        f.ocr = Mock(return_value=[])
         return f
 
     def test_strict_skill_levels(self):
@@ -312,21 +317,38 @@ class SkillPracticeTests(unittest.TestCase):
         self.assertEqual(row['selected_cards'], 2)
         f.swipe.assert_called_once()
 
-    def test_all_filter_toggle_restores_checked_state_if_previously_all_selected(self):
+    def test_all_filters_use_verified_reset_and_clear_target_story_radios(self):
         f = self.flow()
-        toggle = hit('全选/取消全选', [950, 60, 175, 40])
-        label = hit('种类', [164, 171, 88, 30])
-        confirm = hit('确定', [650, 590, 240, 65])
-        f.hit_text = Mock(side_effect=[toggle, label, confirm])
-        def click(h):
-            if h is toggle:
-                f.image[:] = (120, 50, 255) if f.tap_hit.call_count == 2 else 255
-        f.tap_hit.side_effect = click
-        with patch('skill_practice.member_filter_box', return_value=[129, 34, 1022, 653]):
+        order=[]
+        f.reset_all_member_filters=Mock(side_effect=lambda box:order.append('reset'))
+        f.clear_story_radio=Mock(side_effect=lambda box,label:order.append(label))
+        f.confirm_member_filter=Mock(side_effect=lambda box,**kwargs:order.append('confirm'))
+        with patch('skill_practice.member_filter_box',return_value=[129,34,1022,653]):
             f.select_all_filters(materials=False)
-        self.assertEqual(f.tap_hit.call_args_list[0].args, (toggle,))
-        self.assertEqual(f.tap_hit.call_args_list[1].args, (toggle,))
-        self.assertEqual(f.tap_hit.call_args_list[2].args, (confirm,))
+        self.assertEqual(order,['reset','小故事','动画','confirm'])
+
+    def test_material_filter_uses_verified_reset_without_assuming_story_radios(self):
+        f=self.flow()
+        f.reset_all_member_filters=Mock()
+        f.clear_story_radio=Mock()
+        f.confirm_member_filter=Mock()
+        f.reco=Mock(side_effect=lambda node:node in ('SP_Page','SP_Lounge'))
+        with patch('skill_practice.member_filter_box',return_value=[129,34,1022,653]):
+            f.select_all_filters(materials=True)
+        f.reset_all_member_filters.assert_called_once()
+        f.clear_story_radio.assert_not_called()
+        ready=f.confirm_member_filter.call_args.kwargs['ready']
+        self.assertTrue(ready())
+        f.reco=Mock(return_value=True)
+        self.assertFalse(ready())
+
+    def test_unconfirmed_filter_reset_never_applies_partial_skill_filters(self):
+        f=self.flow()
+        f.reset_all_member_filters=Mock(side_effect=FlowError('角色筛选仍未全部选中'))
+        f.confirm_member_filter=Mock()
+        with patch('skill_practice.member_filter_box',return_value=[129,34,1022,653]),self.assertRaises(FlowError):
+            f.select_all_filters(materials=False)
+        f.confirm_member_filter.assert_not_called()
 
     def test_filter_is_enabled_once_and_verified(self):
         f = self.flow()
@@ -398,12 +420,17 @@ class SkillPracticeTests(unittest.TestCase):
         f.open_list = Mock()
         f.ensure_filter = Mock()
         f.back = Mock()
+        f.open_target = Mock()
+        f.return_to_list = Mock()
         f.home = Mock()
         remaining = ['first', 'second']
         f.text = lambda roi: remaining[0]
         f.select_batch = Mock(return_value=True)
         def submit(row):
             self.assertEqual(row['member'], remaining.pop(0))
+            row['status'] = 'success_confirmed'
+            if not remaining:
+                self.mark_empty_list(f)
         f.submit_batch = Mock(side_effect=submit)
         f.swipe = Mock()
         def cards(image):
@@ -415,7 +442,311 @@ class SkillPracticeTests(unittest.TestCase):
         self.assertEqual([row['member'] for row in f.report['members']], ['first', 'second'])
         self.assertEqual(f.submit_batch.call_count, 2)
         self.assertEqual(f.report['status'], 'finished')
+        self.assertEqual(f.report['completion_check'], 'empty_message_confirmed')
         f.home.assert_called_once()
+
+    def list_flow(self):
+        f = self.flow()
+        for name in ('open_list', 'ensure_filter', 'home', 'swipe', 'open_target', 'return_to_list'):
+            setattr(f, name, Mock())
+        return f
+
+    def single_target_image(self):
+        image = np.full((720, 1280, 3), 255, dtype=np.uint8)
+        image[185:665, 285:1140] = np.array(Image.open(
+            ROOT/'tests/fixtures/mining/member_single.png').convert('RGB'))[:, :, ::-1]
+        return image
+
+    def mark_empty_list(self, f):
+        f.image = np.array(Image.open(ROOT/'tests/fixtures/skill_practice/empty_list.png')
+                           .convert('RGB'))[:, :, ::-1].copy()
+        f.ocr = Mock(return_value=[hit('没有可以进行技能练习的成员。', [527, 383, 370, 32])])
+
+    def test_single_missed_card_cannot_pass_empty_grid_check(self):
+        f = self.list_flow()
+        f.image = self.single_target_image()
+        # This is the original bug: even a real remaining card passes 90% white.
+        self.assertGreater(np.mean(f.image[200:650, 280:1120].min(axis=2) > 235), .9)
+        self.assertFalse(target_grid_clear(f.image))
+        with patch('skill_practice.member_cards', return_value=[]), patch(
+                'skill_practice.framed_member_cards', return_value=[]):
+            with self.assertRaisesRegex(FlowError, '不报告完成'):
+                f.run()
+        self.assertLessEqual(f.swipe.call_count, 8)
+        f.open_target.assert_not_called()
+        f.home.assert_not_called()
+        self.assertNotEqual(f.report['status'], 'finished')
+        self.assertIn(('unfinished-list.png',), [call.args for call in f.save_frame.call_args_list])
+
+    def test_frame_fallback_recovers_last_card_after_artwork_detector_misses(self):
+        f = self.list_flow()
+        source = np.array(Image.open(ROOT/'tests/fixtures/mining/selection_anon_grid.png')
+                          .convert('RGB'))[:, :, ::-1]
+        # Real pale artwork splits into short bands in the original detector.
+        # Reflow this last card into the first list slot, as the game does.
+        f.image[207:312, 285:404] = source[330:435, 408:527]
+        from mining_policy import member_cards
+        self.assertEqual(member_cards(f.image), [])
+        f.text = Mock(return_value='最后的成员')
+        f.select_batch = Mock(return_value=True)
+        def submit(row):
+            row['status'] = 'success_confirmed'
+            self.mark_empty_list(f)
+        f.submit_batch = Mock(side_effect=submit)
+        f.run()
+        f.submit_batch.assert_called_once()
+        f.open_target.assert_called_once()
+        self.assertEqual(len(f.report['members']), 1)
+        self.assertEqual(f.report['status'], 'finished')
+
+    def test_unknown_card_beside_processed_card_prevents_success(self):
+        f = self.list_flow()
+        f.image = self.single_target_image()
+        f.image[205:310, 416:519] = 80  # unrecognized second portrait
+        f.text = Mock(return_value='已处理成员')
+        f.select_batch = Mock(return_value=True)
+        def submit(row):
+            row['status'] = 'success_confirmed'
+        f.submit_batch = Mock(side_effect=submit)
+        with patch('skill_practice.member_cards', return_value=[(344, 259)]), patch(
+                'skill_practice.framed_member_cards', return_value=[]):
+            with self.assertRaisesRegex(FlowError, '不报告完成'):
+                f.run()
+        f.submit_batch.assert_called_once()
+        f.home.assert_not_called()
+
+    def test_known_clipped_card_is_rechecked_without_repeating_practice(self):
+        f = self.list_flow()
+        complete = self.single_target_image()
+        clipped = np.full_like(complete, 255)
+        clipped[185:251, 285:404] = complete[249:315, 285:404]
+        f.image = complete.copy()
+        f.text = Mock(return_value='已确认满级的成员')
+        def select(row):
+            row['status'] = 'already_max'
+            return False
+        f.select_batch = Mock(side_effect=select)
+        f.submit_batch = Mock()
+        f.swipe.side_effect = lambda x, start, end: setattr(
+            f, 'image', complete.copy() if start < end else clipped.copy())
+        f.run()
+        self.assertEqual(f.report['status'], 'finished')
+        f.open_target.assert_called_once()
+        f.submit_batch.assert_not_called()
+        self.assertGreater(f.load_frame.call_count, 0)
+
+    def test_unknown_clipped_card_cannot_be_cleared_by_later_blank_screen(self):
+        f = self.list_flow()
+        complete = self.single_target_image()
+        clipped = np.full_like(complete, 255)
+        clipped[185:251, 285:404] = complete[249:315, 285:404]
+        state = {'saw_top': False}
+        def scroll(x, start, end):
+            if start < end:
+                f.image = clipped.copy()
+                state['saw_top'] = True
+            elif state['saw_top']:
+                f.image[:] = 255
+        f.swipe.side_effect = scroll
+        with patch('skill_practice.member_cards', return_value=[]), patch(
+                'skill_practice.framed_member_cards', return_value=[]):
+            with self.assertRaisesRegex(FlowError, '不报告完成'):
+                f.run()
+        f.home.assert_not_called()
+
+    def test_rewind_finds_last_card_without_replaying_confirmed_member(self):
+        f = self.list_flow()
+        f.image = self.single_target_image()
+        original = f.image.copy()
+        state = {'first_done': False, 'found_last': False, 'done': False}
+        f.text = lambda roi: '最后成员' if state['found_last'] else '首位成员'
+        f.select_batch = Mock(return_value=True)
+        def submit(row):
+            row['status'] = 'success_confirmed'
+            if not state['first_done']:
+                state['first_done'] = True
+            else:
+                state['done'] = True
+            f.image[:] = 255
+            if state['done']:
+                self.mark_empty_list(f)
+        f.submit_batch = Mock(side_effect=submit)
+        def scroll(x, start, end):
+            if start < end and state['first_done'] and not state['found_last']:
+                state['found_last'] = True
+                f.image = original.copy()
+                f.image[225:290, 310:378] = (100, 80, 150)
+        f.swipe.side_effect = scroll
+        f.run()
+        self.assertTrue(state['done'])
+        self.assertEqual(f.submit_batch.call_count, 2)
+        self.assertEqual([row['member'] for row in f.report['members']], ['首位成员', '最后成员'])
+        self.assertEqual(f.report['status'], 'finished')
+
+    def test_single_card_movement_is_not_mistaken_for_scroll_end(self):
+        first = self.single_target_image()
+        second = np.full_like(first, 255)
+        second[345:665, 285:1140] = first[185:505, 285:1140]
+        self.assertFalse(target_grid_unchanged(first, second))
+        self.assertTrue(target_grid_unchanged(first, first.copy()))
+
+    def test_real_stationary_card_badge_animation_is_not_grid_movement(self):
+        images = [np.array(Image.open(ROOT/'tests/fixtures/skill_practice'/name).convert('RGB'))
+                  [:, :, ::-1].copy() for name in ('target_bonus_before.png', 'target_bonus_after.png')]
+        first, second = images
+        changed = np.max(np.abs(first[185:665, 285:1140].astype(np.int16)
+                               - second[185:665, 285:1140].astype(np.int16)), axis=2) > 24
+        self.assertGreater(np.max(changed.reshape(32, 15, 57, 15).mean(axis=(1, 3))), .25)
+        self.assertTrue(target_grid_unchanged(first, second))
+        shifted = np.full_like(first, 255)
+        shifted[285:665, 285:1140] = second[185:565, 285:1140]
+        self.assertFalse(target_grid_unchanged(first, shifted))
+        # A stable known card cannot conceal another unrecognized moving card.
+        first[220:320, 420:515] = 80
+        second[330:430, 420:515] = 80
+        self.assertFalse(target_grid_unchanged(first, second))
+
+    def test_isolated_badge_animation_is_not_ignored_without_a_matching_card(self):
+        images = []
+        for name in ('target_bonus_before.png', 'target_bonus_after.png'):
+            source = np.array(Image.open(ROOT/'tests/fixtures/skill_practice'/name).convert('RGB'))
+            image = np.full_like(source, 255)
+            image[185:209, 285:405] = source[185:209, 285:405]
+            images.append(image[:, :, ::-1].copy())
+        self.assertFalse(target_grid_unchanged(*images))
+
+    def test_unknown_grid_movement_hits_scroll_bound_instead_of_finished(self):
+        f = self.list_flow()
+        first = self.single_target_image()
+        second = np.full_like(first, 255)
+        second[345:665, 285:1140] = first[185:505, 285:1140]
+        f.image = first.copy()
+        f.swipe.side_effect = lambda *args: setattr(f, 'image',
+            second.copy() if f.swipe.call_count % 2 else first.copy())
+        with patch('skill_practice.member_cards', return_value=[]), patch(
+                'skill_practice.framed_member_cards', return_value=[]):
+            with self.assertRaisesRegex(FlowError, '滚动上限'):
+                f.run()
+        self.assertEqual(f.swipe.call_count, 100)
+        f.home.assert_not_called()
+
+    def test_rescan_obeys_user_stop(self):
+        f = self.list_flow()
+        f.swipe.side_effect = lambda *args: setattr(f.ctx.tasker, 'stopping', True)
+        with self.assertRaisesRegex(FlowError, '用户停止'):
+            f.run()
+        f.home.assert_not_called()
+        self.assertNotEqual(f.report['status'], 'finished')
+
+    def test_real_empty_message_finishes_without_swiping_or_consumption(self):
+        f = self.list_flow()
+        self.mark_empty_list(f)
+        f.report.update(practiced_members=1, consumed_cards=1)
+        f.submit_batch = Mock()
+        with patch('skill_practice.time.sleep'):
+            f.run()
+        f.swipe.assert_not_called()
+        self.assertEqual(f.report['status'], 'finished')
+        self.assertEqual(f.report['completion_check'], 'empty_message_confirmed')
+        self.assertEqual(f.report['consumed_cards'], 1)
+        f.open_target.assert_not_called()
+        f.submit_batch.assert_not_called()
+
+    def test_plain_blank_without_empty_message_does_not_report_finished(self):
+        f = self.list_flow()
+        with self.assertRaisesRegex(FlowError, '不报告完成'):
+            f.run()
+        f.home.assert_not_called()
+        self.assertEqual(f.swipe.call_count, 6)
+
+    def test_empty_message_requires_exact_text_and_bounded_location(self):
+        for text, box in [
+                ('没有可以进行技能练习的成员吗', [527, 383, 370, 32]),
+                ('没有成员', [527, 383, 370, 32]),
+                ('没有可以进行技能练习的成员。', [285, 185, 855, 480]),
+                ('没有可以进行技能练习的成员。', [527, 200, 370, 32])]:
+            with self.subTest(text=text, box=box):
+                f = self.list_flow()
+                self.mark_empty_list(f)
+                f.ocr.return_value = [hit(text, box)]
+                self.assertFalse(f.empty_target_message())
+
+    def test_empty_message_cannot_hide_a_missed_remaining_card(self):
+        f = self.list_flow()
+        self.mark_empty_list(f)
+        f.image[210:310, 294:395] = 120
+        with patch('skill_practice.member_cards', return_value=[]), patch(
+                'skill_practice.framed_member_cards', return_value=[]):
+            self.assertFalse(f.empty_target_message())
+            with patch('skill_practice.time.sleep'):
+                self.assertFalse(f.confirm_empty_targets())
+        f.home.assert_not_called()
+
+    def test_empty_confirmation_requires_both_fresh_frames(self):
+        for change in ('card', 'message_disappears'):
+            with self.subTest(change=change):
+                f = self.list_flow()
+                self.mark_empty_list(f)
+                def refresh():
+                    if f.ensure_filter.call_count == 2:
+                        if change == 'card':
+                            f.image = self.single_target_image()
+                        else:
+                            f.image[:] = 255
+                f.ensure_filter.side_effect = refresh
+                with patch('skill_practice.time.sleep'):
+                    self.assertFalse(f.confirm_empty_targets())
+                f.home.assert_not_called()
+                self.assertNotEqual(f.report['status'], 'finished')
+
+    def test_empty_confirmation_stops_for_page_filter_overlay_or_stop(self):
+        for guard in ('ensure_filter', 'require_clear_notification_overlay', 'stop'):
+            with self.subTest(guard=guard):
+                f = self.list_flow()
+                self.mark_empty_list(f)
+                if guard == 'stop':
+                    f.ctx.tasker.stopping = True
+                else:
+                    getattr(f, guard).side_effect = FlowError('未确认当前页面')
+                with self.assertRaises(FlowError):
+                    f.confirm_empty_targets()
+                f.home.assert_not_called()
+
+    def test_material_ocr_miss_recovers_by_observation_only(self):
+        f = self.flow()
+        row = {}
+        def select(row):
+            row['status'] = 'no_same_members' if f.select_batch.call_count == 1 else 'batch_ready'
+            return f.select_batch.call_count > 1
+        f.select_batch = Mock(side_effect=select)
+        with patch('skill_practice.time.sleep'):
+            self.assertTrue(f.select_target_batch(row))
+        self.assertEqual(f.select_batch.call_count, 2)
+        f.tap.assert_not_called()
+        f.click.assert_not_called()
+
+    def test_unresolved_materials_are_not_treated_as_completed_member(self):
+        f = self.flow()
+        row = {'status': 'no_same_members'}
+        f.select_batch = Mock(return_value=False)
+        with patch('skill_practice.time.sleep'):
+            with self.assertRaisesRegex(FlowError, '不报告完成'):
+                f.select_target_batch(row)
+        self.assertEqual(f.select_batch.call_count, 3)
+        self.assertEqual(row['status'], 'unresolved_materials')
+        f.tap.assert_not_called()
+
+    def test_unconfirmed_submission_stops_before_rescan_or_repeat(self):
+        f = self.list_flow()
+        f.image = self.single_target_image()
+        f.text = Mock(return_value='成员')
+        f.select_batch = Mock(return_value=True)
+        f.submit_batch = Mock()  # no confirmed result
+        with self.assertRaisesRegex(FlowError, '尚未确认成功'):
+            f.run()
+        f.submit_batch.assert_called_once()
+        f.swipe.assert_not_called()
+        f.return_to_list.assert_not_called()
 
     def test_failed_grid_recognition_is_not_reported_as_empty_success(self):
         f = self.flow()
@@ -487,6 +818,11 @@ class SkillPracticeTests(unittest.TestCase):
                 frame('list')
                 test.assertTrue(f.reco('SP_Filter'))
                 test.assertTrue(pink_checked(f.image, 294, 130))
+                frame('empty_list')
+                test.assertTrue(f.reco('SP_Filter'))
+                test.assertTrue(pink_checked(f.image, 294, 130))
+                test.assertEqual(f.target_candidates(fallback=True), [])
+                test.assertTrue(f.empty_target_message())
                 frame('confirm')
                 test.assertTrue(f.reco('SP_Confirm'))
                 test.assertTrue(f.reco('SP_ConfirmOK'))
