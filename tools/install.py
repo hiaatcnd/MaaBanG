@@ -16,6 +16,21 @@ from package_manifest import build_updater, write_manifest
 from song_interface import install_bindings
 
 ROOT = Path(__file__).resolve().parents[1]
+# Assemblies rebuilt from the patched upstream UI source. A library build only
+# emits project outputs, so every patched project must be copied into the
+# package explicitly instead of keeping the unpatched upstream copy.
+UI_PATCHED_ASSEMBLIES = ('MFAAvalonia.Core.dll', 'SukiUI.dll')
+
+
+def copy_ui_assemblies(core, package):
+    """Install patched UI assemblies, failing loudly when one is missing."""
+    libs = package / 'libs'
+    libs.mkdir(parents=True, exist_ok=True)
+    for name in UI_PATCHED_ASSEMBLIES:
+        patched = core.parent / name
+        if not patched.is_file():
+            raise FileNotFoundError(f'Patched UI assembly missing from UI build: {patched}')
+        shutil.copy2(patched, libs / name)
 
 
 def release_archive(name, spec, cache):
@@ -74,8 +89,9 @@ def build(version):
         with zipfile.ZipFile(archive) as source:
             source.extractall(dest)
     # Keep upstream managed dependencies and use our verified Framework/Toolkit
-    # runtime pin for both the UI and Python wheel.
-    shutil.copy2(build_ui(), package / 'libs/MFAAvalonia.Core.dll')
+    # runtime pin for both the UI and Python wheel. Patched UI projects (such as
+    # SukiUI) must replace their upstream assemblies as well.
+    copy_ui_assemblies(build_ui(), package)
     shutil.copytree(ROOT / "assets/resource", package / "resource")
     if not (package / "resource/model/ocr").exists():
         shutil.copytree(ROOT / "assets/MaaCommonAssets/OCR/ppocr_v6/small", package / "resource/model/ocr")
