@@ -58,6 +58,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet tests/wakeup_ui/bin/Release/net10.0/win-x64/WakeupUi.dll $PWD.Path
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify song search UI with the packaged runtime
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem install/MaaBanG-*-win-x64 -Directory | Select-Object -First 1
+          dotnet build tests/song_search_ui/SongSearchUi.csproj -c Release "-p:MaaBanGTestApp=$($package.FullName)/app"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet tests/song_search_ui/bin/Release/net10.0/win-x64/SongSearchUi.dll (Join-Path $package.FullName 'app')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify upgrade with the packaged runtime
         shell: pwsh
         run: |
