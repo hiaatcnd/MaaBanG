@@ -1,0 +1,386 @@
+--- a/SukiUI/Extensions/ComboBoxExtensions.cs
++++ b/SukiUI/Extensions/ComboBoxExtensions.cs
+@@ -90,8 +90,8 @@
+ 
+     #region CanSearch Property
+ 
+-    // 存储搜索框引用的字典
+-    private static readonly Dictionary<ComboBox, TextBox> _searchBoxes = new();
++    // 每个下拉框的搜索状态；搜索改为过滤 ItemsSource，不再依赖逐项修改 IsVisible。
++    private static readonly Dictionary<ComboBox, SearchState> _searchStates = new();
+ 
+     /// <summary>
+     /// 附加属性：是否启用搜索功能
+@@ -136,16 +136,18 @@
+ 
+         if (args.NewValue.Value)
+         {
+-            // 搜索逻辑基于下拉项容器的可见性；禁用虚拟化以确保未滚动到的选项也会生成并参与匹配。
+-            comboBox.ItemsPanel = new FuncTemplate<Panel>(() => new StackPanel());
++            // 保留 ComboBox 默认的虚拟化面板：搜索使用 ItemsSource 过滤，
++            // 不再为了匹配未生成的容器而一次性实例化全部选项，避免大列表卡顿。
+             comboBox.DropDownOpened += OnSearchableDropDownOpened;
+             comboBox.DropDownClosed += OnSearchableDropDownClosed;
++            comboBox.DetachedFromVisualTree += OnSearchableDetachedFromVisualTree;
+         }
+         else
+         {
+             comboBox.DropDownOpened -= OnSearchableDropDownOpened;
+             comboBox.DropDownClosed -= OnSearchableDropDownClosed;
+-            CleanupSearch(comboBox);
++            comboBox.DetachedFromVisualTree -= OnSearchableDetachedFromVisualTree;
++            CleanupSearch(comboBox, restoreItems: true);
+         }
+     }
+ 
+@@ -163,36 +165,21 @@
+ 
+     private static void OnSearchableDropDownClosed(object? sender, EventArgs e)
+     {
+-        if (sender is not ComboBox comboBox)
+-            return;
+-
+-        // 恢复所有项目的可见性
+-        RestoreAllItemsVisibility(comboBox);
+-
+-        // 清理搜索框文本
+-        if (_searchBoxes.TryGetValue(comboBox, out var searchBox))
+-        {
+-            searchBox.Text = string.Empty;
+-        }
+-    }
+-
+-    /// <summary>
+-    /// 恢复所有ComboBoxItem的可见性
+-    /// </summary>
+-    private static void RestoreAllItemsVisibility(ComboBox comboBox)
+-    {
+-        var itemsPresenter = comboBox.FindDescendantOfType<ItemsPresenter>();
+-        if (itemsPresenter == null)
+-            return;
+-
+-        foreach (var item in itemsPresenter.GetVisualDescendants().OfType<ComboBoxItem>())
+-        {
+-            item.IsVisible = true;
+-        }
++        if (sender is ComboBox comboBox)
++            CleanupSearch(comboBox, restoreItems: true);
++    }
++
++    private static void OnSearchableDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
++    {
++        if (sender is ComboBox comboBox)
++            CleanupSearch(comboBox, restoreItems: true);
+     }
+ 
+     private static void SetupSearchBox(ComboBox comboBox)
+     {
++        if (!comboBox.IsDropDownOpen || _searchStates.ContainsKey(comboBox))
++            return;
++
+         // 查找模板中的PART_SearchBox
+         var popup = comboBox.FindDescendantOfType<Popup>();
+         if (popup?.Child == null)
+@@ -200,7 +187,7 @@
+ 
+         // 从Popup.Child开始查找TextBox
+         TextBox? searchBox = null;
+-        
++
+         // 首先尝试从Popup.Child的视觉后代中查找
+         if (popup.Child is Visual visual)
+         {
+@@ -213,49 +200,171 @@
+                 }
+             }
+         }
+-        
++
+         if (searchBox == null)
+             return;
+ 
+-        // 检查是否已经设置过
+-        if (_searchBoxes.ContainsKey(comboBox))
+-            return;
+-
+-        _searchBoxes[comboBox] = searchBox;
+-
+-        // 监听搜索文本变化
+-        searchBox.TextChanged += (s, args) => OnSearchTextChanged(comboBox, searchBox.Text);
++        _searchStates[comboBox] = new SearchState(comboBox, searchBox);
+ 
+         // 聚焦搜索框
+         searchBox.Focus();
+     }
+ 
+-    private static void OnSearchTextChanged(ComboBox comboBox, string? searchText)
+-    {
+-        // 查找ItemsPresenter以获取所有ComboBoxItem
+-        var popup = comboBox.FindDescendantOfType<Popup>();
+-        if (popup?.Child == null)
+-            return;
+-
+-        var itemsPresenter = popup.Child.FindDescendantOfType<ItemsPresenter>();
+-        if (itemsPresenter == null)
+-            return;
+-
+-        var searchLower = searchText?.ToLowerInvariant() ?? string.Empty;
+-        var isSearchEmpty = string.IsNullOrWhiteSpace(searchText);
+-
+-        // 遍历所有ComboBoxItem并设置可见性
+-        foreach (var comboBoxItem in itemsPresenter.GetVisualDescendants().OfType<ComboBoxItem>())
+-        {
+-            if (isSearchEmpty)
+-            {
+-                comboBoxItem.IsVisible = true;
++    private static void CleanupSearch(ComboBox comboBox, bool restoreItems)
++    {
++        if (!_searchStates.TryGetValue(comboBox, out var state))
++            return;
++
++        _searchStates.Remove(comboBox);
++
++        if (restoreItems)
++        {
++            state.RestoreItems();
++            state.ClearSearchText();
++        }
++
++        state.Dispose();
++    }
++
++    /// <summary>
++    /// 单个下拉框的搜索会话：保存原始 ItemsSource，并在搜索文本变化时替换为过滤后的列表。
++    /// </summary>
++    private sealed class SearchState
++    {
++        private readonly ComboBox _comboBox;
++        private readonly TextBox _searchBox;
++        private readonly IEnumerable? _originalItems;
++        private readonly Dictionary<object, string> _displayTextCache = new();
++        private bool _suppressTextChanged;
++
++        public SearchState(ComboBox comboBox, TextBox searchBox)
++        {
++            _comboBox = comboBox;
++            _searchBox = searchBox;
++            _originalItems = comboBox.ItemsSource;
++
++            // 下拉重新打开时清空上一次的搜索文本，避免沿用旧过滤条件。
++            _searchBox.Text = string.Empty;
++            _searchBox.TextChanged += OnSearchTextChanged;
++        }
++
++        public void Dispose()
++        {
++            _searchBox.TextChanged -= OnSearchTextChanged;
++        }
++
++        private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
++        {
++            if (_suppressTextChanged)
++                return;
++
++            ApplyFilter(_searchBox.Text);
++        }
++
++        private void ApplyFilter(string? searchText)
++        {
++            if (_originalItems == null)
++                return;
++
++            var searchLower = searchText?.ToLowerInvariant();
++            IEnumerable source;
++
++            if (string.IsNullOrWhiteSpace(searchLower))
++            {
++                source = _originalItems;
+             }
+             else
+             {
+-                var itemText = GetItemDisplayText(comboBox, comboBoxItem.DataContext);
+-                comboBoxItem.IsVisible = itemText.ToLowerInvariant().Contains(searchLower);
+-            }
++                var filtered = new List<object?>();
++                foreach (var item in _originalItems)
++                {
++                    if (item == null)
++                        continue;
++
++                    if (GetDisplayText(item).Contains(searchLower))
++                        filtered.Add(item);
++                }
++
++                // 选中的项即使不匹配也保留在过滤结果中，避免替换 ItemsSource 时
++                // ComboBox 清空选中项并触发使用方的选择变更处理。
++                var selectedItem = _comboBox.SelectedItem;
++                if (selectedItem != null && !filtered.Contains(selectedItem))
++                    filtered.Insert(0, selectedItem);
++
++                source = filtered;
++            }
++
++            if (ReferenceEquals(_comboBox.ItemsSource, source))
++                return;
++
++            SetItemsSource(source);
++        }
++
++        /// <summary>
++        /// 切换 ItemsSource 并保留当前选中项。Avalonia 会在替换源时短暂清空选择，
++        /// 这里在替换后立即恢复同一个选项对象。
++        /// </summary>
++        private void SetItemsSource(IEnumerable source)
++        {
++            var selectedItem = _comboBox.SelectedItem;
++            var hadFocus = _searchBox.IsFocused;
++            var caretIndex = _searchBox.CaretIndex;
++
++            _suppressTextChanged = true;
++            try
++            {
++                _comboBox.ItemsSource = source;
++
++                if (selectedItem != null && !ReferenceEquals(_comboBox.SelectedItem, selectedItem))
++                    _comboBox.SelectedItem = selectedItem;
++
++                // 替换 ItemsSource 时 Avalonia 会把焦点移到下拉项容器；若不恢复，
++                // 搜索框只能收到第一个字符（空格修好之后其余按键也会丢失）。
++                if (hadFocus && !_searchBox.IsFocused)
++                {
++                    _searchBox.Focus();
++                    _searchBox.CaretIndex = caretIndex;
++                }
++            }
++            finally
++            {
++                _suppressTextChanged = false;
++            }
++        }
++
++        public void RestoreItems()
++        {
++            if (_originalItems != null)
++            {
++                if (!ReferenceEquals(_comboBox.ItemsSource, _originalItems))
++                    SetItemsSource(_originalItems);
++            }
++        }
++
++        public void ClearSearchText()
++        {
++            if (string.IsNullOrEmpty(_searchBox.Text))
++                return;
++
++            _suppressTextChanged = true;
++            try
++            {
++                _searchBox.Text = string.Empty;
++            }
++            finally
++            {
++                _suppressTextChanged = false;
++            }
++        }
++
++        private string GetDisplayText(object item)
++        {
++            if (_displayTextCache.TryGetValue(item, out var cached))
++                return cached;
++
++            var text = GetItemDisplayText(_comboBox, item).ToLowerInvariant();
++            _displayTextCache[item] = text;
++            return text;
+         }
+     }
+ 
+@@ -312,11 +421,6 @@
+         return item.ToString() ?? string.Empty;
+     }
+ 
+-    private static void CleanupSearch(ComboBox comboBox)
+-    {
+-        _searchBoxes.Remove(comboBox);
+-    }
+-
+     #endregion
+ 
+     static ComboBoxExtensions()
+@@ -329,3 +433,39 @@
+         return observable.Subscribe((IObserver<T>)new AnonymousObserver<T>((Action<T>)action));
+     }
+ }
++
++/// <summary>
++/// 选项下拉专用的 ComboBox：下拉打开且搜索框拥有焦点时，跳过基类对空格键的
++/// “选中当前项并关闭下拉”处理，让空格作为普通文本输入进入搜索框。
++/// 注意不能把 KeyDown 标记为已处理：Avalonia 的 Win32 后端会因此丢弃 WM_CHAR，
++/// TextBox 将收不到任何文字（空格永远无法输入）。
++/// </summary>
++public sealed class SearchComboBox : ComboBox
++{
++    // 让 SearchComboBox 直接复用 SukiUI 为 ComboBox 定义的样式与模板（搜索框所在模板）。
++    protected override Type StyleKeyOverride => typeof(ComboBox);
++
++    protected override void OnKeyDown(KeyEventArgs e)
++    {
++        if (IsDropDownOpen
++            && e.Key == Key.Space
++            && ComboBoxExtensions.GetCanSearch(this)
++            && IsSearchBoxFocused())
++        {
++            return;
++        }
++
++        base.OnKeyDown(e);
++    }
++
++    private bool IsSearchBoxFocused()
++    {
++        var popup = this.FindDescendantOfType<Popup>();
++        if (popup?.Child is not Visual visual)
++            return false;
++
++        return visual.GetVisualDescendants()
++            .OfType<TextBox>()
++            .Any(textBox => textBox.Name == "PART_SearchBox" && textBox.IsFocused);
++    }
++}
+
+--- a/MFAAvalonia/Helper/TaskOptionGenerator.cs
++++ b/MFAAvalonia/Helper/TaskOptionGenerator.cs
+@@ -712,7 +712,7 @@
+         interfaceOption.Cases?.ForEach(c => c.InitializeDisplayName());
+         interfaceOption.InitializeIcon();
+ 
+-        var comboBox = new ComboBox
++        var comboBox = new SearchComboBox
+         {
+             MinWidth = 120,
+             Classes = { "LimitWidth" },
+@@ -753,9 +753,23 @@
+         comboBox.SelectionChanged += (_, _) =>
+         {
+             var selectedCase = comboBox.SelectedItem as MaaInterface.MaaInterfaceOptionCase;
+-            var resolvedIndex = selectedCase != null && interfaceOption.Cases != null
++
++            // 搜索过滤替换 ItemsSource 时，ComboBox 会先短暂清空选中项；忽略该中间状态，
++            // 避免把 option.Index 写成 -1、清空子选项并反复保存配置。
++            if (selectedCase == null)
++                return;
++
++            var resolvedIndex = interfaceOption.Cases != null
+                 ? interfaceOption.Cases.FindIndex(c => c.Name == selectedCase.Name)
+-                : comboBox.SelectedIndex;
++                : -1;
++            if (resolvedIndex < 0)
++                resolvedIndex = comboBox.SelectedIndex;
++            if (resolvedIndex < 0)
++                return;
++
++            // 过滤结束恢复原选中项会再次触发本事件，索引未变化时无需重建子选项。
++            if (resolvedIndex == option.Index)
++                return;
+ 
+             option.Index = resolvedIndex;
+             UpdateSubOptions(resolvedIndex);
